@@ -1,0 +1,150 @@
+const { v4: uuidv4 } = require('uuid');
+
+function createError(statusCode, message) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
+function parseJsonFields(row) {
+  if (!row) return row;
+  const parsed = { ...row };
+  for (const key of ['tags', 'data', 'metadata', 'available_accounts']) {
+    if (parsed[key] && typeof parsed[key] === 'string') {
+      try { parsed[key] = JSON.parse(parsed[key]); } catch {}
+    }
+  }
+  return parsed;
+}
+
+function serializeJson(value) {
+  return value == null ? null : JSON.stringify(value);
+}
+
+function normalizeSlug(slug) {
+  return String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getAppSlug(req) {
+  const bodyApp = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body.app : null;
+  return normalizeSlug(
+    req.headers['x-demo-app'] ||
+    req.query?.app ||
+    bodyApp?.slug ||
+    req.body?.appSlug
+  );
+}
+
+function getAppConfigFromRequest(req) {
+  const bodyApp = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body.app : null;
+  return {
+    slug: getAppSlug(req),
+    name: bodyApp?.name || req.body?.appName || req.query?.appName || null,
+    bootstrapVersion: bodyApp?.bootstrapVersion || req.body?.bootstrapVersion || req.query?.bootstrapVersion || null
+  };
+}
+
+function getAppBySlug(db, slug) {
+  if (!slug) return null;
+  return db.prepare('SELECT * FROM apps WHERE slug = ?').get(normalizeSlug(slug));
+}
+
+function upsertApp(db, { slug, name, bootstrapVersion }) {
+  const normalizedSlug = normalizeSlug(slug);
+  if (!normalizedSlug) {
+    throw createError(400, 'Missing app slug');
+  }
+
+  const existing = getAppBySlug(db, normalizedSlug);
+  const id = existing?.id || uuidv4();
+  db.prepare(`
+    INSERT INTO apps (id, slug, name, bootstrap_version)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(slug) DO UPDATE SET
+      name = COALESCE(excluded.name, apps.name),
+      bootstrap_version = excluded.bootstrap_version,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(id, normalizedSlug, name || existing?.name || normalizedSlug, bootstrapVersion || null);
+
+  return getAppBySlug(db, normalizedSlug);
+}
+
+function getRequiredApp(db, req) {
+  const slug = getAppSlug(req);
+  if (!slug) {
+    throw createError(400, 'Missing app slug. Set TGK_CONFIG.appSlug on the frontend.');
+  }
+
+  const app = getAppBySlug(db, slug);
+  if (!app) {
+    throw createError(404, `App "${slug}" has not been initialized yet.`);
+  }
+
+  return app;
+}
+
+function getConnectionForApp(db, appId) {
+  return parseJsonFields(
+    db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(appId)
+  );
+}
+
+function upsertConnection(db, app, { userId, accountId, accountName, userName, email, availableAccounts }) {
+  const existing = parseJsonFields(db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(app.id));
+  const id = existing?.id || uuidv4();
+
+  db.prepare(`
+    INSERT INTO docusign_connections (id, app_id, docusign_user_id, docusign_account_id, account_name, user_name, email, available_accounts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(app_id) DO UPDATE SET
+      docusign_user_id = excluded.docusign_user_id,
+      docusign_account_id = excluded.docusign_account_id,
+      account_name = excluded.account_name,
+      user_name = excluded.user_name,
+      email = excluded.email,
+      available_accounts = excluded.available_accounts,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    id,
+    app.id,
+    userId,
+    accountId,
+    accountName || existing?.account_name || null,
+    userName || existing?.user_name || null,
+    email || existing?.email || null,
+    serializeJson(availableAccounts || existing?.available_accounts || [])
+  );
+
+  return getConnectionForApp(db, app.id);
+}
+
+function clearAppConnection(db, appId) {
+  db.prepare('DELETE FROM docusign_connections WHERE app_id = ?').run(appId);
+}
+
+function getAppStats(db, appId) {
+  const profiles = db.prepare('SELECT COUNT(*) AS count FROM profiles WHERE app_id = ?').get(appId).count;
+  const records = db.prepare('SELECT COUNT(*) AS count FROM records WHERE app_id = ?').get(appId).count;
+  const envelopes = db.prepare('SELECT COUNT(*) AS count FROM envelopes WHERE app_id = ?').get(appId).count;
+  return { profiles, records, envelopes };
+}
+
+module.exports = {
+  clearAppConnection,
+  createError,
+  getAppBySlug,
+  getAppConfigFromRequest,
+  getAppSlug,
+  getAppStats,
+  getConnectionForApp,
+  getRequiredApp,
+  normalizeSlug,
+  parseJsonFields,
+  serializeJson,
+  upsertApp,
+  upsertConnection
+};

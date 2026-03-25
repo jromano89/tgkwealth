@@ -1,0 +1,9 @@
+{
+  "name": "tgk-demo-workspace",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "seed:tgk": "node scripts/seed-tgk.js",
+    "start:backend": "npm --prefix backend run start"
+  }
+}

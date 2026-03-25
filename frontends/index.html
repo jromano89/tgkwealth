@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TGK Wealth — Demo Portals</title>
+  <link rel="icon" type="image/svg+xml" href="shared/favicon.svg">
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { text-align: center; max-width: 640px; padding: 2rem; }
+    .logo { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #3b5bdb, #5c7cfa); display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.25rem; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #9ca3af; font-size: 0.9rem; margin-bottom: 2.5rem; line-height: 1.6; }
+    .cards { display: flex; gap: 1.25rem; justify-content: center; margin-bottom: 2.5rem; }
+    .card { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.75rem 1.5rem; text-align: left; text-decoration: none; color: #fff; transition: all 0.2s; }
+    .card:hover { background: rgba(255,255,255,0.08); border-color: rgba(59,91,219,0.5); transform: translateY(-2px); }
+    .card-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .card h2 { font-size: 1rem; margin-bottom: 0.4rem; }
+    .card p { color: #9ca3af; font-size: 0.8rem; line-height: 1.5; }
+    .card .arrow { color: #5c7cfa; font-size: 0.8rem; margin-top: 1rem; display: inline-block; }
+    .footer { color: #4b5563; font-size: 0.75rem; line-height: 1.8; }
+    .footer a { color: #6b7280; text-decoration: none; }
+    .footer a:hover { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">T</div>
+    <h1>TGK Wealth Demo</h1>
+    <p class="subtitle">A FINS wealth management demo showcasing Docusign agreement workflows — account opening, asset transfers, and self-service tasks — embedded across two connected portals.</p>
+
+    <div class="cards">
+      <a href="tgk-wealth/advisor/" class="card">
+        <div class="card-icon">📊</div>
+        <h2>Advisor Portal</h2>
+        <p>Client book, AUM dashboard, and advisor-led account opening powered by Docusign IAM and Web Forms.</p>
+        <span class="arrow">Open portal →</span>
+      </a>
+      <a href="tgk-wealth/investor/" class="card">
+        <div class="card-icon">💼</div>
+        <h2>Investor Portal</h2>
+        <p>Portfolio overview, holdings, documents, and self-service workflows like asset transfers and options trading.</p>
+        <span class="arrow">Open portal →</span>
+      </a>
+    </div>
+
+    <div class="footer">
+      <p>Backend API: <a href="http://localhost:3000/api-docs">API Docs</a> · <a href="http://localhost:3000/api/health">Health Check</a></p>
+      <p>Built with Alpine.js + Tailwind · Powered by Docusign</p>
+    </div>
+  </div>
+</body>
+</html>

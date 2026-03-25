@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TGK Wealth Demo — Investor Portal</title>
+  <meta name="description" content="TGK Wealth demonstration investor portal for product showcase and testing. For demo purposes only, not a real financial services portal.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="application-name" content="TGK Wealth Demo">
+  <meta property="og:title" content="TGK Wealth Demo — Investor Portal">
+  <meta property="og:description" content="Demonstration investor portal for product showcase and testing.">
+  <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
+  <script>
+    (() => {
+      const originalWarn = console.warn;
+      console.warn = (...args) => {
+        const message = String(args[0] || '');
+        if (message.includes('cdn.tailwindcss.com should not be used in production')) {
+          return;
+        }
+        originalWarn.apply(console, args);
+      };
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="../../shared/js/demo-settings.js"></script>
+  <script src="../../shared/js/api-client.js"></script>
+  <script src="../../shared/js/shared-components.js"></script>
+  <script src="../../shared/js/stock-ticker.js"></script>
+  <script src="../../shared/js/news-panel.js"></script>
+  <script src="../../shared/js/docusign-settings.js"></script>
+  <script src="js/app.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f4f5f7; margin: 0; }
+    .font-serif { font-family: Georgia, 'Times New Roman', serif; }
+    .ticker-scroll { animation: scroll 45s linear infinite; }
+    @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .flash-green { background-color: rgba(22,163,74,0.15) !important; transition: background 0.3s; }
+    .flash-red { background-color: rgba(220,38,38,0.15) !important; transition: background 0.3s; }
+    [x-cloak] { display: none !important; }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: 'var(--color-navy, #1a1a2e)',
+            'navy-light': 'var(--color-navy-light, #2d2d52)',
+            brand: 'var(--color-brand, #3b5bdb)',
+            'brand-light': 'var(--color-brand-light, #5c7cfa)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+
+<!-- Stock Ticker -->
+<div class="bg-navy text-white text-[11px] h-7 overflow-hidden relative z-50" x-data="stockTicker()">
+  <div class="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-navy to-transparent z-10"></div>
+  <div class="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-navy to-transparent z-10"></div>
+  <div class="ticker-scroll flex items-center h-full whitespace-nowrap">
+    <template x-for="(item, i) in [...prices, ...prices]" :key="'t'+i">
+      <span class="inline-flex items-center px-4 gap-1.5 transition-colors" :class="item.flash">
+        <span class="font-semibold" x-text="item.sym"></span>
+        <span x-text="fmt(item.price)"></span>
+        <span :class="item.change >= 0 ? 'text-green-400' : 'text-red-400'" x-text="fmtChange(item.change)"></span>
+      </span>
+    </template>
+  </div>
+</div>
+
+<div class="flex h-[calc(100vh-28px)]" x-data="investorApp()">
+
+  <!-- Sidebar -->
+  <aside class="bg-navy text-white flex flex-col transition-all duration-200" :class="sidebarCollapsed ? 'w-[68px]' : 'w-[220px]'">
+    <div class="p-4 flex items-center gap-3 cursor-pointer" @click="sidebarCollapsed = !sidebarCollapsed">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-text="((window.TGK_DEMO.branding.appName || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase()"></div>
+      <div x-show="!sidebarCollapsed" class="overflow-hidden">
+        <div class="font-bold text-sm leading-tight" x-text="window.TGK_DEMO.branding.appName"></div>
+        <div class="text-[10px] text-gray-400 tracking-widest uppercase">Investor Portal</div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-2 mt-2 space-y-1">
+      <button @click="tab = 'overview'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span x-show="!sidebarCollapsed">Overview</span>
+      </button>
+      <button @click="tab = 'holdings'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l8 8-8 8-8-8 8-8z"/></svg>
+        <span x-show="!sidebarCollapsed">Holdings</span>
+      </button>
+      <button @click="tab = 'documents'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span x-show="!sidebarCollapsed">Documents</span>
+      </button>
+      <button @click="tab = 'messages'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Messages
+          <template x-if="unreadCount > 0"><span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span></template>
+        </span>
+      </button>
+      <button @click="tab = 'settings'"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+        :class="tab === 'settings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span x-show="!sidebarCollapsed">Settings</span>
+      </button>
+    </nav>
+
+    <div class="px-4 pb-3" x-show="!sidebarCollapsed">
+      <div class="text-[10px] uppercase tracking-wide text-gray-500">For demo purposes only</div>
+    </div>
+
+    <!-- Portal Switch -->
+    <div class="px-3 pb-2" x-show="!sidebarCollapsed">
+      <a href="../advisor/index.html" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        Switch to Advisor Portal
+      </a>
+    </div>
+
+    <!-- Client Picker -->
+    <div class="px-3 pb-2" x-show="!sidebarCollapsed">
+      <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
+        <template x-for="c in contacts" :key="c.id">
+          <option :value="c.id" x-text="c.first_name + ' ' + c.last_name"></option>
+        </template>
+      </select>
+    </div>
+
+    <!-- User -->
+    <div class="p-3 border-t border-white/10 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${selectedClient?.metadata?.avatar || '#3b5bdb'}`" x-text="initials(clientName)"></div>
+      <div x-show="!sidebarCollapsed" class="overflow-hidden">
+        <div class="text-sm font-medium leading-tight" x-text="clientName"></div>
+        <div class="text-[10px] text-gray-400">Investor</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-auto">
+    <div class="p-6">
+
+      <!-- Header -->
+      <div x-show="tab !== 'settings'" class="flex items-center justify-between mb-2">
+        <div>
+          <h1 class="text-xl font-semibold text-navy">Good afternoon, <span x-text="selectedClient?.first_name || ''"></span></h1>
+          <p class="text-sm text-gray-400">Your portfolio as of March 20, 2026</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div x-data="newsPanel()">
+            <button @click="toggleOpen()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
+              <span>📺</span> News <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            </button>
+            <template x-if="open">
+              <div>
+                <div class="fixed inset-0 bg-black/30 z-40" @click="open = false"></div>
+                <div class="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 overflow-auto p-6 transition-transform">
+                  <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-lg text-navy">Market News</h2>
+                    <button @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                  </div>
+                  <input x-model="search" placeholder="Search news..." class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
+                  <div class="flex gap-1.5 flex-wrap mb-4">
+                    <template x-for="cat in categories" :key="cat">
+                      <button @click="activeCategory = cat" class="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide transition-colors"
+                        :class="activeCategory === cat ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        x-text="cat === 'all' ? 'All' : cat"></button>
+                    </template>
+                  </div>
+                  <template x-if="loading && !loaded">
+                    <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-6 text-center text-sm text-gray-500">
+                      Loading live market news...
+                    </div>
+                  </template>
+                  <template x-if="!loading && error && !loaded">
+                    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">
+                      Failed to load live market news.
+                    </div>
+                  </template>
+                  <template x-if="!loading && !error && loaded && filteredItems.length === 0">
+                    <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-6 text-center text-sm text-gray-500">
+                      No live headlines matched your filters.
+                    </div>
+                  </template>
+                  <div class="space-y-3" x-show="loaded && filteredItems.length > 0">
+                    <template x-for="item in filteredItems" :key="item.title">
+                      <a
+                        :href="item.link || '#'"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-colors"
+                        :class="{ 'pointer-events-none': !item.link }">
+                        <div class="flex items-center gap-2 mb-1">
+                          <span class="text-[10px] font-medium uppercase tracking-wide text-gray-500" x-text="item.category"></span>
+                          <template x-if="item.badge">
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" :class="item.badgeColor" x-text="item.badge"></span>
+                          </template>
+                          <span class="ml-auto text-[10px] text-gray-400" x-text="item.time"></span>
+                        </div>
+                        <div class="font-medium text-sm text-navy mb-1" x-text="item.title"></div>
+                        <div class="text-xs text-gray-500" x-text="item.summary"></div>
+                        <div class="mt-2 flex items-center gap-1.5">
+                          <div class="w-1.5 h-1.5 rounded-full" :class="impactColor(item.impact)"></div>
+                          <span class="text-[10px] text-gray-400" x-text="item.impact + ' impact'"></span>
+                        </div>
+                      </a>
+                    </template>
+                  </div>
+                  <div class="mt-4 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1.5" x-show="loaded && filteredItems.length > 0">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live updates
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Nav -->
+      <div x-show="tab !== 'settings'" class="flex gap-6 border-b border-gray-200 mb-6">
+        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'holdings',icon:'◈',label:'Holdings'},{id:'documents',icon:'▤',label:'Documents'},{id:'messages',icon:'✉',label:'Messages'}]" :key="t.id">
+          <button @click="tab = t.id" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+            :class="tab === t.id ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
+            <span x-text="t.icon"></span>
+            <span x-text="t.label"></span>
+            <template x-if="t.id === 'messages' && unreadCount > 0">
+              <span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span>
+            </template>
+          </button>
+        </template>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div x-show="tab === 'overview'">
+        <!-- Hero Card -->
+        <div class="bg-gradient-to-r from-navy to-navy-light rounded-xl p-8 text-white mb-6 relative overflow-hidden">
+          <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/5"></div>
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-300 mb-2">Total Portfolio Value</div>
+          <div class="font-serif text-[44px] font-semibold leading-tight" x-text="fmtMoney(totalPortfolioValue)"></div>
+          <div class="flex gap-8 mt-4">
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-gray-400">YTD Return</div>
+              <div class="text-lg font-semibold text-green-400" x-text="fmtPct(ytdReturn)"></div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-gray-400">Accounts</div>
+              <div class="text-lg font-semibold" x-text="accounts.length"></div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-gray-400">Risk Profile</div>
+              <div class="text-lg font-semibold" x-text="selectedClient?.metadata?.riskProfile || '—'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Cards -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <template x-for="acct in accounts" :key="acct.id">
+            <div class="bg-white rounded-xl shadow-sm p-5">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
+                  <div class="text-[11px] text-gray-400" x-text="acct.metadata?.accountType || ''"></div>
+                </div>
+                <template x-if="acct.metadata?.ytdReturn != null">
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="acct.metadata.ytdReturn >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
+                </template>
+              </div>
+              <div class="font-serif text-2xl font-semibold text-navy mb-3" x-text="fmtMoney(acct.metadata?.value)"></div>
+              <div class="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
+                <div class="bg-blue-500" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
+                <div class="bg-green-400" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
+                <div class="bg-yellow-400" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
+                <div class="bg-gray-300" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
+              </div>
+              <div class="flex gap-3 mt-2 text-[10px] text-gray-500">
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Advisor Contact -->
+        <div class="bg-white rounded-xl shadow-sm p-5">
+          <h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3">Your Advisor</h3>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white font-bold" x-text="TGK_CONFIG.advisor?.avatar || '?'"></div>
+            <div>
+              <div class="font-medium text-navy" x-text="TGK_CONFIG.advisor?.name || 'Your Advisor'"></div>
+              <div class="text-sm text-gray-500" x-text="TGK_CONFIG.advisor?.title || ''"></div>
+              <div class="text-xs text-gray-400 mt-0.5" x-text="(TGK_CONFIG.advisor?.email || '') + ' · ' + (TGK_CONFIG.advisor?.phone || '')"></div>
+            </div>
+            <div class="ml-auto flex gap-2">
+              <button @click="tab = 'messages'" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">Send Message</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOLDINGS TAB -->
+      <div x-show="tab === 'holdings'">
+        <div class="bg-white rounded-xl shadow-sm p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-base text-navy">Holdings</h3>
+              <p class="text-sm text-gray-400 mt-0.5">Real-time position data synced from your accounts.</p>
+            </div>
+            <button class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">+ Add Options to Account</button>
+          </div>
+          <table class="w-full">
+            <thead>
+              <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
+                <th class="text-left pb-3">Symbol</th><th class="text-left pb-3">Name</th><th class="text-right pb-3">Shares</th><th class="text-right pb-3">Price</th><th class="text-right pb-3">Market Value</th><th class="text-right pb-3">Today</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">AAPL</td><td class="text-sm">Apple Inc.</td><td class="text-right text-sm">150</td><td class="text-right text-sm">$237.45</td><td class="text-right text-sm font-medium">$35,617</td><td class="text-right text-sm text-green-600">+0.42%</td></tr>
+              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">MSFT</td><td class="text-sm">Microsoft Corp.</td><td class="text-right text-sm">85</td><td class="text-right text-sm">$428.84</td><td class="text-right text-sm font-medium">$36,451</td><td class="text-right text-sm text-red-600">-0.18%</td></tr>
+              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">GOOGL</td><td class="text-sm">Alphabet Inc.</td><td class="text-right text-sm">200</td><td class="text-right text-sm">$178.38</td><td class="text-right text-sm font-medium">$35,676</td><td class="text-right text-sm text-green-600">+0.31%</td></tr>
+              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">BRK.B</td><td class="text-sm">Berkshire Hathaway</td><td class="text-right text-sm">60</td><td class="text-right text-sm">$472.15</td><td class="text-right text-sm font-medium">$28,329</td><td class="text-right text-sm text-green-600">+0.08%</td></tr>
+              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">AGG</td><td class="text-sm">iShares Core US Agg Bond</td><td class="text-right text-sm">300</td><td class="text-right text-sm">$98.49</td><td class="text-right text-sm font-medium">$29,547</td><td class="text-right text-sm text-green-600">+0.12%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DOCUMENTS TAB -->
+      <div x-show="tab === 'documents'">
+        <div class="bg-white rounded-xl shadow-sm p-5">
+          <h3 class="font-semibold text-base text-navy mb-4">Documents</h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-brand text-xs font-bold">R</div>
+                <div><div class="text-sm font-medium text-navy">Q1 2026 Performance Report</div><div class="text-[11px] text-gray-400">March 15, 2026</div></div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">Ready</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 text-xs font-bold">T</div>
+                <div><div class="text-sm font-medium text-navy">2025 Tax Summary (1099)</div><div class="text-[11px] text-gray-400">February 15, 2026</div></div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">Signed</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 text-xs font-bold">L</div>
+                <div><div class="text-sm font-medium text-navy">Investment Policy Statement</div><div class="text-[11px] text-gray-400">January 10, 2026</div></div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">On File</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 text-xs font-bold">D</div>
+                <div><div class="text-sm font-medium text-navy">Form ADV Part 2 Disclosure</div><div class="text-[11px] text-gray-400">January 2, 2026</div></div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">Delivered</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MESSAGES TAB -->
+      <div x-show="tab === 'messages'">
+        <div class="bg-white rounded-xl shadow-sm p-5">
+          <h3 class="font-semibold text-base text-navy mb-4">Messages</h3>
+          <div class="space-y-3 mb-4 max-h-[50vh] overflow-auto">
+            <template x-if="messages.length === 0">
+              <div class="text-center py-8 text-gray-400">
+                <div class="text-3xl mb-2">💬</div>
+                <p class="text-sm">No messages yet. Start a conversation below.</p>
+              </div>
+            </template>
+            <template x-for="(m, i) in messages" :key="i">
+              <div class="p-4 rounded-lg border transition-colors" :class="m.unread ? 'border-brand/30 bg-blue-50/30 border-l-4 border-l-brand' : 'border-gray-100'">
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" :class="m.isAdvisor ? 'bg-brand' : 'bg-gray-400'" x-text="initials(m.from)"></div>
+                  <span class="text-sm font-medium text-navy" x-text="m.from"></span>
+                  <template x-if="m.unread"><span class="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">NEW</span></template>
+                  <span class="ml-auto text-[10px] text-gray-400" x-text="m.time"></span>
+                </div>
+                <p class="text-sm text-gray-600 ml-8" x-text="m.body"></p>
+              </div>
+            </template>
+          </div>
+          <div class="flex gap-2">
+            <input x-model="newMessage" @keydown.enter="sendMessage()" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+            <button @click="sendMessage()" class="px-4 py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div x-show="tab === 'settings'" x-data="demoSettingsPanel()">
+        <h1 class="text-xl font-semibold text-navy mb-6">Settings</h1>
+
+        <div class="grid grid-cols-2 gap-6 max-w-4xl">
+
+          <!-- Demo Branding -->
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-semibold text-base text-navy mb-1">Demo Branding</h2>
+            <p class="text-xs text-gray-400 mb-5">Customize the look of this demo. Changes apply to both portals.</p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">App Name</label>
+                <input x-model="appName" @input="dirty = true" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="TGK Wealth">
+                <p class="text-[10px] text-gray-400 mt-1">The sidebar mark is generated automatically from the app name.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-2">Theme Color</label>
+                <div class="flex items-center gap-3">
+                  <label class="relative w-10 h-10 rounded-lg overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-gray-400 transition-colors" :style="`background:${brandColor}`">
+                    <input type="color" :value="brandColor" @input="applyColor($event.target.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                  </label>
+                  <span class="text-xs text-gray-500 font-mono" x-text="brandColor"></span>
+                  <span class="text-[10px] text-gray-400">Click to pick any color</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-5">
+              <button @click="save()" :disabled="!dirty"
+                class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                :class="dirty ? 'bg-brand hover:bg-brand-light' : 'bg-gray-300 cursor-not-allowed'">
+                Save &amp; Apply
+              </button>
+              <button @click="resetDefaults()" class="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors">
+                Reset Defaults
+              </button>
+            </div>
+          </div>
+
+          <!-- Demo Config + Docusign -->
+          <div class="space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+              <h2 class="font-semibold text-base text-navy mb-1">Demo Configuration</h2>
+              <p class="text-xs text-gray-400 mb-5">Toggle features for this demo scenario.</p>
+
+              <div class="space-y-4">
+                <label class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
+                  <div>
+                    <div class="text-sm font-medium text-navy">ID Verification</div>
+                    <div class="text-xs text-gray-400 mt-0.5">Require identity verification before signing</div>
+                  </div>
+                  <div class="relative">
+                    <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
+                    <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
+                    <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Docusign Connection -->
+            <div class="bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
+              <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <h2 class="font-semibold text-base text-navy mb-1">Docusign Connection</h2>
+                  <p class="text-xs text-gray-400">Manage the connected account.</p>
+                </div>
+                <button @click="openScopesModal()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Scopes</button>
+              </div>
+
+              <template x-if="loading"><p class="text-sm text-gray-400">Checking connection...</p></template>
+              <template x-if="error"><p class="text-sm text-red-500 mb-3" x-text="error"></p></template>
+              <template x-if="notice"><p class="text-sm text-brand mb-3" x-text="notice"></p></template>
+
+              <template x-if="!loading && session?.accountId">
+                <div class="space-y-4">
+                  <div class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="flex items-center gap-2 mb-2">
+                          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span class="text-sm font-medium text-emerald-700">Connected</span>
+                        </div>
+                        <div class="text-sm font-medium text-navy" x-text="session.accountName"></div>
+                        <div class="text-xs text-gray-500 mt-1" x-text="session.name || session.email"></div>
+                        <div class="text-[11px] text-gray-400 mt-1" x-text="session.accountId"></div>
+                      </div>
+                      <div class="flex flex-wrap gap-2 justify-end">
+                        <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="!loading && session?.pendingAccountSelection">
+                <div class="space-y-4">
+                  <div class="rounded-xl border border-sky-100 bg-sky-50/70 p-4">
+                    <div class="text-sm font-medium text-navy">Choose Account</div>
+                    <div class="text-xs text-gray-500 mt-1">Select the Docusign account for this demo.</div>
+                  </div>
+                  <div class="space-y-3 rounded-xl border border-gray-200 p-4">
+                    <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
+                      <template x-for="account in availableAccounts()" :key="account.accountId">
+                        <option :value="account.accountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
+                      </template>
+                    </select>
+                    <button @click="selectAccount(selectedAccountId)" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors">Use Selected Account</button>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="!loading && !session?.accountId && !session?.pendingAccountSelection">
+                <div class="space-y-4">
+                  <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
+                    <div class="text-sm font-medium text-navy">No account connected</div>
+                    <div class="text-xs text-gray-500 mt-1">Connect a Docusign account to enable live demo actions.</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button>
+                  </div>
+                </div>
+              </template>
+
+              <div x-show="showScopesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/40" @click="closeScopesModal()"></div>
+                <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6">
+                  <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
+                      <p class="text-xs text-gray-400 mt-1">Edit the scope string used on the next connect.</p>
+                    </div>
+                    <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+                  </div>
+
+                  <textarea x-model="requestedScopesText" rows="8" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40"></textarea>
+                  <p class="text-[11px] text-gray-400 mt-2">The required <span class="font-medium">signature</span>, <span class="font-medium">impersonation</span>, and <span class="font-medium">aow_manage</span> scopes are always included.</p>
+
+                  <div class="flex items-center justify-between gap-3 mt-5">
+                    <button @click="resetRequestedScopes()" class="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">Reset Default</button>
+                    <div class="flex gap-2">
+                      <button @click="closeScopesModal()" class="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">Cancel</button>
+                      <button @click="saveRequestedScopes()" class="text-xs bg-brand text-white px-3 py-2 rounded-lg hover:bg-brand-light transition-colors">Save Scopes</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>
