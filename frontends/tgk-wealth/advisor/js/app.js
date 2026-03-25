@@ -1,3 +1,6 @@
+const TGK_SELECTED_CLIENT_STORAGE_KEY = 'tgk_selected_client_id';
+const TGK_ADVISOR_VIEW_STORAGE_KEY = 'tgk_advisor_view';
+
 function advisorApp() {
   return {
     view: 'dashboard',
@@ -10,6 +13,9 @@ function advisorApp() {
     maestroInstanceUrl: '',
     maestroError: null,
     maestroLoading: false,
+    maestroCompleted: false,
+    maestroNewContact: null,
+    maestroIframeLoadCount: 0,
     onboardingLoadingIndex: 0,
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
@@ -18,10 +24,43 @@ function advisorApp() {
     async init() {
       try {
         this.contacts = await TGK_API.getContacts();
+        const requestedView = this.restoreView();
+        const requestedClientId = this.restoreSelectedContactId();
+        const requestedContact = this.contacts.find((contact) => contact.id === requestedClientId);
+
+        if (requestedView === 'client' && requestedContact) {
+          await this.viewClient(requestedContact);
+        } else {
+          this.setView(requestedView === 'client' ? 'dashboard' : requestedView);
+        }
       } catch (e) {
         console.error('Failed to load contacts:', e);
       }
       this.loading = false;
+    },
+
+    restoreView() {
+      try {
+        return window.localStorage.getItem(TGK_ADVISOR_VIEW_STORAGE_KEY) || 'dashboard';
+      } catch (e) {
+        return 'dashboard';
+      }
+    },
+
+    restoreSelectedContactId() {
+      try {
+        return window.localStorage.getItem(TGK_SELECTED_CLIENT_STORAGE_KEY);
+      } catch (e) {
+        return null;
+      }
+    },
+
+    setView(nextView) {
+      const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
+      this.view = allowedViews.has(nextView) ? nextView : 'dashboard';
+      try {
+        window.localStorage.setItem(TGK_ADVISOR_VIEW_STORAGE_KEY, this.view);
+      } catch (e) {}
     },
 
     get filteredContacts() {
@@ -49,6 +88,7 @@ function advisorApp() {
     },
 
     async viewClient(contact) {
+      this.rememberSelectedContact(contact?.id);
       this.selectedContact = contact;
       try {
         const detail = await TGK_API.getContact(contact.id);
@@ -57,16 +97,27 @@ function advisorApp() {
       } catch (e) {
         this.selectedContactAccounts = [];
       }
-      this.view = 'client';
+      this.setView('client');
+    },
+
+    rememberSelectedContact(contactId) {
+      if (!contactId) return;
+      try {
+        window.localStorage.setItem(TGK_SELECTED_CLIENT_STORAGE_KEY, contactId);
+      } catch (e) {}
     },
 
     goBack() {
-      this.view = 'dashboard';
+      this.setView('dashboard');
       this.selectedContact = null;
+      this.selectedContactAccounts = [];
     },
 
     async openOnboarding() {
       this.showOnboarding = true;
+      this.maestroCompleted = false;
+      this.maestroNewContact = null;
+      this.maestroIframeLoadCount = 0;
       await this.loadMaestroWorkflow();
     },
 
@@ -75,7 +126,47 @@ function advisorApp() {
       this.maestroInstanceUrl = '';
       this.maestroError = null;
       this.maestroLoading = false;
+      this.maestroCompleted = false;
+      this.maestroNewContact = null;
       this.stopOnboardingLoading();
+    },
+
+    onMaestroIframeLoad() {
+      this.maestroIframeLoadCount++;
+      // Skip the initial load and don't re-trigger if already completing
+      if (this.maestroIframeLoadCount <= 1 || this.maestroCompleted) return;
+
+      // Debounce: each navigation resets the timer so only the last one (done-page) fires
+      if (this._maestroRedirectTimer) clearTimeout(this._maestroRedirectTimer);
+
+      const app = this;
+      this._maestroRedirectTimer = setTimeout(function () {
+        app.maestroCompleted = true;
+
+        TGK_API.getContacts().then(function (contacts) {
+          app.contacts = contacts;
+
+          // Find the most recently created contact
+          const target = contacts.reduce(function (a, b) {
+            return new Date(b.created_at) > new Date(a.created_at) ? b : a;
+          });
+          app.maestroNewContact = target;
+
+          // Show confirmation briefly, then close and navigate
+          setTimeout(function () {
+            app.showOnboarding = false;
+            app.maestroInstanceUrl = '';
+            app.maestroCompleted = false;
+            app.maestroNewContact = null;
+            if (target) {
+              app.viewClient(target);
+            }
+          }, 2000);
+        }).catch(function () {
+          app.showOnboarding = false;
+          app.maestroCompleted = false;
+        });
+      }, 1000);
     },
 
     startOnboardingLoading() {
@@ -112,8 +203,11 @@ function advisorApp() {
 
       try {
         const session = await TGK_API.getSession();
-        if (!session?.connected || !session?.accountId) {
+        if (!session?.connected) {
           throw new Error('Connect a Docusign account before launching account opening.');
+        }
+        if (!session?.accountId) {
+          throw new Error('Select and save a Docusign account in Settings before launching account opening.');
         }
 
         const result = await TGK_API.triggerMaestroWorkflow(this.maestroWorkflowId, {

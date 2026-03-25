@@ -4,7 +4,6 @@ const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const { getDb } = require('./db/database');
-const { setupSession } = require('./middleware/session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,7 +18,6 @@ app.use(cors({
 app.use('/api/webhooks', require('./routes/webhooks'));
 
 app.use(express.json());
-setupSession(app);
 getDb();
 
 const swaggerSpec = swaggerJsdoc({

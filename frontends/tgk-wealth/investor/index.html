@@ -30,8 +30,8 @@
   <script src="../../shared/js/shared-components.js"></script>
   <script src="../../shared/js/stock-ticker.js"></script>
   <script src="../../shared/js/news-panel.js"></script>
-  <script src="../../shared/js/docusign-settings.js"></script>
-  <script src="js/app.js"></script>
+  <script src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
+  <script src="js/app.js?v=20260325-4"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f4f5f7; margin: 0; }
     .font-serif { font-family: Georgia, 'Times New Roman', serif; }
@@ -86,25 +86,25 @@
     </div>
 
     <nav class="flex-1 px-2 mt-2 space-y-1">
-      <button @click="tab = 'overview'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('overview')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span x-show="!sidebarCollapsed">Overview</span>
       </button>
-      <button @click="tab = 'holdings'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('holdings')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l8 8-8 8-8-8 8-8z"/></svg>
         <span x-show="!sidebarCollapsed">Holdings</span>
       </button>
-      <button @click="tab = 'documents'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('documents')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span x-show="!sidebarCollapsed">Documents</span>
       </button>
-      <button @click="tab = 'messages'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('messages')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Messages
           <template x-if="unreadCount > 0"><span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span></template>
         </span>
       </button>
-      <button @click="tab = 'settings'"
+      <button @click="setTab('settings')"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
         :class="tab === 'settings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -226,7 +226,7 @@
       <!-- Tab Nav -->
       <div x-show="tab !== 'settings'" class="flex gap-6 border-b border-gray-200 mb-6">
         <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'holdings',icon:'◈',label:'Holdings'},{id:'documents',icon:'▤',label:'Documents'},{id:'messages',icon:'✉',label:'Messages'}]" :key="t.id">
-          <button @click="tab = t.id" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+          <button @click="setTab(t.id)" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
             :class="tab === t.id ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
             <span x-text="t.icon"></span>
             <span x-text="t.label"></span>
@@ -301,7 +301,7 @@
               <div class="text-xs text-gray-400 mt-0.5" x-text="(TGK_CONFIG.advisor?.email || '') + ' · ' + (TGK_CONFIG.advisor?.phone || '')"></div>
             </div>
             <div class="ml-auto flex gap-2">
-              <button @click="tab = 'messages'" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">Send Message</button>
+              <button @click="setTab('messages')" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">Send Message</button>
             </div>
           </div>
         </div>
@@ -444,8 +444,8 @@
           </div>
 
           <!-- Demo Config + Docusign -->
-          <div class="space-y-6">
-            <div class="bg-white rounded-xl shadow-sm p-6">
+          <div class="flex flex-col gap-6">
+            <div class="order-2 bg-white rounded-xl shadow-sm p-6">
               <h2 class="font-semibold text-base text-navy mb-1">Demo Configuration</h2>
               <p class="text-xs text-gray-400 mb-5">Toggle features for this demo scenario.</p>
 
@@ -465,7 +465,7 @@
             </div>
 
             <!-- Docusign Connection -->
-            <div class="bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
+            <div class="order-1 bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
               <div class="flex items-start justify-between gap-4 mb-5">
                 <div>
                   <h2 class="font-semibold text-base text-navy mb-1">Docusign Connection</h2>
@@ -478,7 +478,7 @@
               <template x-if="error"><p class="text-sm text-red-500 mb-3" x-text="error"></p></template>
               <template x-if="notice"><p class="text-sm text-brand mb-3" x-text="notice"></p></template>
 
-              <template x-if="!loading && session?.accountId">
+              <template x-if="!loading && hasSavedAccount()">
                 <div class="space-y-4">
                   <div class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
                     <div class="flex items-start justify-between gap-4">
@@ -492,39 +492,60 @@
                         <div class="text-[11px] text-gray-400 mt-1" x-text="session.accountId"></div>
                       </div>
                       <div class="flex flex-wrap gap-2 justify-end">
+                        <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Change Account</button>
                         <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
                       </div>
                     </div>
                   </div>
+
+                  <template x-if="shouldShowAccountPicker()">
+                    <div class="space-y-3 rounded-xl border border-gray-200 p-4">
+                      <div class="text-sm font-medium text-navy">Change Account</div>
+                      <div class="text-xs text-gray-500">Choose a different Docusign account and save it for this demo.</div>
+                      <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
+                        <template x-for="account in availableAccounts()" :key="account.accountId">
+                          <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
+                        </template>
+                      </select>
+                      <div class="flex gap-2">
+                        <button @click="cancelAccountSelection()" class="flex-1 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 hover:border-gray-300 transition-colors">Cancel</button>
+                        <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="flex-1 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Selected Account'"></button>
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </template>
 
-              <template x-if="!loading && session?.pendingAccountSelection">
+              <template x-if="!loading && needsAccountSelection()">
                 <div class="space-y-4">
-                  <div class="rounded-xl border border-sky-100 bg-sky-50/70 p-4">
-                    <div class="text-sm font-medium text-navy">Choose Account</div>
-                    <div class="text-xs text-gray-500 mt-1">Select the Docusign account for this demo.</div>
+                  <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="flex items-center gap-2 mb-2">
+                          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                          <span class="text-sm font-medium text-amber-700">Connection Ready</span>
+                        </div>
+                        <div class="text-sm font-medium text-navy" x-text="session.name || session.email"></div>
+                        <div class="text-xs text-gray-500 mt-1">Select the Docusign account to save for this demo.</div>
+                      </div>
+                      <div class="flex flex-wrap gap-2 justify-end">
+                        <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
+                      </div>
+                    </div>
                   </div>
                   <div class="space-y-3 rounded-xl border border-gray-200 p-4">
-                    <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
-                      <template x-for="account in availableAccounts()" :key="account.accountId">
-                        <option :value="account.accountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
-                      </template>
-                    </select>
-                    <button @click="selectAccount(selectedAccountId)" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors">Use Selected Account</button>
+                    <div class="text-sm font-medium text-navy">Choose Account</div><div class="text-xs text-gray-500">Your connection is authorized. Save the account you want this demo to use.</div><select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40"><template x-for="account in availableAccounts()" :key="account.accountId"><option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option></template></select><button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Account'"></button>
                   </div>
                 </div>
               </template>
 
-              <template x-if="!loading && !session?.accountId && !session?.pendingAccountSelection">
+              <template x-if="!loading && !hasConnection()">
                 <div class="space-y-4">
                   <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
                     <div class="text-sm font-medium text-navy">No account connected</div>
                     <div class="text-xs text-gray-500 mt-1">Connect a Docusign account to enable live demo actions.</div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button>
-                  </div>
+                  <div class="flex items-center gap-2"><button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button></div>
                 </div>
               </template>
 

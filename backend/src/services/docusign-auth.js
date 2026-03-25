@@ -3,6 +3,7 @@ const crypto = require('crypto');
 // In-memory token cache: { [userId_accountId]: { token, expiresAt } }
 const tokenCache = new Map();
 const REQUIRED_SCOPES = ['signature', 'impersonation', 'aow_manage'];
+const CONSENT_STATE_MAX_AGE_MS = 60 * 60 * 1000;
 
 function normalizeScopes(scopes) {
   const requested = Array.isArray(scopes)
@@ -89,8 +90,53 @@ async function getAccessToken(userId, accountId) {
   return data.access_token;
 }
 
-function createConsentState() {
-  return base64url(crypto.randomBytes(24));
+function getConsentStateSecret() {
+  return String(
+    process.env.DOCUSIGN_STATE_SECRET
+    || process.env.SESSION_SECRET
+    || process.env.DOCUSIGN_SECRET_KEY
+    || 'dev-secret-change-me'
+  );
+}
+
+function createConsentState(payload = {}) {
+  const encodedPayload = base64url(JSON.stringify({
+    ...payload,
+    iat: Date.now()
+  }));
+  const signature = signValue(encodedPayload);
+  return `${encodedPayload}.${signature}`;
+}
+
+function readConsentState(value) {
+  const [encodedPayload, signature] = String(value || '').split('.');
+  if (!encodedPayload || !signature) {
+    throw new Error('Docusign consent state verification failed');
+  }
+
+  const expectedSignature = signValue(encodedPayload);
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  if (
+    actualBuffer.length !== expectedBuffer.length
+    || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)
+  ) {
+    throw new Error('Docusign consent state verification failed');
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(fromBase64url(encodedPayload).toString('utf8'));
+  } catch (error) {
+    throw new Error('Docusign consent state verification failed');
+  }
+
+  if (!payload?.iat || Date.now() - Number(payload.iat) > CONSENT_STATE_MAX_AGE_MS) {
+    throw new Error('Docusign consent state expired');
+  }
+
+  return payload;
 }
 
 /**
@@ -176,11 +222,26 @@ function base64url(str) {
     .replace(/=+$/, '');
 }
 
+function fromBase64url(value) {
+  const normalized = String(value || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
+  return Buffer.from(`${normalized}${padding}`, 'base64');
+}
+
+function signValue(value) {
+  return base64url(
+    crypto.createHmac('sha256', getConsentStateSecret()).update(String(value || '')).digest()
+  );
+}
+
 module.exports = {
   createConsentState,
   getAccessToken,
   getConsentUrl,
   getUserInfoFromCode,
+  readConsentState,
   normalizeScopes,
   normalizeScopeString
 };

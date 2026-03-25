@@ -116,6 +116,7 @@ function demoSettingsPanel() {
     saveConfig() {
       const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       existing.config = { ...existing.config, idVerification: this.idVerification };
+      delete existing.config.countersignatures;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
     },
 

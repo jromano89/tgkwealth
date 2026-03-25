@@ -30,13 +30,14 @@
   <script src="../../shared/js/shared-components.js"></script>
   <script src="../../shared/js/stock-ticker.js"></script>
   <script src="../../shared/js/news-panel.js"></script>
-  <script src="../../shared/js/docusign-settings.js"></script>
-  <script src="js/app.js"></script>
+  <script src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
+  <script src="js/app.js?v=20260325-4"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f4f5f7; margin: 0; }
     .font-serif { font-family: Georgia, 'Times New Roman', serif; }
     .ticker-scroll { animation: scroll 45s linear infinite; }
     @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes shrink { 0% { width: 100%; } 100% { width: 0%; } }
     .flash-green { background-color: rgba(22,163,74,0.15) !important; transition: background 0.3s; }
     .flash-red { background-color: rgba(220,38,38,0.15) !important; transition: background 0.3s; }
     [x-cloak] { display: none !important; }
@@ -88,19 +89,19 @@
 
     <!-- Nav -->
     <nav class="flex-1 px-2 mt-2 space-y-1">
-      <button @click="view = 'dashboard'; selectedContact = null"
+      <button @click="goBack()"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
         :class="view === 'dashboard' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span x-show="!sidebarCollapsed">Dashboard</span>
       </button>
-      <button @click="view = 'documents'"
+      <button @click="setView('documents')"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
         :class="view === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span x-show="!sidebarCollapsed">Documents</span>
       </button>
-      <button @click="view = 'settings'"
+      <button @click="setView('settings')"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
         :class="view === 'settings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -435,8 +436,8 @@
         </div>
 
         <!-- Demo Config -->
-        <div class="space-y-6">
-          <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex flex-col gap-6">
+          <div class="order-2 bg-white rounded-xl shadow-sm p-6">
             <h2 class="font-semibold text-base text-navy mb-1">Demo Configuration</h2>
             <p class="text-xs text-gray-400 mb-5">Toggle features for this demo scenario.</p>
 
@@ -456,7 +457,7 @@
           </div>
 
           <!-- Docusign Connection -->
-          <div class="bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
+          <div class="order-1 bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div>
                 <h2 class="font-semibold text-base text-navy mb-1">Docusign Connection</h2>
@@ -469,7 +470,7 @@
             <template x-if="error"><p class="text-sm text-red-500 mb-3" x-text="error"></p></template>
             <template x-if="notice"><p class="text-sm text-brand mb-3" x-text="notice"></p></template>
 
-            <template x-if="!loading && session?.accountId">
+            <template x-if="!loading && hasSavedAccount()">
               <div class="space-y-4">
                 <div class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
                   <div class="flex items-start justify-between gap-4">
@@ -483,39 +484,67 @@
                       <div class="text-[11px] text-gray-400 mt-1" x-text="session.accountId"></div>
                     </div>
                     <div class="flex flex-wrap gap-2 justify-end">
+                      <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Change Account</button>
                       <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
                     </div>
                   </div>
                 </div>
+
+                <template x-if="shouldShowAccountPicker()">
+                  <div class="space-y-3 rounded-xl border border-gray-200 p-4">
+                    <div class="text-sm font-medium text-navy">Change Account</div>
+                    <div class="text-xs text-gray-500">Choose a different Docusign account and save it for this demo.</div>
+                    <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
+                      <template x-for="account in availableAccounts()" :key="account.accountId">
+                        <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
+                      </template>
+                    </select>
+                    <div class="flex gap-2">
+                      <button @click="cancelAccountSelection()" class="flex-1 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 hover:border-gray-300 transition-colors">Cancel</button>
+                      <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="flex-1 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Selected Account'"></button>
+                    </div>
+                  </div>
+                </template>
               </div>
             </template>
 
-            <template x-if="!loading && session?.pendingAccountSelection">
+            <template x-if="!loading && needsAccountSelection()">
               <div class="space-y-4">
-                <div class="rounded-xl border border-sky-100 bg-sky-50/70 p-4">
-                  <div class="text-sm font-medium text-navy">Choose Account</div>
-                  <div class="text-xs text-gray-500 mt-1">Select the Docusign account for this demo.</div>
+                <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span class="text-sm font-medium text-amber-700">Connection Ready</span>
+                      </div>
+                      <div class="text-sm font-medium text-navy" x-text="session.name || session.email"></div>
+                      <div class="text-xs text-gray-500 mt-1">Select the Docusign account to save for this demo.</div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-end">
+                      <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
+                    </div>
+                  </div>
                 </div>
                 <div class="space-y-3 rounded-xl border border-gray-200 p-4">
+                  <div class="text-sm font-medium text-navy">Choose Account</div>
+                  <div class="text-xs text-gray-500">Your connection is authorized. Save the account you want this demo to use.</div>
                   <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
                     <template x-for="account in availableAccounts()" :key="account.accountId">
-                      <option :value="account.accountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
+                      <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
                     </template>
                   </select>
-                  <button @click="selectAccount(selectedAccountId)" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors">Use Selected Account</button>
+                  <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Account'"></button>
                 </div>
               </div>
             </template>
 
-            <template x-if="!loading && !session?.accountId && !session?.pendingAccountSelection">
+            <template x-if="!loading && !hasConnection()">
               <div class="space-y-4">
                 <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
                   <div class="text-sm font-medium text-navy">No account connected</div>
                   <div class="text-xs text-gray-500 mt-1">Connect a Docusign account to enable live demo actions.</div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button>
-                </div>
+                <div class="flex items-center gap-2"><button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button></div>
               </div>
             </template>
 
@@ -617,14 +646,35 @@
               </div>
             </template>
 
-            <template x-if="!maestroLoading && !maestroError && maestroInstanceUrl">
+            <template x-if="!maestroLoading && !maestroError && maestroInstanceUrl && !maestroCompleted">
               <iframe
                 class="h-full w-full border-0 bg-white"
                 :src="maestroInstanceUrl"
+                @load="onMaestroIframeLoad($event)"
                 title="Docusign IAM Account Opening"
                 referrerpolicy="strict-origin-when-cross-origin"
                 allow="clipboard-write; fullscreen">
               </iframe>
+            </template>
+
+            <template x-if="maestroCompleted && maestroNewContact">
+              <div class="flex h-full items-center justify-center p-10">
+                <div class="w-full max-w-2xl rounded-2xl border border-emerald-200 bg-white p-8 shadow-sm text-center">
+                  <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+                    <svg class="h-7 w-7 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <h3 class="text-xl font-semibold text-navy mb-2">Account opened successfully</h3>
+                  <p class="text-sm text-gray-500 leading-6">
+                    <span x-text="maestroNewContact.first_name + ' ' + maestroNewContact.last_name"></span>
+                    has been added to your book. Redirecting now…
+                  </p>
+                  <div class="mt-6 h-1 overflow-hidden rounded-full bg-emerald-100">
+                    <div class="h-full rounded-full bg-emerald-500 animate-[shrink_3s_linear_forwards]"></div>
+                  </div>
+                </div>
+              </div>
             </template>
           </div>
         </div>

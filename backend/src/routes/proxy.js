@@ -1,6 +1,6 @@
 const express = require('express');
 const { getAccessToken } = require('../services/docusign-auth');
-const { createError, getConnectionForApp, getRequiredApp } = require('../utils');
+const { createError, getConnectionForApp, getRequiredApp, requireSelectedDocusignAccount } = require('../utils');
 
 const router = express.Router();
 const HOP_BY_HOP_HEADERS = new Set([
@@ -23,34 +23,158 @@ const CONTROL_QUERY_KEYS = new Set([
 /**
  * @swagger
  * /api/proxy:
- *   all:
- *     summary: Generic CORS pass-through to an arbitrary URL
+ *   post:
+ *     summary: Generic CORS pass-through proxy
  *     tags: [Proxy]
  *     description: |
- *       Proxies requests to a target URL to avoid browser CORS restrictions.
- *       You can invoke it in one of two ways:
- *       1. POST /api/proxy with JSON body containing { method, url, headers, body, authMode, bearerToken }
- *       2. GET /api/proxy?url=https://example.com/feed.xml&authMode=none
+ *       Proxies a request to a target URL to avoid browser CORS restrictions.
+ *       The proxy resolves the target from the JSON body and forwards the request,
+ *       returning the upstream response as-is.
  *
- *       authMode:
- *       - none: no Authorization header is added
- *       - bearer: adds Authorization: Bearer <bearerToken>
- *       - docusign: resolves a Docusign access token from the current session
+ *       **Auth modes**
+ *       | Mode | Behavior |
+ *       |------|----------|
+ *       | `none` | No Authorization header (default) |
+ *       | `bearer` | Adds `Authorization: Bearer <bearerToken>` |
+ *       | `docusign` | Resolves a Docusign access token from the current app connection and adds it as a Bearer token. `{accountId}` placeholders in `url`, `path`, and `baseUrl` are replaced with the connected account ID. |
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 description: HTTP method for the upstream request.
+ *                 default: GET
+ *                 example: POST
+ *               url:
+ *                 type: string
+ *                 description: Absolute target URL. Mutually exclusive with `path`/`baseUrl`.
+ *                 example: https://api.example.com/v1/resource
+ *               path:
+ *                 type: string
+ *                 description: Relative path appended to `baseUrl`. Use instead of `url` when a base is shared.
+ *                 example: /v1/accounts/{accountId}/workflows/abc123/actions/trigger
+ *               baseUrl:
+ *                 type: string
+ *                 description: Base URL for relative `path`. Defaults to the Docusign eSign REST API base.
+ *                 example: https://api-d.docusign.com
+ *               authMode:
+ *                 type: string
+ *                 enum: [none, bearer, docusign]
+ *                 default: none
+ *               bearerToken:
+ *                 type: string
+ *                 description: Required when `authMode` is `bearer`.
+ *               headers:
+ *                 type: object
+ *                 description: Additional headers to send upstream. Hop-by-hop headers (host, cookie, etc.) are stripped.
+ *                 additionalProperties:
+ *                   type: string
+ *               query:
+ *                 type: object
+ *                 description: Query-string parameters appended to the target URL.
+ *                 additionalProperties:
+ *                   type: string
+ *               body:
+ *                 description: Body to send upstream. Objects are JSON-serialised automatically.
+ *           examples:
+ *             docusign-maestro:
+ *               summary: Trigger a Docusign Maestro workflow
+ *               value:
+ *                 method: POST
+ *                 path: /v1/accounts/{accountId}/workflows/7cc7fa67-843e-4e45-8ea8-80f451819028/actions/trigger
+ *                 baseUrl: https://api-d.docusign.com
+ *                 authMode: docusign
+ *                 body:
+ *                   instance_name: Account Opening 2025-01-15
+ *                   trigger_inputs: {}
+ *             external-api:
+ *               summary: Fetch from an external API with a bearer token
+ *               value:
+ *                 method: GET
+ *                 url: https://api.example.com/v1/data
+ *                 authMode: bearer
+ *                 bearerToken: eyJhbGciOi...
+ *             simple-get:
+ *               summary: Simple GET with no auth
+ *               value:
+ *                 method: GET
+ *                 url: https://example.com/feed.xml
+ *                 authMode: none
+ *     responses:
+ *       200:
+ *         description: Upstream response forwarded as-is. Content-Type matches the upstream response.
+ *       400:
+ *         description: Bad request — missing target URL, unsupported authMode, or missing bearerToken.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       401:
+ *         description: No active Docusign connection (when authMode is `docusign`).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *   get:
+ *     summary: Proxy via query parameters
+ *     tags: [Proxy]
+ *     description: |
+ *       Lightweight alternative for simple GET requests. Pass the target URL and auth mode as query parameters.
+ *     parameters:
+ *       - in: query
+ *         name: url
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Absolute target URL.
+ *       - in: query
+ *         name: authMode
+ *         schema:
+ *           type: string
+ *           enum: [none, bearer, docusign]
+ *           default: none
+ *       - in: query
+ *         name: bearerToken
+ *         schema:
+ *           type: string
+ *         description: Required when `authMode` is `bearer`.
+ *     responses:
+ *       200:
+ *         description: Upstream response forwarded as-is.
  *
- *       Existing /api/proxy/{path} Docusign-style calls remain supported for backward compatibility.
- */
-router.all('/', handleProxy);
-
-/**
- * @swagger
  * /api/proxy/{path}:
  *   all:
- *     summary: Backward-compatible proxy for relative paths
+ *     summary: Legacy path-based proxy (backward-compatible)
  *     tags: [Proxy]
  *     description: |
- *       Legacy route preserved for compatibility. Relative paths default to Docusign auth and
- *       DOCUSIGN_API_BASE unless authMode/baseUrl are provided explicitly.
+ *       Proxies to a relative Docusign API path. Defaults to `authMode: docusign` and uses
+ *       the configured `DOCUSIGN_API_BASE` as the base URL. Query parameters are forwarded
+ *       to the upstream request.
+ *
+ *       Prefer `POST /api/proxy` with an explicit body for new integrations.
+ *     parameters:
+ *       - in: path
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Relative path appended to DOCUSIGN_API_BASE.
+ *         example: v2.1/accounts/{accountId}/envelopes
+ *     responses:
+ *       200:
+ *         description: Upstream response forwarded as-is.
  */
+router.all('/', handleProxy);
 router.all('/*', handleProxy);
 
 async function handleProxy(req, res) {
@@ -108,10 +232,7 @@ function getDocusignSession(req) {
   const { getDb } = require('../db/database');
   const db = getDb();
   const app = getRequiredApp(db, req);
-  const connection = getConnectionForApp(db, app.id);
-  if (!connection) {
-    throw createError(401, 'No active Docusign connection for this app. Use /api/auth/login to connect.');
-  }
+  const connection = requireSelectedDocusignAccount(getConnectionForApp(db, app.id));
   return {
     userId: connection.docusign_user_id,
     accountId: connection.docusign_account_id

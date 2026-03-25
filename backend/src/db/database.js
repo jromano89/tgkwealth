@@ -31,7 +31,7 @@ function createTables() {
       id TEXT PRIMARY KEY,
       app_id TEXT NOT NULL UNIQUE REFERENCES apps(id),
       docusign_user_id TEXT NOT NULL,
-      docusign_account_id TEXT NOT NULL,
+      docusign_account_id TEXT,
       account_name TEXT,
       user_name TEXT,
       email TEXT,
@@ -134,8 +134,11 @@ function migrateDocusignConnectionsTable() {
     return;
   }
 
-  const columnNames = new Set(getTableColumns('docusign_connections').map((column) => column.name));
+  const tableColumns = getTableColumns('docusign_connections');
+  const columnNames = new Set(tableColumns.map((column) => column.name));
+  const accountIdColumn = tableColumns.find((column) => column.name === 'docusign_account_id');
   const needsRebuild =
+    !!accountIdColumn?.notnull ||
     columnNames.has('status') ||
     columnNames.has('disconnected_at') ||
     columnNames.has('consented_scopes') ||
@@ -154,7 +157,7 @@ function migrateDocusignConnectionsTable() {
         id TEXT PRIMARY KEY,
         app_id TEXT NOT NULL UNIQUE REFERENCES apps(id),
         docusign_user_id TEXT NOT NULL,
-        docusign_account_id TEXT NOT NULL,
+        docusign_account_id TEXT,
         account_name TEXT,
         user_name TEXT,
         email TEXT,
@@ -192,7 +195,7 @@ function migrateDocusignConnectionsTable() {
         row.id,
         row.app_id,
         row.docusign_user_id,
-        row.docusign_account_id,
+        row.docusign_account_id || null,
         row.account_name || null,
         row.user_name || null,
         row.email || null,

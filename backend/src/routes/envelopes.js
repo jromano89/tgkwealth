@@ -1,7 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../db/database');
-const { requireDocusignConnection } = require('../middleware/session');
+const { requireDocusignConnection } = require('../middleware/docusign-connection');
 const { createError, getConnectionForApp, getRequiredApp, parseJsonFields } = require('../utils');
 const envelopeService = require('../services/docusign-envelopes');
 const router = express.Router();
@@ -106,7 +106,7 @@ router.get('/:id', async (req, res) => {
     if (!envelope) throw createError(404, 'Envelope not found');
 
     const connection = getConnectionForApp(db, app.id);
-    if (connection && envelope.docusign_envelope_id) {
+    if (connection?.docusign_account_id && envelope.docusign_envelope_id) {
       try {
         const live = await envelopeService.getEnvelope(
           connection.docusign_user_id,

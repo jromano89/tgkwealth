@@ -21,9 +21,9 @@ function newsPanel() {
   function categorize(title, source) {
     const haystack = `${title} ${source}`.toLowerCase();
 
-    if (/(sec |regulation|regulator|\brule\b|fiduciary|compliance|doj|dol\b|legislation|policy|policymaker)/.test(haystack)) return 'POLICY';
-    if (/(fed\b|inflation|economy|economic|consumer|jobs\b|gdp|recession|tariff|war\b|iran)/.test(haystack)) return 'MACRO';
-    if (/(bond|treasury|yield|muni|fixed income|stock|dow|s&p|nasdaq|earnings|equity|wall street|market|gold|oil\b|energy|commodity|commodities|crude|natural gas|brent)/.test(haystack)) return 'MARKETS';
+    if (/(fed\b|fomc|central bank|rate cut|rate hike|policy|policymaker|regulation|regulator|\brule\b|sec\b|doj|dol\b|white house|congress|treasury secretary|tariff|sanction|trade talks?|opec|government|legislation)/.test(haystack)) return 'POLICY';
+    if (/(inflation|economy|economic|consumer|jobs\b|payrolls?|gdp|recession|housing|retail sales|manufacturing|growth|unemployment|confidence|spending|deficit|debt\b|war\b|china|europe)/.test(haystack)) return 'MACRO';
+    if (/(bond|treasury|yield|muni|fixed income|stock|dow|s&p|nasdaq|earnings|guidance|results|buyback|dividend|merger|acquisition|deal\b|ipo\b|ceo\b|cfo\b|company|corporate|wall street|market|futures|vix|gold|oil\b|energy|commodity|commodities|crude|natural gas|brent|bitcoin|crypto|dollar|forex|fx\b|currency|yen|euro|shares? (rise|fall|jump|drop|slip|surge))/.test(haystack)) return 'MARKETS';
     return 'MARKETS';
   }
 
@@ -43,7 +43,13 @@ function newsPanel() {
       return { label: 'Earnings', color: 'bg-blue-100 text-blue-700' };
     }
     if (category === 'POLICY') {
-      return { label: 'Compliance', color: 'bg-amber-100 text-amber-700' };
+      return { label: 'Policy', color: 'bg-amber-100 text-amber-700' };
+    }
+    if (/(merger|acquisition|deal\b|ipo\b)/.test(haystack)) {
+      return { label: 'Deal', color: 'bg-indigo-100 text-indigo-700' };
+    }
+    if (category === 'MACRO') {
+      return { label: 'Macro', color: 'bg-sky-100 text-sky-700' };
     }
     if (/(alert|warning|surge|plunge|selloff)/.test(haystack)) {
       return { label: 'Alert', color: 'bg-purple-100 text-purple-700' };

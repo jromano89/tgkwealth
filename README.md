@@ -127,15 +127,3 @@ To build another frontend against this backend:
 3. point it at this backend
 4. optionally seed app-specific demo data
 5. use the shared API contract instead of building a new backend
-
-## Important Files
-
-- `backend/src/index.js`
-- `backend/src/routes/apps.js`
-- `backend/src/routes/auth.js`
-- `backend/src/routes/data.js`
-- `backend/src/routes/envelopes.js`
-- `backend/src/routes/proxy.js`
-- `backend/src/routes/webhooks.js`
-- `backend/src/services/docusign-auth.js`
-- `backend/src/db/database.js`

@@ -23,6 +23,8 @@ function docusignSettings() {
     showScopesModal: false,
     requestedScopesText: DEFAULT_SCOPES,
     selectedAccountId: '',
+    showAccountPicker: false,
+    savingAccount: false,
     authInProgress: false,
     popupWindow: null,
     popupPoller: null,
@@ -38,8 +40,8 @@ function docusignSettings() {
 
       if (callbackStatus?.status === 'error') {
         this.error = callbackStatus.message || 'Docusign connection failed.';
-      } else if (callbackStatus?.status === 'select-account' || this.session?.pendingAccountSelection) {
-        this.notice = 'Select the Docusign account to use.';
+      } else if (callbackStatus?.status === 'connected') {
+        this.notice = this.connectionNotice();
       } else {
         this.notice = null;
       }
@@ -50,12 +52,29 @@ function docusignSettings() {
       try {
         this.session = await TGK_API.getSession();
         this.error = null;
-        this.selectedAccountId = this.session?.accountId || this.session?.accounts?.[0]?.accountId || '';
+        this.syncAccountSelectionState();
       } catch (e) {
         this.session = null;
         this.error = e.message;
+        this.selectedAccountId = '';
+        this.showAccountPicker = false;
       }
       this.loading = false;
+    },
+
+    syncAccountSelectionState() {
+      const accounts = this.availableAccounts();
+      const selectedAccountStillExists = accounts.some((account) => account.accountId === this.selectedAccountId);
+      if (!selectedAccountStillExists) {
+        this.selectedAccountId = this.session?.accountId || accounts[0]?.accountId || '';
+      }
+      if (!this.session?.connected) {
+        this.showAccountPicker = false;
+        return;
+      }
+      if (!this.session?.accountId) {
+        this.showAccountPicker = accounts.length > 0;
+      }
     },
 
     consumeCallbackStatus() {
@@ -100,8 +119,8 @@ function docusignSettings() {
 
       await this.checkSession();
 
-      if (result?.status === 'select-account') {
-        this.notice = 'Select the Docusign account to use.';
+      if (result?.status === 'connected') {
+        this.notice = this.connectionNotice();
       } else {
         this.notice = null;
       }
@@ -148,16 +167,41 @@ function docusignSettings() {
       }
     },
 
+    beginAccountSelection() {
+      this.selectedAccountId = this.session?.accountId || this.availableAccounts()[0]?.accountId || '';
+      this.showAccountPicker = true;
+      this.error = null;
+      this.notice = null;
+    },
+
+    cancelAccountSelection() {
+      if (!this.hasSavedAccount()) {
+        return;
+      }
+      this.selectedAccountId = this.session?.accountId || '';
+      this.showAccountPicker = false;
+      this.error = null;
+    },
+
     async selectAccount(accountId) {
       try {
-        if (!accountId || accountId === this.session?.accountId) {
+        if (!accountId) {
           return;
         }
+        if (accountId === this.session?.accountId) {
+          this.showAccountPicker = false;
+          this.notice = `${this.session?.accountName || 'This Docusign account'} is already active.`;
+          return;
+        }
+        this.savingAccount = true;
         await TGK_API.selectAccount(accountId);
         await this.checkSession();
-        this.notice = `Using ${this.session?.accountName || 'the selected Docusign account'}.`;
+        this.showAccountPicker = false;
+        this.notice = `Saved ${this.session?.accountName || 'the selected Docusign account'} as the active Docusign account.`;
       } catch (e) {
         this.error = e.message;
+      } finally {
+        this.savingAccount = false;
       }
     },
 
@@ -197,6 +241,32 @@ function docusignSettings() {
 
     resetRequestedScopes() {
       this.requestedScopesText = DEFAULT_SCOPES;
+    },
+
+    connectionNotice() {
+      return this.needsAccountSelection()
+        ? 'Docusign connected. Select an account to finish setup.'
+        : 'Docusign account connected.';
+    },
+
+    hasConnection() {
+      return !!this.session?.connected;
+    },
+
+    hasSavedAccount() {
+      return !!this.session?.accountId;
+    },
+
+    needsAccountSelection() {
+      return this.hasConnection() && !this.hasSavedAccount();
+    },
+
+    shouldShowAccountPicker() {
+      return this.showAccountPicker && this.availableAccounts().length > 0;
+    },
+
+    canChangeAccount() {
+      return this.hasSavedAccount() && this.availableAccounts().length > 1;
     },
 
     availableAccounts() {

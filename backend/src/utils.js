@@ -93,9 +93,20 @@ function getConnectionForApp(db, appId) {
   );
 }
 
+function requireSelectedDocusignAccount(connection) {
+  if (!connection) throw createError(401, 'No active Docusign connection for this app. Use /api/auth/login to connect.');
+  if (!connection.docusign_account_id) throw createError(409, 'Docusign is connected, but no account is selected. Open Settings and save an account first.');
+  return connection;
+}
+
 function upsertConnection(db, app, { userId, accountId, accountName, userName, email, availableAccounts }) {
   const existing = parseJsonFields(db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(app.id));
   const id = existing?.id || uuidv4();
+  const resolvedAccountId = accountId !== undefined ? accountId : existing?.docusign_account_id || null;
+  const resolvedAccountName = accountName !== undefined ? accountName : existing?.account_name || null;
+  const resolvedUserName = userName !== undefined ? userName : existing?.user_name || null;
+  const resolvedEmail = email !== undefined ? email : existing?.email || null;
+  const resolvedAvailableAccounts = availableAccounts !== undefined ? availableAccounts : (existing?.available_accounts || []);
 
   db.prepare(`
     INSERT INTO docusign_connections (id, app_id, docusign_user_id, docusign_account_id, account_name, user_name, email, available_accounts)
@@ -112,11 +123,11 @@ function upsertConnection(db, app, { userId, accountId, accountName, userName, e
     id,
     app.id,
     userId,
-    accountId,
-    accountName || existing?.account_name || null,
-    userName || existing?.user_name || null,
-    email || existing?.email || null,
-    serializeJson(availableAccounts || existing?.available_accounts || [])
+    resolvedAccountId,
+    resolvedAccountName,
+    resolvedUserName,
+    resolvedEmail,
+    serializeJson(resolvedAvailableAccounts)
   );
 
   return getConnectionForApp(db, app.id);
@@ -142,6 +153,7 @@ module.exports = {
   getAppStats,
   getConnectionForApp,
   getRequiredApp,
+  requireSelectedDocusignAccount,
   normalizeSlug,
   parseJsonFields,
   serializeJson,
