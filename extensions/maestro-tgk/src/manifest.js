@@ -1,0 +1,27 @@
+const fs = require('fs');
+const path = require('path');
+const { config } = require('./config');
+
+const templatePath = path.join(__dirname, '..', 'manifest', 'clientCredentials.ReadWriteManifest.template.json');
+
+function buildManifest(publicBaseUrl) {
+  const replacements = {
+    '__PUBLIC_BASE_URL__': publicBaseUrl,
+    '__CLIENT_ID__': config.oauthClientId,
+    '__CLIENT_SECRET__': config.oauthClientSecret,
+    '__PUBLISHER_NAME__': config.publisherName,
+    '__PUBLISHER_EMAIL__': config.publisherEmail,
+    '__PUBLISHER_PHONE__': config.publisherPhone
+  };
+
+  let content = fs.readFileSync(templatePath, 'utf8');
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    content = content.split(placeholder).join(String(value));
+  }
+
+  return JSON.parse(content);
+}
+
+module.exports = {
+  buildManifest
+};

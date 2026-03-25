@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
+    "dev:maestro-extension": "npm --prefix extensions/maestro-tgk run dev",
     "seed:tgk": "node scripts/seed-tgk.js",
-    "start:backend": "npm --prefix backend run start"
+    "start:backend": "npm --prefix backend run start",
+    "start:maestro-extension": "npm --prefix extensions/maestro-tgk run start"
   }
 }

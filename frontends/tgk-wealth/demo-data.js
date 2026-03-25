@@ -78,7 +78,7 @@ const DEMO_BOOTSTRAP = {
       organization: 'Brickell Wealth Group',
       status: 'pending',
       tags: ['pending-onboard'],
-      data: { firstName: 'Sophia', lastName: 'Reyes-Martin', value: 620000000, netWorth: 780000000, changePct: 2.1, riskProfile: 'Growth', role: 'Private Banking Client', assignedTo: 'Gordon Gecko', avatar: '#ec4899' }
+      data: { firstName: 'Sophia', lastName: 'Reyes-Martin', value: 0, netWorth: 0, changePct: 0, riskProfile: 'Pending', role: 'Prospective Client', assignedTo: 'Gordon Gecko', avatar: '#ec4899', lifecycleStage: 'pending_signature' }
     }
   ],
   records: [
@@ -98,8 +98,8 @@ const DEMO_BOOTSTRAP = {
     { ref: 'acct-james-1', profileRef: 'james-holden', kind: 'account', title: 'Joint Brokerage', status: 'active', data: { typeCode: 'type-a', accountType: 'Taxable', value: 280000000, ytdReturn: 7.3, allocEquity: 60, allocFixed: 20, allocAlt: 12, allocCash: 8 } },
     { ref: 'acct-james-2', profileRef: 'james-holden', kind: 'account', title: 'James IRA', status: 'active', data: { typeCode: 'type-b', accountType: 'Tax-Deferred', value: 120000000, ytdReturn: 4.1, allocEquity: 50, allocFixed: 30, allocAlt: 10, allocCash: 10 } },
     { ref: 'acct-james-3', profileRef: 'james-holden', kind: 'account', title: 'Priya IRA', status: 'active', data: { typeCode: 'type-b', accountType: 'Tax-Deferred', value: 90000000, ytdReturn: 4.8, allocEquity: 55, allocFixed: 25, allocAlt: 12, allocCash: 8 } },
-    { ref: 'acct-sophia-1', profileRef: 'sophia-reyes-martin', kind: 'account', title: 'Individual Brokerage', status: 'pending', data: { typeCode: 'type-a', accountType: 'Taxable', value: 420000000, ytdReturn: 6.5, allocEquity: 65, allocFixed: 15, allocAlt: 12, allocCash: 8 } },
-    { ref: 'acct-sophia-2', profileRef: 'sophia-reyes-martin', kind: 'account', title: 'Roth IRA', status: 'pending', data: { typeCode: 'type-b', accountType: 'Tax-Free', value: 200000000, ytdReturn: 8.2, allocEquity: 70, allocFixed: 10, allocAlt: 15, allocCash: 5 } }
+    { ref: 'acct-sophia-1', profileRef: 'sophia-reyes-martin', kind: 'account', title: 'Individual Brokerage', status: 'pending', data: { typeCode: 'type-a', accountType: 'Taxable', value: 0, ytdReturn: 0, allocEquity: 0, allocFixed: 0, allocAlt: 0, allocCash: 100 } },
+    { ref: 'acct-sophia-2', profileRef: 'sophia-reyes-martin', kind: 'account', title: 'Roth IRA', status: 'pending', data: { typeCode: 'type-b', accountType: 'Tax-Free', value: 0, ytdReturn: 0, allocEquity: 0, allocFixed: 0, allocAlt: 0, allocCash: 100 } }
   ]
 };
 

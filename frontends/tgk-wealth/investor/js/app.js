@@ -16,7 +16,7 @@ function investorApp() {
 
     async init() {
       try {
-        this.contacts = await TGK_API.getContacts();
+        this.contacts = this.sortContacts(await TGK_API.getContacts());
         this.setTab(this.restoreTab());
         let requestedClientId = null;
         try {
@@ -32,6 +32,14 @@ function investorApp() {
         console.error('Failed to load:', e);
       }
       this.loading = false;
+    },
+
+    sortContacts(contacts) {
+      return [...(contacts || [])].sort((a, b) => {
+        const left = `${a.first_name || ''} ${a.last_name || ''}`.trim();
+        const right = `${b.first_name || ''} ${b.last_name || ''}`.trim();
+        return left.localeCompare(right, undefined, { sensitivity: 'base' });
+      });
     },
 
     restoreTab() {

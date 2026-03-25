@@ -581,19 +581,18 @@
     <template x-if="showOnboarding">
       <div class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeOnboarding()"></div>
-        <div class="relative flex h-[min(92vh,980px)] w-[min(96vw,1400px)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-          <div class="flex items-start justify-between border-b border-gray-200 px-8 py-6">
-            <div>
-              <h2 class="font-serif text-2xl font-semibold text-navy mb-1">New Account Opening</h2>
-              <p class="text-sm text-gray-500">Launch a Docusign IAM account opening flow without leaving the portal.</p>
+        <div class="relative flex h-[min(95vh,1040px)] w-[min(92vw,1260px)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+            <div class="min-w-0 pr-4">
+              <h2 class="font-serif text-lg font-semibold text-navy leading-tight">New Account Opening</h2>
             </div>
             <div class="flex items-center gap-2">
               <template x-if="maestroInstanceUrl">
-                <a :href="maestroInstanceUrl" target="_blank" rel="noreferrer" class="px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:border-gray-300 hover:text-navy transition-colors">
+                <a :href="maestroInstanceUrl" target="_blank" rel="noreferrer" class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-medium text-gray-600 hover:border-gray-300 hover:text-navy transition-colors">
                   Open in New Tab
                 </a>
               </template>
-              <button @click="closeOnboarding()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+              <button @click="closeOnboarding()" class="h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg leading-none transition-colors">&times;</button>
             </div>
           </div>
 
@@ -650,7 +649,7 @@
               <iframe
                 class="h-full w-full border-0 bg-white"
                 :src="maestroInstanceUrl"
-                @load="onMaestroIframeLoad($event)"
+                @load="handleOnboardingFrameLoad()"
                 title="Docusign IAM Account Opening"
                 referrerpolicy="strict-origin-when-cross-origin"
                 allow="clipboard-write; fullscreen">

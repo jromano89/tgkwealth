@@ -93,7 +93,6 @@ async function getAccessToken(userId, accountId) {
 function getConsentStateSecret() {
   return String(
     process.env.DOCUSIGN_STATE_SECRET
-    || process.env.SESSION_SECRET
     || process.env.DOCUSIGN_SECRET_KEY
     || 'dev-secret-change-me'
   );

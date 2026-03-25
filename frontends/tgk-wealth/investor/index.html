@@ -33,7 +33,7 @@
   <script src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
   <script src="js/app.js?v=20260325-4"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f4f5f7; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f5f7fb; margin: 0; --color-navy: #202443; --color-navy-light: #30365f; --color-brand: #4c6ef5; --color-brand-light: #7c91ff; }
     .font-serif { font-family: Georgia, 'Times New Roman', serif; }
     .ticker-scroll { animation: scroll 45s linear infinite; }
     @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -86,19 +86,19 @@
     </div>
 
     <nav class="flex-1 px-2 mt-2 space-y-1">
-      <button @click="setTab('overview')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('overview')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span x-show="!sidebarCollapsed">Overview</span>
       </button>
-      <button @click="setTab('holdings')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('holdings')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l8 8-8 8-8-8 8-8z"/></svg>
         <span x-show="!sidebarCollapsed">Holdings</span>
       </button>
-      <button @click="setTab('documents')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('documents')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span x-show="!sidebarCollapsed">Documents</span>
       </button>
-      <button @click="setTab('messages')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+      <button @click="setTab('messages')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Messages
           <template x-if="unreadCount > 0"><span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span></template>
@@ -106,10 +106,18 @@
       </button>
       <button @click="setTab('settings')"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="tab === 'settings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        :class="tab === 'settings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
         <span x-show="!sidebarCollapsed">Settings</span>
       </button>
+
+      <div class="px-1 pt-3" x-show="!sidebarCollapsed">
+        <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
+          <template x-for="c in contacts" :key="c.id">
+            <option :value="c.id" x-text="c.first_name + ' ' + c.last_name"></option>
+          </template>
+        </select>
+      </div>
     </nav>
 
     <div class="px-4 pb-3" x-show="!sidebarCollapsed">
@@ -122,15 +130,6 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         Switch to Advisor Portal
       </a>
-    </div>
-
-    <!-- Client Picker -->
-    <div class="px-3 pb-2" x-show="!sidebarCollapsed">
-      <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
-        <template x-for="c in contacts" :key="c.id">
-          <option :value="c.id" x-text="c.first_name + ' ' + c.last_name"></option>
-        </template>
-      </select>
     </div>
 
     <!-- User -->
@@ -275,13 +274,13 @@
               </div>
               <div class="font-serif text-2xl font-semibold text-navy mb-3" x-text="fmtMoney(acct.metadata?.value)"></div>
               <div class="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
-                <div class="bg-blue-500" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
+                <div class="bg-brand" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
                 <div class="bg-green-400" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
                 <div class="bg-yellow-400" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
                 <div class="bg-gray-300" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
               </div>
               <div class="flex gap-3 mt-2 text-[10px] text-gray-500">
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
+                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-brand"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
                 <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
                 <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
                 <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
@@ -383,7 +382,7 @@
               </div>
             </template>
             <template x-for="(m, i) in messages" :key="i">
-              <div class="p-4 rounded-lg border transition-colors" :class="m.unread ? 'border-brand/30 bg-blue-50/30 border-l-4 border-l-brand' : 'border-gray-100'">
+              <div class="p-4 rounded-lg border transition-colors" :class="m.unread ? 'border-brand/30 bg-blue-50/40 border-l-4 border-l-brand' : 'border-gray-100'">
                 <div class="flex items-center gap-2 mb-1">
                   <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" :class="m.isAdvisor ? 'bg-brand' : 'bg-gray-400'" x-text="initials(m.from)"></div>
                   <span class="text-sm font-medium text-navy" x-text="m.from"></span>
@@ -480,12 +479,12 @@
 
               <template x-if="!loading && hasSavedAccount()">
                 <div class="space-y-4">
-                  <div class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+                  <div class="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
                     <div class="flex items-start justify-between gap-4">
                       <div>
                         <div class="flex items-center gap-2 mb-2">
-                          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          <span class="text-sm font-medium text-emerald-700">Connected</span>
+                          <span class="w-2 h-2 rounded-full bg-brand"></span>
+                          <span class="text-sm font-medium text-brand">Connected</span>
                         </div>
                         <div class="text-sm font-medium text-navy" x-text="session.accountName"></div>
                         <div class="text-xs text-gray-500 mt-1" x-text="session.name || session.email"></div>

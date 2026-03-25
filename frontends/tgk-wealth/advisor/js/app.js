@@ -1,5 +1,9 @@
 const TGK_SELECTED_CLIENT_STORAGE_KEY = 'tgk_selected_client_id';
 const TGK_ADVISOR_VIEW_STORAGE_KEY = 'tgk_advisor_view';
+const MAESTRO_CONTACT_SOURCE = 'maestro-extension';
+const MAESTRO_POLL_INTERVAL_MS = 1500;
+const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
+const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 
 function advisorApp() {
   return {
@@ -15,11 +19,14 @@ function advisorApp() {
     maestroLoading: false,
     maestroCompleted: false,
     maestroNewContact: null,
-    maestroIframeLoadCount: 0,
     onboardingLoadingIndex: 0,
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
     loading: true,
+    _maestroCreationPollTimer: null,
+    _maestroRedirectTimer: null,
+    _maestroTrackingStarted: false,
+    _maestroKnownContactIds: new Set(),
 
     async init() {
       try {
@@ -113,60 +120,144 @@ function advisorApp() {
       this.selectedContactAccounts = [];
     },
 
-    async openOnboarding() {
-      this.showOnboarding = true;
-      this.maestroCompleted = false;
-      this.maestroNewContact = null;
-      this.maestroIframeLoadCount = 0;
-      await this.loadMaestroWorkflow();
-    },
-
-    closeOnboarding() {
+    resetOnboardingState() {
       this.showOnboarding = false;
       this.maestroInstanceUrl = '';
       this.maestroError = null;
       this.maestroLoading = false;
       this.maestroCompleted = false;
       this.maestroNewContact = null;
+      this.stopMaestroCreationPolling();
+      this.clearOnboardingRedirectTimer();
       this.stopOnboardingLoading();
+      this._maestroTrackingStarted = false;
+      this._maestroKnownContactIds = new Set();
     },
 
-    onMaestroIframeLoad() {
-      this.maestroIframeLoadCount++;
-      // Skip the initial load and don't re-trigger if already completing
-      if (this.maestroIframeLoadCount <= 1 || this.maestroCompleted) return;
+    async openOnboarding() {
+      this.resetOnboardingState();
+      this.showOnboarding = true;
+      await this.loadMaestroWorkflow();
+    },
 
-      // Debounce: each navigation resets the timer so only the last one (done-page) fires
-      if (this._maestroRedirectTimer) clearTimeout(this._maestroRedirectTimer);
+    closeOnboarding() {
+      this.resetOnboardingState();
+    },
+
+    clearOnboardingRedirectTimer() {
+      if (this._maestroRedirectTimer) {
+        window.clearTimeout(this._maestroRedirectTimer);
+        this._maestroRedirectTimer = null;
+      }
+    },
+
+    async fetchMaestroContacts() {
+      try {
+        return await TGK_API.getContacts({ source: MAESTRO_CONTACT_SOURCE });
+      } catch (e) {
+        return [];
+      }
+    },
+
+    async snapshotMaestroContacts() {
+      const contacts = await this.fetchMaestroContacts();
+      this._maestroKnownContactIds = new Set((contacts || []).map((contact) => contact.id));
+    },
+
+    async refreshContactsAfterOnboarding(targetId) {
+      try {
+        const contacts = await TGK_API.getContacts();
+        this.contacts = contacts;
+        return contacts.find((contact) => contact.id === targetId) || null;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    async handleOnboardingFrameLoad() {
+      if (this._maestroTrackingStarted || this.maestroCompleted || this.maestroError) {
+        return;
+      }
+
+      this._maestroTrackingStarted = true;
+      await this.snapshotMaestroContacts();
+
+      if (!this.showOnboarding || this.maestroCompleted) {
+        return;
+      }
+
+      this.startMaestroCreationPolling();
+    },
+
+    findNewMaestroContact(extensionContacts) {
+      const knownIds = this._maestroKnownContactIds || new Set();
+      const newContacts = (extensionContacts || []).filter((contact) => !knownIds.has(contact.id));
+
+      if (newContacts.length === 0) {
+        return null;
+      }
+
+      return newContacts.reduce(function (a, b) {
+        return new Date(b.created_at) > new Date(a.created_at) ? b : a;
+      });
+    },
+
+    startMaestroCreationPolling() {
+      this.stopMaestroCreationPolling();
 
       const app = this;
-      this._maestroRedirectTimer = setTimeout(function () {
+      const poll = async function () {
+        if (!app.showOnboarding || app.maestroCompleted) {
+          return;
+        }
+
+        try {
+          const extensionContacts = await app.fetchMaestroContacts();
+          const target = app.findNewMaestroContact(extensionContacts);
+
+          if (target) {
+            await app.completeOnboardingWithContact(target);
+            return;
+          }
+        } catch (e) {
+          console.warn('Could not poll for Maestro-created contacts:', e);
+        }
+
+        app._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
+      };
+
+      this._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
+    },
+
+    stopMaestroCreationPolling() {
+      if (this._maestroCreationPollTimer) {
+        window.clearTimeout(this._maestroCreationPollTimer);
+        this._maestroCreationPollTimer = null;
+      }
+    },
+
+    async completeOnboardingWithContact(target) {
+      if (!target || this.maestroCompleted) {
+        return;
+      }
+
+      this.stopMaestroCreationPolling();
+      this.clearOnboardingRedirectTimer();
+      if (this._maestroKnownContactIds) {
+        this._maestroKnownContactIds.add(target.id);
+      }
+      const resolvedTarget = await this.refreshContactsAfterOnboarding(target.id) || target;
+
+      const app = this;
+      this._maestroRedirectTimer = window.setTimeout(function () {
         app.maestroCompleted = true;
+        app.maestroNewContact = resolvedTarget;
 
-        TGK_API.getContacts().then(function (contacts) {
-          app.contacts = contacts;
-
-          // Find the most recently created contact
-          const target = contacts.reduce(function (a, b) {
-            return new Date(b.created_at) > new Date(a.created_at) ? b : a;
-          });
-          app.maestroNewContact = target;
-
-          // Show confirmation briefly, then close and navigate
-          setTimeout(function () {
-            app.showOnboarding = false;
-            app.maestroInstanceUrl = '';
-            app.maestroCompleted = false;
-            app.maestroNewContact = null;
-            if (target) {
-              app.viewClient(target);
-            }
-          }, 2000);
-        }).catch(function () {
-          app.showOnboarding = false;
-          app.maestroCompleted = false;
-        });
-      }, 1000);
+        app._maestroRedirectTimer = window.setTimeout(function () {
+          app.resetOnboardingState();
+          app.viewClient(resolvedTarget);
+        }, MAESTRO_SUCCESS_REDIRECT_DELAY_MS);
+      }, MAESTRO_COMPLETION_SETTLE_DELAY_MS);
     },
 
     startOnboardingLoading() {
@@ -196,6 +287,10 @@ function advisorApp() {
     },
 
     async loadMaestroWorkflow() {
+      this.stopMaestroCreationPolling();
+      this.clearOnboardingRedirectTimer();
+      this._maestroTrackingStarted = false;
+      this._maestroKnownContactIds = new Set();
       this.maestroLoading = true;
       this.maestroError = null;
       this.maestroInstanceUrl = '';
@@ -223,6 +318,7 @@ function advisorApp() {
       } catch (e) {
         console.error('Failed to load Maestro workflow:', e);
         this.maestroError = e.message || 'Failed to launch account opening.';
+        this.stopMaestroCreationPolling();
       } finally {
         this.maestroLoading = false;
         this.stopOnboardingLoading();
