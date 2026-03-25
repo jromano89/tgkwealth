@@ -106,6 +106,12 @@ Local extension service:
 - [http://localhost:3300/health](http://localhost:3300/health)
 - [http://localhost:3300/manifest/clientCredentials.ReadWriteManifest.json](http://localhost:3300/manifest/clientCredentials.ReadWriteManifest.json)
 
+7. Generate runtime frontend config when you need non-local backend URLs.
+
+```bash
+TGK_FRONTEND_BACKEND_URL=http://localhost:3000 npm run build:frontend-config
+```
+
 ## Docusign Model
 
 This project uses one Docusign pattern:
@@ -133,6 +139,43 @@ The extension service in `extensions/maestro-tgk/` is intentionally narrow:
 - fake client-credentials auth for private demo use
 - Data IO `CreateRecord` and `PatchRecord` map to TGK profile create/update
 - TGK remains the system of record through `/api/data/profiles`
+
+## Deployment Notes
+
+Recommended shape for this repo:
+
+- frontend static hosting
+- one public backend service
+- one public Maestro extension service
+- one persistent volume mounted to the backend for SQLite
+
+Key runtime config points:
+
+- backend supports `TGK_DB_PATH` if you want the SQLite file on a mounted volume
+- Maestro extension supports `PORT` or `MAESTRO_EXTENSION_PORT`
+- the frontend reads `frontends/tgk-wealth/runtime-config.js`
+- `npm run build:frontend-config` writes that file from environment variables for deploy-time config
+
+Frontend runtime envs:
+
+- `TGK_FRONTEND_BACKEND_URL`
+- `TGK_FRONTEND_DOCUSIGN_IAM_BASE_URL`
+- `TGK_FRONTEND_APP_SLUG`
+- `TGK_FRONTEND_APP_NAME`
+- `TGK_FRONTEND_ADVISOR_NAME`
+- `TGK_FRONTEND_ADVISOR_TITLE`
+- `TGK_FRONTEND_ADVISOR_EMAIL`
+- `TGK_FRONTEND_ADVISOR_PHONE`
+- `TGK_FRONTEND_ADVISOR_AVATAR`
+- `TGK_FRONTEND_ADVISOR_PORTAL_NAME`
+- `TGK_FRONTEND_INVESTOR_PORTAL_NAME`
+
+Config files that should stay out of git:
+
+- `backend/.env`
+- `extensions/maestro-tgk/.env`
+
+For auto deploys, set those values in your host instead of committing secrets or production URLs.
 
 ## Main API Areas
 

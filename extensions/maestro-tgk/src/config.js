@@ -44,7 +44,7 @@ function parsePort(value, fallback) {
 }
 
 const config = {
-  port: parsePort(process.env.MAESTRO_EXTENSION_PORT, 3300),
+  port: parsePort(process.env.MAESTRO_EXTENSION_PORT || process.env.PORT, 3300),
   publicBaseUrl: trimTrailingSlash(process.env.MAESTRO_EXTENSION_PUBLIC_URL || ''),
   tgkBackendUrl: trimTrailingSlash(process.env.TGK_BACKEND_URL || 'http://localhost:3000'),
   tgkAppSlug: process.env.TGK_APP_SLUG || 'tgk-wealth',
