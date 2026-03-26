@@ -54,10 +54,6 @@ Required values:
 - `DOCUSIGN_RSA_PRIVATE_KEY`
 - `DOCUSIGN_SECRET_KEY`
 
-Optional:
-
-- `DOCUSIGN_STATE_SECRET` if you want a separate secret for signing the consent state
-
 3. Start the backend.
 
 ```bash
@@ -155,6 +151,7 @@ Key runtime config points:
 - Maestro extension supports `PORT` or `MAESTRO_EXTENSION_PORT`
 - the frontend reads `frontends/tgk-wealth/runtime-config.js`
 - `npm run build:frontend-config` writes that file from environment variables for deploy-time config
+- `npm run start:frontend` serves `frontends/` for hosts that prefer a normal web service over static-site detection
 
 Frontend runtime envs:
 
