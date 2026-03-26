@@ -32,6 +32,7 @@ function investorApp() {
         console.error('Failed to load:', e);
       }
       this.loading = false;
+      TGK_API.scheduleDocusignWarmup();
     },
 
     sortContacts(contacts) {

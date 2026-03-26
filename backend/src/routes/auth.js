@@ -2,6 +2,7 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const {
   createConsentState,
+  getAccessToken,
   getConsentUrl,
   getUserInfoFromCode,
   readConsentState
@@ -99,6 +100,34 @@ function sendPopupResult(req, res, frontendRedirect, payload) {
     </script>
   </body>
 </html>`);
+}
+
+function getSessionPayload(db, appSlug) {
+  if (!appSlug) {
+    return { connected: false };
+  }
+
+  const app = getAppBySlug(db, appSlug);
+  if (!app) {
+    return { connected: false };
+  }
+
+  const ds = getConnectionForApp(db, app.id);
+  if (!ds) {
+    return { connected: false };
+  }
+
+  return {
+    connected: true,
+    userId: ds.docusign_user_id,
+    accountId: ds.docusign_account_id,
+    accountName: ds.account_name,
+    name: ds.user_name,
+    email: ds.email,
+    accounts: ds.available_accounts || [],
+    accountSelectionRequired: !ds.docusign_account_id && (ds.available_accounts || []).length > 0,
+    app: { slug: app.slug, name: app.name }
+  };
 }
 
 /**
@@ -269,33 +298,38 @@ router.post('/account', (req, res) => {
  */
 router.get('/session', (req, res) => {
   const db = getDb();
-  const appSlug = getAppSlug(req);
+  res.json(getSessionPayload(db, getAppSlug(req)));
+});
 
-  if (!appSlug) {
-    return res.json({ connected: false });
+/**
+ * @swagger
+ * /api/auth/prewarm:
+ *   get:
+ *     summary: Warm the Docusign JWT token cache for the current app connection
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Returns session info and whether token warmup completed
+ */
+router.get('/prewarm', async (req, res) => {
+  const db = getDb();
+  const session = getSessionPayload(db, getAppSlug(req));
+
+  if (!session.connected) {
+    return res.json({ session, warmed: false, reason: 'not-connected' });
   }
 
-  const app = getAppBySlug(db, appSlug);
-  if (!app) {
-    return res.json({ connected: false });
+  if (!session.accountId) {
+    return res.json({ session, warmed: false, reason: 'account-selection-required' });
   }
 
-  const ds = getConnectionForApp(db, app.id);
-  if (!ds) {
-    return res.json({ connected: false });
+  try {
+    await getAccessToken(session.userId, session.accountId);
+    return res.json({ session, warmed: true });
+  } catch (err) {
+    console.warn('Docusign auth prewarm failed:', err.message);
+    return res.json({ session, warmed: false, reason: 'token-warmup-failed' });
   }
-
-  res.json({
-    connected: true,
-    userId: ds.docusign_user_id,
-    accountId: ds.docusign_account_id,
-    accountName: ds.account_name,
-    name: ds.user_name,
-    email: ds.email,
-    accounts: ds.available_accounts || [],
-    accountSelectionRequired: !ds.docusign_account_id && (ds.available_accounts || []).length > 0,
-    app: { slug: app.slug, name: app.name }
-  });
 });
 
 /**

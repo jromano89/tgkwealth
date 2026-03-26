@@ -96,6 +96,10 @@
     _sessionCache: null,
     _sessionCacheExpiresAt: 0,
     _sessionPromise: null,
+    _docusignPrewarmResult: null,
+    _docusignPrewarmExpiresAt: 0,
+    _docusignPrewarmPromise: null,
+    _docusignWarmScheduled: false,
 
     withAppQuery(path) {
       if (!this.appSlug) return path;
@@ -170,10 +174,20 @@
     getCurrentApp() { return this.get('/api/apps/current'); },
 
     // Auth
+    cacheSession(session) {
+      this._sessionCache = session;
+      this._sessionCacheExpiresAt = Date.now() + 30000;
+    },
+    clearDocusignPrewarmCache() {
+      this._docusignPrewarmResult = null;
+      this._docusignPrewarmExpiresAt = 0;
+      this._docusignPrewarmPromise = null;
+    },
     clearSessionCache() {
       this._sessionCache = null;
       this._sessionCacheExpiresAt = 0;
       this._sessionPromise = null;
+      this.clearDocusignPrewarmCache();
     },
     async getSession(options = {}) {
       const force = !!options.force;
@@ -188,8 +202,7 @@
       const app = this;
       this._sessionPromise = this.get('/api/auth/session')
         .then(function (session) {
-          app._sessionCache = session;
-          app._sessionCacheExpiresAt = Date.now() + 30000;
+          app.cacheSession(session);
           return session;
         })
         .finally(function () {
@@ -197,6 +210,32 @@
         });
 
       return this._sessionPromise;
+    },
+    async prewarmDocusignAuth(options = {}) {
+      const force = !!options.force;
+      if (!force && this._docusignPrewarmResult && this._docusignPrewarmExpiresAt > Date.now()) {
+        return this._docusignPrewarmResult;
+      }
+
+      if (!force && this._docusignPrewarmPromise) {
+        return this._docusignPrewarmPromise;
+      }
+
+      const app = this;
+      this._docusignPrewarmPromise = this.get('/api/auth/prewarm')
+        .then(function (result) {
+          if (result?.session) {
+            app.cacheSession(result.session);
+          }
+          app._docusignPrewarmResult = result;
+          app._docusignPrewarmExpiresAt = Date.now() + (result?.warmed ? 10 * 60 * 1000 : 30000);
+          return result;
+        })
+        .finally(function () {
+          app._docusignPrewarmPromise = null;
+        });
+
+      return this._docusignPrewarmPromise;
     },
     async logout() {
       this.clearSessionCache();
@@ -209,6 +248,67 @@
     },
     getBackendOrigin() {
       return new URL(this.baseUrl, window.location.href).origin;
+    },
+    getDocusignAppOrigin() {
+      const defaultOrigin = 'https://apps-d.docusign.com';
+      try {
+        const configured = this.docusignIamBaseUrl || defaultOrigin;
+        const url = new URL(configured, window.location.href);
+        url.host = url.host.replace(/^api(?=[.-])/, 'apps');
+        return url.origin;
+      } catch (e) {
+        return defaultOrigin;
+      }
+    },
+    warmOrigin(origin) {
+      let normalizedOrigin;
+      try {
+        normalizedOrigin = new URL(origin, window.location.href).origin;
+      } catch (e) {
+        return;
+      }
+
+      const key = normalizedOrigin.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      if (document.head.querySelector(`link[data-warm-origin="${key}"]`)) {
+        return;
+      }
+
+      const dnsPrefetch = document.createElement('link');
+      dnsPrefetch.rel = 'dns-prefetch';
+      dnsPrefetch.href = normalizedOrigin;
+      dnsPrefetch.dataset.warmOrigin = key;
+      document.head.appendChild(dnsPrefetch);
+
+      const preconnect = document.createElement('link');
+      preconnect.rel = 'preconnect';
+      preconnect.href = normalizedOrigin;
+      preconnect.crossOrigin = '';
+      preconnect.dataset.warmOrigin = key;
+      document.head.appendChild(preconnect);
+    },
+    async warmDocusignExperience() {
+      this.warmOrigin(this.getDocusignAppOrigin());
+      return this.prewarmDocusignAuth().catch(function () {
+        return null;
+      });
+    },
+    scheduleDocusignWarmup() {
+      if (this._docusignWarmScheduled) {
+        return;
+      }
+
+      this._docusignWarmScheduled = true;
+      const app = this;
+      const warm = function () {
+        app.warmDocusignExperience();
+      };
+
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(warm, { timeout: 2500 });
+        return;
+      }
+
+      window.setTimeout(warm, 1200);
     },
     getLoginUrl(redirect, scopes, display) {
       const params = new URLSearchParams({

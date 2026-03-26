@@ -25,9 +25,7 @@ function advisorApp() {
     loading: true,
     _maestroCreationPollTimer: null,
     _maestroRedirectTimer: null,
-    _maestroSessionWarmPromise: null,
     _maestroTrackingStarted: false,
-    _maestroWarmScheduled: false,
     _maestroKnownContactIds: new Set(),
 
     async init() {
@@ -46,7 +44,7 @@ function advisorApp() {
         console.error('Failed to load contacts:', e);
       }
       this.loading = false;
-      this.scheduleOnboardingWarmup();
+      TGK_API.scheduleDocusignWarmup();
     },
 
     restoreView() {
@@ -155,81 +153,8 @@ function advisorApp() {
       }
     },
 
-    getMaestroAppOrigin() {
-      const defaultOrigin = 'https://apps-d.docusign.com';
-      try {
-        const configured = window.TGK_CONFIG?.docusignIamBaseUrl || TGK_API.docusignIamBaseUrl || defaultOrigin;
-        const url = new URL(configured);
-        url.host = url.host.replace(/^api(?=[.-])/, 'apps');
-        return url.origin;
-      } catch (e) {
-        return defaultOrigin;
-      }
-    },
-
-    warmOrigin(origin) {
-      let normalizedOrigin;
-      try {
-        normalizedOrigin = new URL(origin, window.location.href).origin;
-      } catch (e) {
-        return;
-      }
-
-      const key = normalizedOrigin.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      if (document.head.querySelector(`link[data-warm-origin="${key}"]`)) {
-        return;
-      }
-
-      const dnsPrefetch = document.createElement('link');
-      dnsPrefetch.rel = 'dns-prefetch';
-      dnsPrefetch.href = normalizedOrigin;
-      dnsPrefetch.dataset.warmOrigin = key;
-      document.head.appendChild(dnsPrefetch);
-
-      const preconnect = document.createElement('link');
-      preconnect.rel = 'preconnect';
-      preconnect.href = normalizedOrigin;
-      preconnect.crossOrigin = '';
-      preconnect.dataset.warmOrigin = key;
-      document.head.appendChild(preconnect);
-    },
-
-    scheduleOnboardingWarmup() {
-      if (this._maestroWarmScheduled) {
-        return;
-      }
-
-      this._maestroWarmScheduled = true;
-      const app = this;
-      const warm = function () {
-        app.warmOrigin(app.getMaestroAppOrigin());
-      };
-
-      if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(warm, { timeout: 2000 });
-        return;
-      }
-
-      window.setTimeout(warm, 800);
-    },
-
     warmOnboarding() {
-      this.warmOrigin(this.getMaestroAppOrigin());
-
-      if (this._maestroSessionWarmPromise) {
-        return this._maestroSessionWarmPromise;
-      }
-
-      const app = this;
-      this._maestroSessionWarmPromise = TGK_API.getSession()
-        .catch(function () {
-          return null;
-        })
-        .finally(function () {
-          app._maestroSessionWarmPromise = null;
-        });
-
-      return this._maestroSessionWarmPromise;
+      return TGK_API.warmDocusignExperience();
     },
 
     async fetchMaestroContacts() {
