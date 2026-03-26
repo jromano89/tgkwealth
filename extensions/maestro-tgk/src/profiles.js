@@ -400,7 +400,12 @@ function getTypeDefinitions(body) {
     throw createError(400, 'BAD_REQUEST', 'Missing typeNames in request');
   }
 
-  const requested = new Set(typeNames.map((item) => String(item?.typeName || '').toLowerCase()));
+  const requested = new Set(typeNames.map((item) => {
+    if (typeof item === 'string') {
+      return item.toLowerCase();
+    }
+    return String(item?.typeName || '').toLowerCase();
+  }));
   const errors = [];
   const hasSupportedType = [...requested].some((typeName) => TYPE_ALIASES.has(typeName));
 

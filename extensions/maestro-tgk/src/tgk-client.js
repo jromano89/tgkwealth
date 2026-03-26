@@ -14,13 +14,14 @@ function buildUrl(pathname, query) {
 }
 
 async function request(pathname, options = {}) {
+  const url = buildUrl(pathname, options.query);
   const headers = {
     'Content-Type': 'application/json',
     'x-demo-app': config.tgkAppSlug,
     ...(options.headers || {})
   };
 
-  const response = await fetch(buildUrl(pathname, options.query), {
+  const response = await fetch(url, {
     method: options.method || 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined
@@ -37,6 +38,13 @@ async function request(pathname, options = {}) {
       : payload.error || payload.message || JSON.stringify(payload);
     const error = new Error(message || `TGK backend request failed: ${response.status}`);
     error.statusCode = response.status;
+    error.context = {
+      service: 'tgk-backend',
+      method: options.method || 'GET',
+      url,
+      responseStatus: response.status,
+      responseBody: payload
+    };
     throw error;
   }
 

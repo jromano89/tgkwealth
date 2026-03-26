@@ -17,6 +17,26 @@ function createErrorResponse(error) {
   };
 }
 
+function logRequestError(scope, error, details = {}) {
+  const payload = {
+    scope,
+    message: error.message,
+    statusCode: error.statusCode || 500,
+    code: error.code || '',
+    ...details
+  };
+
+  if (error.context) {
+    payload.context = error.context;
+  }
+
+  if (error.stack) {
+    payload.stack = error.stack;
+  }
+
+  console.error(JSON.stringify(payload));
+}
+
 function isAuthorized(req) {
   const authorization = String(req.headers.authorization || '');
   return authorization === `Bearer ${config.oauthAccessToken}`;
@@ -101,6 +121,10 @@ async function handleDataIo(req, res, pathname) {
       return sendJson(res, 200, profileService.getTypeDefinitions(body));
     }
   } catch (error) {
+    logRequestError('dataio', error, {
+      path: pathname,
+      method: req.method
+    });
     return sendJson(res, error.statusCode || 500, createErrorResponse(error));
   }
 
@@ -158,7 +182,10 @@ async function requestListener(req, res) {
 
     return sendJson(res, 404, { error: 'Not found' });
   } catch (error) {
-    console.error('Maestro extension error:', error);
+    logRequestError('request', error, {
+      path: pathname,
+      method: req.method
+    });
     return sendJson(res, error.statusCode || 500, createErrorResponse(error));
   }
 }
