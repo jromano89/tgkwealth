@@ -22,6 +22,28 @@ function isAuthorized(req) {
   return authorization === `Bearer ${config.oauthAccessToken}`;
 }
 
+function readBasicAuthCredentials(req) {
+  const authorization = String(req.headers.authorization || '');
+  if (!authorization.startsWith('Basic ')) {
+    return null;
+  }
+
+  try {
+    const decoded = Buffer.from(authorization.slice('Basic '.length).trim(), 'base64').toString('utf8');
+    const separatorIndex = decoded.indexOf(':');
+    if (separatorIndex === -1) {
+      return null;
+    }
+
+    return {
+      clientId: decoded.slice(0, separatorIndex),
+      clientSecret: decoded.slice(separatorIndex + 1)
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
 async function handleOauthToken(req, res) {
   const body = await readParsedBody(req);
   if (body.grant_type !== 'client_credentials') {
@@ -31,7 +53,11 @@ async function handleOauthToken(req, res) {
     });
   }
 
-  if (body.client_id !== config.oauthClientId || body.client_secret !== config.oauthClientSecret) {
+  const basicAuth = readBasicAuthCredentials(req);
+  const clientId = body.client_id || basicAuth?.clientId || '';
+  const clientSecret = body.client_secret || basicAuth?.clientSecret || '';
+
+  if (clientId !== config.oauthClientId || clientSecret !== config.oauthClientSecret) {
     return sendJson(res, 401, {
       error: 'invalid_client',
       error_description: 'Invalid client credentials.'
