@@ -31,9 +31,9 @@ const swaggerSpec = swaggerJsdoc({
       version: '1.0.0',
       description: 'Docusign Demo Backend-as-a-Service. Handles app bootstrap, Docusign integration, consent, envelopes, webhooks, and generic demo data so SE frontends don\'t need a backend.'
     },
-    servers: [{ url: localUrl }]
+    servers: [{ url: '/' }]
   },
-  apis: ['./src/routes/*.js']
+  apis: ['./src/index.js', './src/routes/*.js']
 });
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'TGK Demo Backend API'

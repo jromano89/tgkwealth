@@ -45,6 +45,13 @@ router.get('/profiles', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/profiles:
+ *   post:
+ *     summary: Create an app-scoped profile
+ *     tags: [Data]
+ */
 router.post('/profiles', (req, res) => {
   try {
     const db = getDb();
@@ -81,6 +88,13 @@ router.post('/profiles', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/profiles/{id}:
+ *   get:
+ *     summary: Get one profile with related records and envelopes
+ *     tags: [Data]
+ */
 router.get('/profiles/:id', (req, res) => {
   try {
     const db = getDb();
@@ -104,6 +118,13 @@ router.get('/profiles/:id', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/profiles/{id}:
+ *   put:
+ *     summary: Update an app-scoped profile
+ *     tags: [Data]
+ */
 router.put('/profiles/:id', (req, res) => {
   try {
     const db = getDb();
@@ -194,6 +215,13 @@ router.get('/records', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/records:
+ *   post:
+ *     summary: Create an app-scoped record
+ *     tags: [Data]
+ */
 router.post('/records', (req, res) => {
   try {
     const db = getDb();
@@ -234,6 +262,13 @@ router.post('/records', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/records/{id}:
+ *   get:
+ *     summary: Get one record with related envelopes
+ *     tags: [Data]
+ */
 router.get('/records/:id', (req, res) => {
   try {
     const db = getDb();
@@ -254,6 +289,13 @@ router.get('/records/:id', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/data/records/{id}:
+ *   put:
+ *     summary: Update an app-scoped record
+ *     tags: [Data]
+ */
 router.put('/records/:id', (req, res) => {
   try {
     const db = getDb();

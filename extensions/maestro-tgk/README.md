@@ -1,51 +1,43 @@
 # TGK Maestro Extension
 
-Profile-oriented DocuSign Maestro Data IO extension service for the TGK demo.
+Small DocuSign Maestro Data IO service for TGK.
 
-It is intentionally small:
+## Purpose
 
 - separate service
-- no runtime dependencies beyond Node
-- fake client-credentials auth for private demo use
-- writes to the existing TGK backend API instead of touching SQLite directly
+- fake client-credentials auth for demo use
+- writes to the TGK backend API, not SQLite
+- creates and updates TGK profiles
 
-## What It Does
+Canonical Data IO type:
 
-- `CreateRecord` creates a TGK profile
-- `PatchRecord` updates a TGK profile
-- `SearchRecords`, `GetTypeNames`, and `GetTypeDefinitions` are included so the app behaves like a complete Data IO extension
+- `Profile`
 
-The canonical type is `Profile`. `Investor` is still accepted as a compatibility alias.
+Compatibility alias:
 
-## Run It
+- `Investor`
 
-1. Copy `.env.example` to `.env` if you want to override defaults.
-2. Start the TGK backend first.
-3. Start the extension service:
+## Run
 
 ```bash
 npm --prefix extensions/maestro-tgk run start
 ```
 
-Default local URLs:
+Local URLs:
 
 - service: `http://localhost:3300`
 - health: `http://localhost:3300/health`
-- hosted manifest JSON: `http://localhost:3300/manifest/clientCredentials.ReadWriteManifest.json`
+- manifest: `http://localhost:3300/manifest/clientCredentials.ReadWriteManifest.json`
 
-## Maestro / Data IO Contract
+## Contract
 
-Use `typeName: "Profile"` for new actions.
+- `CreateRecord` -> create profile
+- `PatchRecord` -> update profile
+- `SearchRecords`, `GetTypeNames`, `GetTypeDefinitions` are included for Data IO completeness
 
-Supported profile fields:
+Useful fields:
 
-- `Id`
-- `Ref`
-- `Kind`
 - `DisplayName`
-- `FullName`
-- `FirstName`
-- `LastName`
 - `Email`
 - `Phone`
 - `Organization`
@@ -54,17 +46,7 @@ Supported profile fields:
 - `DataJson`
 - `Aum`
 - `NetWorth`
-- `RiskProfile`
-- `Role`
-- `AssignedTo`
 - `LifecycleStage`
 - `CompletedEnvelopeId`
 
-Create defaults:
-
-- `status` defaults to `pending`
-- `Aum` defaults to `0`
-- `NetWorth` defaults to `0`
-- filler demo fields like advisor, avatar color, and risk profile are backfilled if omitted
-
-The returned `recordId` is the TGK profile id. Pass that into `PatchRecord` when the workflow needs to update the same profile later.
+Returned `recordId` is the TGK profile id.
