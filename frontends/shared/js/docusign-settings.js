@@ -47,10 +47,10 @@ function docusignSettings() {
       }
     },
 
-    async checkSession() {
+    async checkSession(options = {}) {
       this.loading = true;
       try {
-        this.session = await TGK_API.getSession();
+        this.session = await TGK_API.getSession(options);
         this.error = null;
         this.syncAccountSelectionState();
       } catch (e) {
@@ -111,13 +111,13 @@ function docusignSettings() {
       this.authInProgress = false;
 
       if (result?.status === 'error') {
-        await this.checkSession();
+        await this.checkSession({ force: true });
         this.error = result.message || 'Docusign connection failed.';
         this.notice = null;
         return;
       }
 
-      await this.checkSession();
+      await this.checkSession({ force: true });
 
       if (result?.status === 'connected') {
         this.notice = this.connectionNotice();
@@ -154,7 +154,7 @@ function docusignSettings() {
           this.stopPopupMonitor();
           if (this.authInProgress) {
             this.authInProgress = false;
-            await this.checkSession();
+            await this.checkSession({ force: true });
           }
         }
       }, 500);
@@ -195,7 +195,7 @@ function docusignSettings() {
         }
         this.savingAccount = true;
         await TGK_API.selectAccount(accountId);
-        await this.checkSession();
+        await this.checkSession({ force: true });
         this.showAccountPicker = false;
         this.notice = `Saved ${this.session?.accountName || 'the selected Docusign account'} as the active Docusign account.`;
       } catch (e) {
@@ -209,7 +209,7 @@ function docusignSettings() {
       try {
         await TGK_API.logout();
         this.notice = 'Docusign account disconnected.';
-        await this.checkSession();
+        await this.checkSession({ force: true });
       } catch (e) {
         this.error = e.message;
       }
