@@ -9,6 +9,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const localUrl = `http://localhost:${PORT}`;
 
+// Railway terminates TLS at the edge, so trust the first proxy hop for req.protocol/hostname.
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: true,
   credentials: true
