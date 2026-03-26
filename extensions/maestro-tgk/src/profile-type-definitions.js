@@ -1,4 +1,5 @@
 const TYPE_NAME = 'Profile';
+const NAMESPACE = 'org.tgk.maestro';
 const TYPE_ALIASES = new Set(['profile', 'investor']);
 
 const TYPE_NAMES = [
@@ -8,6 +9,10 @@ const TYPE_NAMES = [
     description: 'TGK profile row'
   }
 ];
+
+// ── Field schema ──────────────────────────────────────────────────────
+// Each entry drives both the Concerto metamodel output and record mapping.
+// `type` must be one of: String, Double, DateTime, Integer, Long, Boolean.
 
 const FIELD_DEFINITIONS = [
   { name: 'Id', label: 'Profile ID', type: 'String', optional: false, readableOnly: true },
@@ -34,50 +39,68 @@ const FIELD_DEFINITIONS = [
   { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 
+// ── Concerto metamodel helpers (v1.0.0) ───────────────────────────────
+
+const METAMODEL = 'concerto.metamodel@1.0.0';
+
+function mm(className) {
+  return `${METAMODEL}.${className}`;
+}
+
+const PROPERTY_CLASS_MAP = {
+  String: mm('StringProperty'),
+  Double: mm('DoubleProperty'),
+  Integer: mm('IntegerProperty'),
+  Long: mm('LongProperty'),
+  DateTime: mm('DateTimeProperty'),
+  Boolean: mm('BooleanProperty')
+};
+
 function createDecorator(name, value) {
   return {
-    $class: 'concerto.metamodel@1.0.0.Decorator',
+    $class: mm('Decorator'),
     name,
     arguments: [
       {
-        $class: 'concerto.metamodel@1.0.0.DecoratorString',
+        $class: mm('DecoratorString'),
         value
       }
     ]
   };
 }
 
-function createPropertyDeclaration(field) {
-  const propertyClass = field.type === 'Double'
-    ? 'concerto.metamodel@1.0.0.DoubleProperty'
-    : field.type === 'DateTime'
-      ? 'concerto.metamodel@1.0.0.DateTimeProperty'
-      : 'concerto.metamodel@1.0.0.StringProperty';
+function crudDecorator(readableOnly) {
+  return createDecorator('Crud', readableOnly ? 'Readable' : 'Createable,Readable,Updateable');
+}
 
+function createPropertyDeclaration(field) {
   return {
-    $class: propertyClass,
+    $class: PROPERTY_CLASS_MAP[field.type] || PROPERTY_CLASS_MAP.String,
     name: field.name,
     isArray: false,
     isOptional: !!field.optional,
     decorators: [
       createDecorator('Term', field.label),
-      createDecorator('Crud', field.readableOnly ? 'Readable' : 'Createable,Readable,Updateable')
+      crudDecorator(field.readableOnly)
     ]
   };
 }
 
+// ── Exported type definition (Concerto ConceptDeclaration) ────────────
+
 const TYPE_DEFINITIONS = {
   declarations: [
     {
-      $class: 'concerto.metamodel@1.0.0.ConceptDeclaration',
+      $class: mm('ConceptDeclaration'),
       name: TYPE_NAME,
-      namespace: 'org.tgk.maestro',
-      fullyQualifiedName: `org.tgk.maestro.${TYPE_NAME}`,
-      identified: true,
-      identifierFieldName: 'Id',
+      isAbstract: false,
+      identified: {
+        $class: mm('IdentifiedBy'),
+        name: 'Id'
+      },
       decorators: [
         createDecorator('Term', 'Profile'),
-        createDecorator('Crud', 'Createable,Readable,Updateable')
+        crudDecorator(false)
       ],
       properties: FIELD_DEFINITIONS.map(createPropertyDeclaration)
     }
