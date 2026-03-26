@@ -10,21 +10,8 @@
   <meta property="og:title" content="TGK Wealth Demo — Advisor Portal">
   <meta property="og:description" content="Demonstration advisor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
+  <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-  <script>
-    (() => {
-      const originalWarn = console.warn;
-      console.warn = (...args) => {
-        const message = String(args[0] || '');
-        if (message.includes('cdn.tailwindcss.com should not be used in production')) {
-          return;
-        }
-        originalWarn.apply(console, args);
-      };
-    })();
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/demo-settings.js"></script>
@@ -45,20 +32,6 @@
     .flash-red { background-color: rgba(220,38,38,0.15) !important; transition: background 0.3s; }
     [x-cloak] { display: none !important; }
   </style>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            navy: 'var(--color-navy, #1a1a2e)',
-            'navy-light': 'var(--color-navy-light, #2d2d52)',
-            brand: 'var(--color-brand, #3b5bdb)',
-            'brand-light': 'var(--color-brand-light, #5c7cfa)'
-          }
-        }
-      }
-    }
-  </script>
 </head>
 <body>
 

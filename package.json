@@ -1,13 +1,22 @@
 {
   "name": "tgk-demo-workspace",
   "private": true,
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2"
+  },
   "scripts": {
-    "build:frontend-config": "node scripts/generate-frontend-runtime-config.js",
+    "build:frontend-config": "npm run build:frontend-css && node scripts/generate-frontend-runtime-config.js",
+    "build:frontend-css": "npx @tailwindcss/cli -i ./frontends/shared/styles/tgk-tailwind.source.css -o ./frontends/shared/styles/tgk-tailwind.css --minify",
     "dev:backend": "npm --prefix backend run dev",
     "dev:maestro-extension": "npm --prefix extensions/maestro-tgk run dev",
     "seed:tgk": "node scripts/seed-tgk.js",
     "start:backend": "npm --prefix backend run start",
     "start:frontend": "node scripts/serve-frontends.js",
     "start:maestro-extension": "npm --prefix extensions/maestro-tgk run start"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2"
   }
 }
