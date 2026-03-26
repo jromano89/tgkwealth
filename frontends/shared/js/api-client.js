@@ -93,6 +93,9 @@
     docusignIamBaseUrl: window.TGK_CONFIG?.docusignIamBaseUrl || 'https://api-d.docusign.com',
     appSlug: window.TGK_CONFIG?.appSlug || '',
     appName: window.TGK_CONFIG?.appName || '',
+    _sessionCache: null,
+    _sessionCacheExpiresAt: 0,
+    _sessionPromise: null,
 
     withAppQuery(path) {
       if (!this.appSlug) return path;
@@ -167,9 +170,43 @@
     getCurrentApp() { return this.get('/api/apps/current'); },
 
     // Auth
-    getSession() { return this.get('/api/auth/session'); },
-    logout() { return this.post('/api/auth/logout'); },
-    selectAccount(accountId) { return this.post('/api/auth/account', { accountId }); },
+    clearSessionCache() {
+      this._sessionCache = null;
+      this._sessionCacheExpiresAt = 0;
+      this._sessionPromise = null;
+    },
+    async getSession(options = {}) {
+      const force = !!options.force;
+      if (!force && this._sessionCache && this._sessionCacheExpiresAt > Date.now()) {
+        return this._sessionCache;
+      }
+
+      if (!force && this._sessionPromise) {
+        return this._sessionPromise;
+      }
+
+      const app = this;
+      this._sessionPromise = this.get('/api/auth/session')
+        .then(function (session) {
+          app._sessionCache = session;
+          app._sessionCacheExpiresAt = Date.now() + 30000;
+          return session;
+        })
+        .finally(function () {
+          app._sessionPromise = null;
+        });
+
+      return this._sessionPromise;
+    },
+    async logout() {
+      this.clearSessionCache();
+      return this.post('/api/auth/logout');
+    },
+    async selectAccount(accountId) {
+      const result = await this.post('/api/auth/account', { accountId });
+      this.clearSessionCache();
+      return result;
+    },
     getBackendOrigin() {
       return new URL(this.baseUrl, window.location.href).origin;
     },

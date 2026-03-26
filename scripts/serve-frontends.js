@@ -1,6 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const zlib = require('zlib');
 
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
 const ROOT_DIR = path.join(__dirname, '..', 'frontends');
@@ -28,20 +29,92 @@ function send(res, statusCode, body, contentType) {
   res.end(body);
 }
 
-function sendFile(res, filePath) {
+function createEtag(stats) {
+  return `W/"${stats.size}-${Number(stats.mtimeMs).toString(16)}"`;
+}
+
+function getCacheControl(filePath, requestUrl) {
+  const ext = path.extname(filePath).toLowerCase();
+  const basename = path.basename(filePath).toLowerCase();
+  const versioned = String(requestUrl || '').includes('?v=');
+
+  if (basename === 'runtime-config.js' || ext === '.html') {
+    return 'no-cache';
+  }
+
+  if (versioned) {
+    return 'public, max-age=31536000, immutable';
+  }
+
+  if (CONTENT_TYPES[ext]) {
+    return 'public, max-age=3600';
+  }
+
+  return 'public, max-age=300';
+}
+
+function compressBody(body, acceptEncoding) {
+  const encoding = String(acceptEncoding || '').toLowerCase();
+  if (!Buffer.isBuffer(body) || body.length < 1024) {
+    return { body, contentEncoding: null };
+  }
+
+  if (encoding.includes('br')) {
+    return {
+      body: zlib.brotliCompressSync(body),
+      contentEncoding: 'br'
+    };
+  }
+
+  if (encoding.includes('gzip')) {
+    return {
+      body: zlib.gzipSync(body),
+      contentEncoding: 'gzip'
+    };
+  }
+
+  return { body, contentEncoding: null };
+}
+
+function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = CONTENT_TYPES[ext] || 'application/octet-stream';
-  const stream = fs.createReadStream(filePath);
+  const stats = fs.statSync(filePath);
+  const etag = createEtag(stats);
 
-  stream.on('open', function () {
-    res.writeHead(200, { 'Content-Type': contentType });
-  });
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, {
+      ETag: etag,
+      'Cache-Control': getCacheControl(filePath, req.url),
+      'Last-Modified': stats.mtime.toUTCString(),
+      Vary: 'Accept-Encoding'
+    });
+    res.end();
+    return;
+  }
 
-  stream.on('error', function () {
-    send(res, 500, 'Internal Server Error', 'text/plain; charset=utf-8');
-  });
+  const source = fs.readFileSync(filePath);
+  const compressed = compressBody(source, req.headers['accept-encoding']);
+  const headers = {
+    'Content-Type': contentType,
+    'Content-Length': compressed.body.length,
+    'Cache-Control': getCacheControl(filePath, req.url),
+    ETag: etag,
+    'Last-Modified': stats.mtime.toUTCString(),
+    Vary: 'Accept-Encoding'
+  };
 
-  stream.pipe(res);
+  if (compressed.contentEncoding) {
+    headers['Content-Encoding'] = compressed.contentEncoding;
+  }
+
+  res.writeHead(200, headers);
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
+
+  res.end(compressed.body);
 }
 
 function resolvePath(urlPathname) {
@@ -96,7 +169,7 @@ const server = http.createServer(function (req, res) {
     return;
   }
 
-  sendFile(res, result.path);
+  sendFile(req, res, result.path);
 });
 
 server.listen(PORT, function () {
