@@ -3,6 +3,7 @@ const path = require('path');
 const { config } = require('./config');
 
 const templatePath = path.join(__dirname, '..', 'manifest', 'clientCredentials.ReadWriteManifest.template.json');
+const templateContent = fs.readFileSync(templatePath, 'utf8');
 
 function buildManifest(publicBaseUrl) {
   const replacements = {
@@ -14,7 +15,7 @@ function buildManifest(publicBaseUrl) {
     '__PUBLISHER_PHONE__': config.publisherPhone
   };
 
-  let content = fs.readFileSync(templatePath, 'utf8');
+  let content = templateContent;
   for (const [placeholder, value] of Object.entries(replacements)) {
     content = content.split(placeholder).join(String(value));
   }

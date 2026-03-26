@@ -6,6 +6,11 @@ const { createError, getConnectionForApp, getRequiredApp, parseJsonFields } = re
 const envelopeService = require('../services/docusign-envelopes');
 const router = express.Router();
 
+function findEnvelope(db, appId, idOrEnvelopeId) {
+  return db.prepare('SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)')
+    .get(appId, idOrEnvelopeId, idOrEnvelopeId);
+}
+
 /**
  * @swagger
  * /api/envelopes:
@@ -100,8 +105,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const app = getRequiredApp(db, req);
-    const envelope = db.prepare('SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)')
-      .get(app.id, req.params.id, req.params.id);
+    const envelope = findEnvelope(db, app.id, req.params.id);
 
     if (!envelope) throw createError(404, 'Envelope not found');
 
@@ -140,8 +144,7 @@ router.post('/:id/signing-url', requireDocusignConnection, async (req, res) => {
   try {
     const db = getDb();
     const { userId, accountId } = req.docusign;
-    const envelope = db.prepare('SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)')
-      .get(req.demoApp.id, req.params.id, req.params.id);
+    const envelope = findEnvelope(db, req.demoApp.id, req.params.id);
 
     if (!envelope || !envelope.docusign_envelope_id) {
       return res.status(404).json({ error: 'Envelope not found or not linked to Docusign' });
@@ -180,8 +183,7 @@ router.get('/:id/documents', requireDocusignConnection, async (req, res) => {
   try {
     const db = getDb();
     const { userId, accountId } = req.docusign;
-    const envelope = db.prepare('SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)')
-      .get(req.demoApp.id, req.params.id, req.params.id);
+    const envelope = findEnvelope(db, req.demoApp.id, req.params.id);
 
     if (!envelope || !envelope.docusign_envelope_id) {
       return res.status(404).json({ error: 'Envelope not found or not linked to Docusign' });

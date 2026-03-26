@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TGK Wealth — Demo Portals</title>
+  <title>TGK Demo — Portals</title>
   <link rel="icon" type="image/svg+xml" href="shared/favicon.svg">
   <script defer src="tgk-wealth/runtime-config.js"></script>
   <style>
@@ -28,37 +28,37 @@
 <body>
   <div class="container">
     <div class="logo">T</div>
-    <h1>TGK Wealth Demo</h1>
-    <p class="subtitle">A FINS wealth management demo showcasing Docusign agreement workflows — account opening, asset transfers, and self-service tasks — embedded across two connected portals.</p>
+    <h1>TGK Demo</h1>
+    <p class="subtitle">FINS wealth management demo — DocuSign IAM embedded in advisor and investor workflows.</p>
 
     <div class="cards">
       <a href="tgk-wealth/advisor/" class="card">
         <div class="card-icon">📊</div>
         <h2>Advisor Portal</h2>
-        <p>Client book, AUM dashboard, and advisor-led account opening powered by Docusign IAM and Web Forms.</p>
+        <p>Client book, AUM dashboard, and advisor-led account opening.</p>
         <span class="arrow">Open portal →</span>
       </a>
       <a href="tgk-wealth/investor/" class="card">
         <div class="card-icon">💼</div>
         <h2>Investor Portal</h2>
-        <p>Portfolio overview, holdings, documents, and self-service workflows like asset transfers and options trading.</p>
+        <p>Portfolio overview, holdings, documents, and self-service workflows.</p>
         <span class="arrow">Open portal →</span>
       </a>
     </div>
 
     <div class="footer">
-      <p>Backend API: <a id="api-docs-link" href="http://localhost:3000/api-docs">API Docs</a> · <a id="health-link" href="http://localhost:3000/api/health">Health Check</a></p>
+      <p>Backend API: <a id="api-docs-link" href="#">API Docs</a> · <a id="health-link" href="#">Health Check</a></p>
       <p>Built with Alpine.js + Tailwind · Powered by Docusign</p>
     </div>
   </div>
   <script>
-    (() => {
+    document.addEventListener('DOMContentLoaded', () => {
       const backendUrl = window.TGK_RUNTIME_CONFIG?.shared?.backendUrl || 'http://localhost:3000';
       const apiDocsLink = document.getElementById('api-docs-link');
       const healthLink = document.getElementById('health-link');
       if (apiDocsLink) apiDocsLink.href = `${backendUrl}/api-docs`;
       if (healthLink) healthLink.href = `${backendUrl}/api/health`;
-    })();
+    });
   </script>
 </body>
 </html>

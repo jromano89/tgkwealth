@@ -3,6 +3,7 @@ const crypto = require('crypto');
 // In-memory token cache: { [userId_accountId]: { token, expiresAt } }
 const tokenCache = new Map();
 const REQUIRED_SCOPES = ['signature', 'impersonation', 'aow_manage'];
+const REQUIRED_SCOPE_STRING = REQUIRED_SCOPES.join(' ');
 const CONSENT_STATE_MAX_AGE_MS = 60 * 60 * 1000;
 
 function normalizeScopes(scopes) {
@@ -31,8 +32,8 @@ function normalizeScopeString(scopes) {
  * Uses the shared integration key + RSA private key, with the user's ID as the subject.
  */
 async function getAccessToken(userId, accountId) {
-  const scopeString = normalizeScopeString(REQUIRED_SCOPES);
-  const cacheKey = `${userId}_${accountId}_${scopeString}`;
+  const scopeString = REQUIRED_SCOPE_STRING;
+  const cacheKey = `${userId}_${accountId}`;
   const cached = tokenCache.get(cacheKey);
 
   if (cached && cached.expiresAt > Date.now() + 60000) {
@@ -108,7 +109,10 @@ function createConsentState(payload = {}) {
 }
 
 function readConsentState(value) {
-  const [encodedPayload, signature] = String(value || '').split('.');
+  const raw = String(value || '');
+  const dotIndex = raw.indexOf('.');
+  const encodedPayload = dotIndex >= 0 ? raw.slice(0, dotIndex) : raw;
+  const signature = dotIndex >= 0 ? raw.slice(dotIndex + 1) : '';
   if (!encodedPayload || !signature) {
     throw new Error('Docusign consent state verification failed');
   }

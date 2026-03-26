@@ -211,9 +211,7 @@ function hasLegacyPath(req) {
 function getAuthMode(req) {
   const authMode = String(getControlValue(req, 'authMode') || (hasLegacyPath(req) ? 'docusign' : 'none')).toLowerCase();
   if (!['none', 'bearer', 'docusign'].includes(authMode)) {
-    const err = new Error(`Unsupported authMode: ${authMode}`);
-    err.statusCode = 400;
-    throw err;
+    throw createError(400, `Unsupported authMode: ${authMode}`);
   }
   return authMode;
 }
@@ -221,16 +219,13 @@ function getAuthMode(req) {
 function getUpstreamMethod(req) {
   const method = String(getControlValue(req, 'method') || req.method).toUpperCase();
   if (!/^[A-Z]+$/.test(method)) {
-    const err = new Error(`Unsupported method: ${method}`);
-    err.statusCode = 400;
-    throw err;
+    throw createError(400, `Unsupported method: ${method}`);
   }
   return method;
 }
 
 function getDocusignSession(req) {
-  const { getDb } = require('../db/database');
-  const db = getDb();
+  const db = require('../db/database').getDb();
   const app = getRequiredApp(db, req);
   const connection = requireSelectedDocusignAccount(getConnectionForApp(db, app.id));
   return {
@@ -250,9 +245,7 @@ function buildTargetUrl(req, docusign) {
     : getControlValue(req, 'path');
 
   if (!path) {
-    const err = new Error('Missing proxy target. Provide "url" or a relative path.');
-    err.statusCode = 400;
-    throw err;
+    throw createError(400, 'Missing proxy target. Provide "url" or a relative path.');
   }
 
   const baseUrl = getControlValue(req, 'baseUrl') || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi';
@@ -299,9 +292,7 @@ async function buildFetchOptions(req, authMode, docusign, upstreamMethod) {
   if (authMode === 'bearer') {
     const bearerToken = getControlValue(req, 'bearerToken');
     if (!bearerToken) {
-      const err = new Error('Missing bearerToken for authMode=bearer');
-      err.statusCode = 400;
-      throw err;
+      throw createError(400, 'Missing bearerToken for authMode=bearer');
     }
     headers.Authorization = `Bearer ${bearerToken}`;
   }
@@ -328,6 +319,7 @@ async function buildFetchOptions(req, authMode, docusign, upstreamMethod) {
 
 function buildOutboundHeaders(req) {
   const headers = {};
+  const isControlEnvelope = hasControlEnvelope(req);
   const requestedHeaders = req.body && typeof req.body === 'object' && !Array.isArray(req.body) && req.body.headers
     ? req.body.headers
     : null;
@@ -341,10 +333,10 @@ function buildOutboundHeaders(req) {
       if (!key || value === undefined || HOP_BY_HOP_HEADERS.has(key.toLowerCase())) continue;
       headers[key] = value;
     }
-  } else if (req.headers['content-type'] && !hasControlEnvelope(req)) {
+  } else if (req.headers['content-type'] && !isControlEnvelope) {
     headers['Content-Type'] = req.headers['content-type'];
   } else if (
-    hasControlEnvelope(req)
+    isControlEnvelope
     && req.body?.body !== undefined
     && (typeof req.body.body === 'object' || Array.isArray(req.body.body))
     && !(req.body.body instanceof Buffer)

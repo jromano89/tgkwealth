@@ -111,7 +111,6 @@ function stockTicker() {
 
     async refresh() {
       try {
-        const previousPrices = Object.fromEntries(this.prices.map(price => [price.sym, price.price]));
         const existingPrices = new Map(this.prices.map(price => [price.sym, price]));
         const quoteMap = await this.fetchQuotes();
 
@@ -124,7 +123,7 @@ function stockTicker() {
           };
           const quote = quoteMap.get(symbol.sym);
           const next = quote || fallback;
-          const previous = previousPrices[symbol.sym];
+          const previous = fallback.price;
           const flash = Number.isFinite(previous) && previous !== next.price
             ? (next.price > previous ? 'flash-green' : 'flash-red')
             : '';

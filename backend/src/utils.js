@@ -138,10 +138,12 @@ function clearAppConnection(db, appId) {
 }
 
 function getAppStats(db, appId) {
-  const profiles = db.prepare('SELECT COUNT(*) AS count FROM profiles WHERE app_id = ?').get(appId).count;
-  const records = db.prepare('SELECT COUNT(*) AS count FROM records WHERE app_id = ?').get(appId).count;
-  const envelopes = db.prepare('SELECT COUNT(*) AS count FROM envelopes WHERE app_id = ?').get(appId).count;
-  return { profiles, records, envelopes };
+  return db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM profiles WHERE app_id = ?) AS profiles,
+      (SELECT COUNT(*) FROM records WHERE app_id = ?) AS records,
+      (SELECT COUNT(*) FROM envelopes WHERE app_id = ?) AS envelopes
+  `).get(appId, appId, appId);
 }
 
 module.exports = {

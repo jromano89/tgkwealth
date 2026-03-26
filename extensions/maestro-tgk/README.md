@@ -1,21 +1,23 @@
 # TGK Maestro Extension
 
-Small DocuSign Maestro Data IO service for TGK.
+Optional DocuSign Maestro Data IO service for TGK. Enables realistic end-to-end Maestro workflows without demo magic.
 
-## Purpose
+## Design
 
-- separate service
-- fake client-credentials auth for demo use
-- writes to the TGK backend API, not SQLite
-- creates and updates TGK profiles
+- Separate service — does not touch SQLite directly
+- Writes to the TGK backend API (`/api/data/profiles`)
+- Fake client-credentials auth (private demo use only)
+- TGK-specific for now; harder to share across verticals than the backend
 
-Canonical Data IO type:
+## Data IO Contract
 
-- `Profile`
+Canonical type: `Profile` (alias: `Investor`)
 
-Compatibility alias:
+- `CreateRecord` -> create profile
+- `PatchRecord` -> update profile
+- `SearchRecords`, `GetTypeNames`, `GetTypeDefinitions` included for Data IO completeness
 
-- `Investor`
+Returned `recordId` is the TGK profile id.
 
 ## Run
 
@@ -28,25 +30,3 @@ Local URLs:
 - service: `http://localhost:3300`
 - health: `http://localhost:3300/health`
 - manifest: `http://localhost:3300/manifest/clientCredentials.ReadWriteManifest.json`
-
-## Contract
-
-- `CreateRecord` -> create profile
-- `PatchRecord` -> update profile
-- `SearchRecords`, `GetTypeNames`, `GetTypeDefinitions` are included for Data IO completeness
-
-Useful fields:
-
-- `DisplayName`
-- `Email`
-- `Phone`
-- `Organization`
-- `Status`
-- `Source`
-- `DataJson`
-- `Aum`
-- `NetWorth`
-- `LifecycleStage`
-- `CompletedEnvelopeId`
-
-Returned `recordId` is the TGK profile id.
