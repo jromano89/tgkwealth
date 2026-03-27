@@ -12,8 +12,9 @@ function investorApp() {
     sidebarCollapsed: false,
     loading: true,
 
-    messages: [],
-    newMessage: '',
+    tasks: [
+      { id: 1, title: 'Begin Asset Transfer', description: 'Initiate the transfer of assets from your external accounts to your new brokerage account.' }
+    ],
 
     async init() {
       try {
@@ -53,7 +54,7 @@ function investorApp() {
     },
 
     setTab(nextTab) {
-      const allowedTabs = new Set(['overview', 'documents', 'messages', 'settings']);
+      const allowedTabs = new Set(['overview', 'documents', 'tasks', 'settings']);
       this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
       try {
         window.localStorage.setItem(TGK_INVESTOR_TAB_STORAGE_KEY, this.tab);
@@ -99,8 +100,8 @@ function investorApp() {
       return total / portfolioValue;
     },
 
-    get unreadCount() {
-      return this.messages.filter(m => m.unread).length;
+    dismissTask(id) {
+      this.tasks = this.tasks.filter(t => t.id !== id);
     },
 
     async openEnvelope(env) {
@@ -114,16 +115,8 @@ function investorApp() {
       }
     },
 
-    sendMessage() {
-      if (!this.newMessage.trim()) return;
-      this.messages.unshift({
-        from: this.clientName,
-        body: this.newMessage,
-        time: 'Just now',
-        unread: false,
-        isAdvisor: false
-      });
-      this.newMessage = '';
+    initials(name) {
+      return (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
     }
   };
 }

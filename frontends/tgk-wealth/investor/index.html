@@ -70,10 +70,10 @@
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span x-show="!sidebarCollapsed">Documents</span>
       </button>
-      <button @click="setTab('messages')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'messages' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Messages
-          <template x-if="unreadCount > 0"><span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span></template>
+      <button @click="setTab('tasks')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'tasks' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Tasks
+          <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
         </span>
       </button>
       <button @click="setTab('settings')"
@@ -196,13 +196,13 @@
 
       <!-- Tab Nav -->
       <div x-show="tab !== 'settings'" class="flex gap-6 border-b border-gray-200 mb-6">
-        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'documents',icon:'▤',label:'Documents'},{id:'messages',icon:'✉',label:'Messages'}]" :key="t.id">
+        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'documents',icon:'▤',label:'Documents'},{id:'tasks',icon:'☑',label:'Tasks'}]" :key="t.id">
           <button @click="setTab(t.id)" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
             :class="tab === t.id ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
             <span x-text="t.icon"></span>
             <span x-text="t.label"></span>
-            <template x-if="t.id === 'messages' && unreadCount > 0">
-              <span class="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="unreadCount"></span>
+            <template x-if="t.id === 'tasks' && tasks.length > 0">
+              <span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span>
             </template>
           </button>
         </template>
@@ -272,7 +272,7 @@
               <div class="text-xs text-gray-400 mt-0.5" x-text="(TGK_CONFIG.advisor?.email || '') + ' · ' + (TGK_CONFIG.advisor?.phone || '')"></div>
             </div>
             <div class="ml-auto flex gap-2">
-              <button @click="setTab('messages')" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">Send Message</button>
+              <button @click="setTab('tasks')" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">View Tasks</button>
             </div>
           </div>
         </div>
@@ -319,32 +319,31 @@
         </div>
       </div>
 
-      <!-- MESSAGES TAB -->
-      <div x-show="tab === 'messages'">
+      <!-- TASKS TAB -->
+      <div x-show="tab === 'tasks'">
         <div class="bg-white rounded-xl shadow-sm p-5">
-          <h3 class="font-semibold text-base text-navy mb-4">Messages</h3>
-          <div class="space-y-3 mb-4 max-h-[50vh] overflow-auto">
-            <template x-if="messages.length === 0">
-              <div class="text-center py-8 text-gray-400">
-                <div class="text-3xl mb-2">💬</div>
-                <p class="text-sm">No messages yet. Start a conversation below.</p>
-              </div>
-            </template>
-            <template x-for="(m, i) in messages" :key="i">
-              <div class="p-4 rounded-lg border transition-colors" :class="m.unread ? 'border-brand/30 bg-blue-50/40 border-l-4 border-l-brand' : 'border-gray-100'">
-                <div class="flex items-center gap-2 mb-1">
-                  <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" :class="m.isAdvisor ? 'bg-brand' : 'bg-gray-400'" x-text="initials(m.from)"></div>
-                  <span class="text-sm font-medium text-navy" x-text="m.from"></span>
-                  <template x-if="m.unread"><span class="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">NEW</span></template>
-                  <span class="ml-auto text-[10px] text-gray-400" x-text="m.time"></span>
+          <h3 class="font-semibold text-base text-navy mb-4">Tasks</h3>
+          <template x-if="tasks.length === 0">
+            <div class="text-center py-8 text-gray-400">
+              <div class="text-3xl mb-2">✓</div>
+              <p class="text-sm">All caught up — no pending tasks.</p>
+            </div>
+          </template>
+          <div class="space-y-3">
+            <template x-for="task in tasks" :key="task.id">
+              <div class="flex items-start gap-3 p-4 rounded-lg border border-brand/20 bg-blue-50/30">
+                <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
-                <p class="text-sm text-gray-600 ml-8" x-text="m.body"></p>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-navy" x-text="task.title"></div>
+                  <p class="text-xs text-gray-500 mt-1" x-text="task.description"></p>
+                </div>
+                <button @click="dismissTask(task.id)" class="text-gray-300 hover:text-green-500 transition-colors flex-shrink-0 mt-0.5" title="Mark complete">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </button>
               </div>
             </template>
-          </div>
-          <div class="flex gap-2">
-            <input x-model="newMessage" @keydown.enter="sendMessage()" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
-            <button @click="sendMessage()" class="px-4 py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">Send</button>
           </div>
         </div>
       </div>
