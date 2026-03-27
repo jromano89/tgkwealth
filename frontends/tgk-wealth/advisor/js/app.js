@@ -160,11 +160,17 @@ function advisorApp() {
       }
     },
 
-    openEnvelopeInDocusign(envelope) {
-      const envelopeId = envelope.docusign_envelope_id;
-      if (!envelopeId) return;
-      const appsOrigin = TGK_API.getDocusignAppOrigin();
-      window.open(`${appsOrigin}/documents/details/${envelopeId}`, '_blank');
+    async openEnvelopeInDocusign(envelope) {
+      const id = envelope.docusign_envelope_id || envelope.id;
+      if (!id) return;
+      try {
+        const { url } = await TGK_API.post(`/api/envelopes/${id}/sender-view`, { returnUrl: window.location.href });
+        window.open(url, '_blank');
+      } catch (e) {
+        // Fallback to generic Docusign URL if sender view fails
+        const appsOrigin = TGK_API.getDocusignAppOrigin();
+        window.open(`${appsOrigin}/documents/details/${id}`, '_blank');
+      }
     },
 
     rememberSelectedContact(contactId) {

@@ -50,4 +50,13 @@ async function getDocuments(userId, accountId, envelopeId) {
   });
 }
 
-module.exports = { createEnvelope, getEnvelope, getSigningUrl, getDocuments };
+async function getSenderViewUrl(userId, accountId, envelopeId, returnUrl) {
+  return docusignRequest(userId, accountId, `/envelopes/${envelopeId}/views/sender`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ returnUrl: returnUrl || 'https://docusign.com' }),
+    errorPrefix: 'Failed to get sender view URL'
+  });
+}
+
+module.exports = { createEnvelope, getEnvelope, getSigningUrl, getSenderViewUrl, getDocuments };

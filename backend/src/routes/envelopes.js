@@ -174,6 +174,35 @@ router.post('/:id/signing-url', requireDocusignConnection, async (req, res) => {
 
 /**
  * @swagger
+ * /api/envelopes/{id}/sender-view:
+ *   post:
+ *     summary: Generate embedded sender view URL (no login required)
+ *     tags: [Envelopes]
+ */
+router.post('/:id/sender-view', requireDocusignConnection, async (req, res) => {
+  try {
+    const db = getDb();
+    const { userId, accountId } = req.docusign;
+    const envelope = findEnvelope(db, req.demoApp.id, req.params.id);
+
+    if (!envelope || !envelope.docusign_envelope_id) {
+      return res.status(404).json({ error: 'Envelope not found or not linked to Docusign' });
+    }
+
+    const result = await envelopeService.getSenderViewUrl(
+      userId, accountId, envelope.docusign_envelope_id,
+      req.body.returnUrl || `${req.headers.referer || '/'}`
+    );
+
+    res.json({ url: result.url });
+  } catch (err) {
+    console.error('Sender view error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
  * /api/envelopes/{id}/documents:
  *   get:
  *     summary: List envelope documents

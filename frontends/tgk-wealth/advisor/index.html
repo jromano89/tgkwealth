@@ -372,8 +372,6 @@
                       <tr class="bg-gray-50 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                         <th class="px-4 py-2.5">Envelope ID</th>
                         <th class="px-4 py-2.5">Document</th>
-                        <th class="px-4 py-2.5">Date Sent</th>
-                        <th class="px-4 py-2.5">Date Signed</th>
                         <th class="px-4 py-2.5">Status</th>
                       </tr>
                     </thead>
@@ -382,8 +380,6 @@
                         <tr class="hover:bg-gray-50/50 cursor-pointer transition-colors" @click="openEnvelopeInDocusign(env)">
                           <td class="px-4 py-3 font-mono text-xs text-gray-500" x-text="(env.docusign_envelope_id || env.id || '').slice(0, 8) + '…'"></td>
                           <td class="px-4 py-3 font-medium text-navy" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></td>
-                          <td class="px-4 py-3 text-gray-500" x-text="env.sent_at ? new Date(env.sent_at).toLocaleDateString() : '—'"></td>
-                          <td class="px-4 py-3 text-gray-500" x-text="env.completed_at ? new Date(env.completed_at).toLocaleDateString() : '—'"></td>
                           <td class="px-4 py-3">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
                               :class="{
