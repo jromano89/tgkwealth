@@ -302,7 +302,7 @@
                     x-text="(env.metadata?.documentName || env.template_name || 'D')[0].toUpperCase()"></div>
                   <div>
                     <div class="text-sm font-medium text-navy" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
-                    <div class="text-[11px] text-gray-400 font-mono" x-text="(env.docusign_envelope_id || env.id || '').slice(0, 8) + '…'"></div>
+                    <div class="text-[11px] text-gray-400 font-mono" x-text="env.docusign_envelope_id || env.id || ''"></div>
                   </div>
                 </div>
                 <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize"
