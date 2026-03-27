@@ -66,10 +66,6 @@
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span x-show="!sidebarCollapsed">Overview</span>
       </button>
-      <button @click="setTab('holdings')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'holdings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l8 8-8 8-8-8 8-8z"/></svg>
-        <span x-show="!sidebarCollapsed">Holdings</span>
-      </button>
       <button @click="setTab('documents')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span x-show="!sidebarCollapsed">Documents</span>
@@ -200,7 +196,7 @@
 
       <!-- Tab Nav -->
       <div x-show="tab !== 'settings'" class="flex gap-6 border-b border-gray-200 mb-6">
-        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'holdings',icon:'◈',label:'Holdings'},{id:'documents',icon:'▤',label:'Documents'},{id:'messages',icon:'✉',label:'Messages'}]" :key="t.id">
+        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'documents',icon:'▤',label:'Documents'},{id:'messages',icon:'✉',label:'Messages'}]" :key="t.id">
           <button @click="setTab(t.id)" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
             :class="tab === t.id ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
             <span x-text="t.icon"></span>
@@ -282,66 +278,43 @@
         </div>
       </div>
 
-      <!-- HOLDINGS TAB -->
-      <div x-show="tab === 'holdings'">
-        <div class="bg-white rounded-xl shadow-sm p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-base text-navy">Holdings</h3>
-              <p class="text-sm text-gray-400 mt-0.5">Real-time position data synced from your accounts.</p>
-            </div>
-            <button class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">+ Add Options to Account</button>
-          </div>
-          <table class="w-full">
-            <thead>
-              <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
-                <th class="text-left pb-3">Symbol</th><th class="text-left pb-3">Name</th><th class="text-right pb-3">Shares</th><th class="text-right pb-3">Price</th><th class="text-right pb-3">Market Value</th><th class="text-right pb-3">Today</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">AAPL</td><td class="text-sm">Apple Inc.</td><td class="text-right text-sm">150</td><td class="text-right text-sm">$237.45</td><td class="text-right text-sm font-medium">$35,617</td><td class="text-right text-sm text-green-600">+0.42%</td></tr>
-              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">MSFT</td><td class="text-sm">Microsoft Corp.</td><td class="text-right text-sm">85</td><td class="text-right text-sm">$428.84</td><td class="text-right text-sm font-medium">$36,451</td><td class="text-right text-sm text-red-600">-0.18%</td></tr>
-              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">GOOGL</td><td class="text-sm">Alphabet Inc.</td><td class="text-right text-sm">200</td><td class="text-right text-sm">$178.38</td><td class="text-right text-sm font-medium">$35,676</td><td class="text-right text-sm text-green-600">+0.31%</td></tr>
-              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">BRK.B</td><td class="text-sm">Berkshire Hathaway</td><td class="text-right text-sm">60</td><td class="text-right text-sm">$472.15</td><td class="text-right text-sm font-medium">$28,329</td><td class="text-right text-sm text-green-600">+0.08%</td></tr>
-              <tr class="border-b border-gray-50"><td class="py-2.5 text-brand font-medium">AGG</td><td class="text-sm">iShares Core US Agg Bond</td><td class="text-right text-sm">300</td><td class="text-right text-sm">$98.49</td><td class="text-right text-sm font-medium">$29,547</td><td class="text-right text-sm text-green-600">+0.12%</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- DOCUMENTS TAB -->
       <div x-show="tab === 'documents'">
         <div class="bg-white rounded-xl shadow-sm p-5">
           <h3 class="font-semibold text-base text-navy mb-4">Documents</h3>
+          <template x-if="envelopes.length === 0">
+            <div class="text-center py-8 text-gray-400">
+              <div class="text-3xl mb-2">📄</div>
+              <p class="text-sm">No documents yet.</p>
+            </div>
+          </template>
           <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-brand text-xs font-bold">R</div>
-                <div><div class="text-sm font-medium text-navy">Q1 2026 Performance Report</div><div class="text-[11px] text-gray-400">March 15, 2026</div></div>
+            <template x-for="env in envelopes" :key="env.id">
+              <div @click="openEnvelope(env)" class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                    :class="{
+                      'bg-green-50 text-green-600': env.status === 'completed',
+                      'bg-blue-50 text-brand': env.status === 'sent',
+                      'bg-yellow-50 text-yellow-600': env.status === 'delivered',
+                      'bg-gray-50 text-gray-500': !['completed','sent','delivered'].includes(env.status)
+                    }"
+                    x-text="(env.metadata?.documentName || env.template_name || 'D')[0].toUpperCase()"></div>
+                  <div>
+                    <div class="text-sm font-medium text-navy" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
+                    <div class="text-[11px] text-gray-400 font-mono" x-text="(env.docusign_envelope_id || env.id || '').slice(0, 8) + '…'"></div>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize"
+                  :class="{
+                    'bg-green-100 text-green-700': env.status === 'completed',
+                    'bg-blue-100 text-blue-700': env.status === 'sent',
+                    'bg-yellow-100 text-yellow-700': env.status === 'delivered',
+                    'bg-gray-100 text-gray-600': !['completed','sent','delivered'].includes(env.status)
+                  }"
+                  x-text="env.status || 'unknown'"></span>
               </div>
-              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">Ready</span>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 text-xs font-bold">T</div>
-                <div><div class="text-sm font-medium text-navy">2025 Tax Summary (1099)</div><div class="text-[11px] text-gray-400">February 15, 2026</div></div>
-              </div>
-              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">Signed</span>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 text-xs font-bold">L</div>
-                <div><div class="text-sm font-medium text-navy">Investment Policy Statement</div><div class="text-[11px] text-gray-400">January 10, 2026</div></div>
-              </div>
-              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">On File</span>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 text-xs font-bold">D</div>
-                <div><div class="text-sm font-medium text-navy">Form ADV Part 2 Disclosure</div><div class="text-[11px] text-gray-400">January 2, 2026</div></div>
-              </div>
-              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">Delivered</span>
-            </div>
+            </template>
           </div>
         </div>
       </div>

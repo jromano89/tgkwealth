@@ -365,37 +365,34 @@
               <template x-if="selectedContactEnvelopes.length === 0">
                 <p class="text-sm text-gray-400">No documents yet.</p>
               </template>
-              <template x-if="selectedContactEnvelopes.length > 0">
-                <div class="overflow-hidden rounded-lg border border-gray-100">
-                  <table class="w-full text-sm">
-                    <thead>
-                      <tr class="bg-gray-50 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                        <th class="px-4 py-2.5">Envelope ID</th>
-                        <th class="px-4 py-2.5">Document</th>
-                        <th class="px-4 py-2.5">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                      <template x-for="env in selectedContactEnvelopes" :key="env.id">
-                        <tr class="hover:bg-gray-50/50 cursor-pointer transition-colors" @click="openEnvelopeInDocusign(env)">
-                          <td class="px-4 py-3 font-mono text-xs text-gray-500" x-text="(env.docusign_envelope_id || env.id || '').slice(0, 8) + '…'"></td>
-                          <td class="px-4 py-3 font-medium text-navy" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></td>
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                              :class="{
-                                'bg-green-100 text-green-700': env.status === 'completed',
-                                'bg-blue-100 text-blue-700': env.status === 'sent',
-                                'bg-yellow-100 text-yellow-700': env.status === 'delivered',
-                                'bg-gray-100 text-gray-600': !['completed','sent','delivered'].includes(env.status)
-                              }"
-                              x-text="env.status || 'unknown'"></span>
-                          </td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </template>
+              <div class="space-y-3">
+                <template x-for="env in selectedContactEnvelopes" :key="env.id">
+                  <div @click="openEnvelopeInDocusign(env)" class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                        :class="{
+                          'bg-green-50 text-green-600': env.status === 'completed',
+                          'bg-blue-50 text-blue-600': env.status === 'sent',
+                          'bg-yellow-50 text-yellow-600': env.status === 'delivered',
+                          'bg-gray-50 text-gray-500': !['completed','sent','delivered'].includes(env.status)
+                        }"
+                        x-text="(env.metadata?.documentName || env.template_name || 'D')[0].toUpperCase()"></div>
+                      <div>
+                        <div class="text-sm font-medium text-navy" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
+                        <div class="text-[11px] text-gray-400 font-mono" x-text="(env.docusign_envelope_id || env.id || '').slice(0, 8) + '…'"></div>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize"
+                      :class="{
+                        'bg-green-100 text-green-700': env.status === 'completed',
+                        'bg-blue-100 text-blue-700': env.status === 'sent',
+                        'bg-yellow-100 text-yellow-700': env.status === 'delivered',
+                        'bg-gray-100 text-gray-600': !['completed','sent','delivered'].includes(env.status)
+                      }"
+                      x-text="env.status || 'unknown'"></span>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>

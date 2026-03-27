@@ -8,6 +8,7 @@ function investorApp() {
     selectedClientId: null,
     selectedClient: null,
     accounts: [],
+    envelopes: [],
     sidebarCollapsed: false,
     loading: true,
 
@@ -52,7 +53,7 @@ function investorApp() {
     },
 
     setTab(nextTab) {
-      const allowedTabs = new Set(['overview', 'holdings', 'documents', 'messages', 'settings']);
+      const allowedTabs = new Set(['overview', 'documents', 'messages', 'settings']);
       this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
       try {
         window.localStorage.setItem(TGK_INVESTOR_TAB_STORAGE_KEY, this.tab);
@@ -65,6 +66,7 @@ function investorApp() {
         const detail = await TGK_API.getContact(this.selectedClientId);
         this.selectedClient = detail;
         this.accounts = detail.accounts || [];
+        this.envelopes = detail.envelopes || [];
       } catch (e) {
         console.error('Failed to load client:', e);
       }
@@ -99,6 +101,18 @@ function investorApp() {
 
     get unreadCount() {
       return this.messages.filter(m => m.unread).length;
+    },
+
+    async openEnvelope(env) {
+      const id = env.docusign_envelope_id || env.id;
+      if (!id) return;
+      try {
+        const { url } = await TGK_API.post(`/api/envelopes/${id}/sender-view`, { returnUrl: window.location.href });
+        window.open(url, '_blank');
+      } catch (e) {
+        const appsOrigin = TGK_API.getDocusignAppOrigin();
+        window.open(`${appsOrigin}/documents/details/${id}`, '_blank');
+      }
     },
 
     sendMessage() {
