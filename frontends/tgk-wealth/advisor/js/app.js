@@ -160,10 +160,15 @@ function advisorApp() {
       }
     },
 
-    openEnvelopeInDocusign(envelope) {
-      const envelopeId = envelope.docusign_envelope_id;
-      if (!envelopeId) return;
-      window.open(`https://app.docusign.com/documents/details/${envelopeId}`, '_blank');
+    async openEnvelopeInDocusign(envelope) {
+      const id = envelope.docusign_envelope_id || envelope.id;
+      if (!id) return;
+      try {
+        const { url } = await TGK_API.post(`/api/envelopes/${id}/console-view`, { returnUrl: window.location.href });
+        window.open(url, '_blank');
+      } catch (e) {
+        window.open(`https://app.docusign.com/documents/details/${id}`, '_blank');
+      }
     },
 
     rememberSelectedContact(contactId) {

@@ -103,10 +103,15 @@ function investorApp() {
       return this.messages.filter(m => m.unread).length;
     },
 
-    openEnvelope(env) {
-      const envelopeId = env.docusign_envelope_id;
-      if (!envelopeId) return;
-      window.open(`https://app.docusign.com/documents/details/${envelopeId}`, '_blank');
+    async openEnvelope(env) {
+      const id = env.docusign_envelope_id || env.id;
+      if (!id) return;
+      try {
+        const { url } = await TGK_API.post(`/api/envelopes/${id}/console-view`, { returnUrl: window.location.href });
+        window.open(url, '_blank');
+      } catch (e) {
+        window.open(`https://app.docusign.com/documents/details/${id}`, '_blank');
+      }
     },
 
     sendMessage() {
