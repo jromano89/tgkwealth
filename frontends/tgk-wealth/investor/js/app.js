@@ -13,9 +13,7 @@ function investorApp() {
     sidebarCollapsed: false,
     loading: true,
 
-    tasks: [
-      { id: 1, title: 'Begin Asset Transfer', description: 'Initiate the transfer of assets from your external accounts to your new brokerage account.' }
-    ],
+    tasks: [],
 
     async init() {
       try {
@@ -69,6 +67,7 @@ function investorApp() {
         this.selectedClient = detail;
         this.accounts = detail.accounts || [];
         this.envelopes = detail.envelopes || [];
+        this.tasks = detail.tasks || [];
       } catch (e) {
         console.error('Failed to load client:', e);
       }
@@ -101,8 +100,13 @@ function investorApp() {
       return total / portfolioValue;
     },
 
-    dismissTask(id) {
-      this.tasks = this.tasks.filter(t => t.id !== id);
+    async dismissTask(id) {
+      try {
+        await TGK_API.deleteTask(id);
+        this.tasks = this.tasks.filter(t => t.id !== id);
+      } catch (e) {
+        console.error('Failed to dismiss task:', e);
+      }
     },
 
     downloadEnvelopeDocs(env) {

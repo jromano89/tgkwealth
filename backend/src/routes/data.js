@@ -81,6 +81,15 @@ router.post('/profiles', (req, res) => {
       source || 'api'
     );
 
+    // Auto-create default tasks for new profiles
+    const defaultTasks = req.body.tasks || [
+      { title: 'Begin Asset Transfer', description: 'Initiate the transfer of assets from your external accounts to your new brokerage account.' }
+    ];
+    for (const task of defaultTasks) {
+      db.prepare('INSERT INTO tasks (id, app_id, profile_id, title, description) VALUES (?, ?, ?, ?, ?)')
+        .run(uuidv4(), app.id, id, task.title, task.description || null);
+    }
+
     const profile = db.prepare('SELECT * FROM profiles WHERE id = ? AND app_id = ?').get(id, app.id);
     res.status(201).json(parseJsonFields(profile));
   } catch (err) {
@@ -107,11 +116,13 @@ router.get('/profiles/:id', (req, res) => {
 
     const records = db.prepare('SELECT * FROM records WHERE profile_id = ? AND app_id = ? ORDER BY created_at DESC').all(profile.id, app.id);
     const envelopes = db.prepare('SELECT * FROM envelopes WHERE profile_id = ? AND app_id = ? ORDER BY created_at DESC').all(profile.id, app.id);
+    const tasks = db.prepare('SELECT * FROM tasks WHERE profile_id = ? AND app_id = ? ORDER BY created_at ASC').all(profile.id, app.id);
 
     res.json({
       ...parseJsonFields(profile),
       records: records.map(parseJsonFields),
-      envelopes: envelopes.map(parseJsonFields)
+      envelopes: envelopes.map(parseJsonFields),
+      tasks
     });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
@@ -185,6 +196,7 @@ router.delete('/profiles/:id', (req, res) => {
     const profile = db.prepare('SELECT id FROM profiles WHERE id = ? AND app_id = ?').get(req.params.id, app.id);
     if (!profile) throw createError(404, 'Profile not found');
 
+    db.prepare('DELETE FROM tasks WHERE profile_id = ? AND app_id = ?').run(profile.id, app.id);
     db.prepare('DELETE FROM envelopes WHERE profile_id = ? AND app_id = ?').run(profile.id, app.id);
     db.prepare('DELETE FROM records WHERE profile_id = ? AND app_id = ?').run(profile.id, app.id);
     db.prepare('DELETE FROM profiles WHERE id = ? AND app_id = ?').run(profile.id, app.id);
@@ -449,6 +461,27 @@ router.put('/envelopes/:id', (req, res) => {
 
     const updated = db.prepare('SELECT * FROM envelopes WHERE id = ?').get(existing.id);
     res.json(parseJsonFields(updated));
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/data/tasks/{id}:
+ *   delete:
+ *     summary: Delete a task
+ *     tags: [Data]
+ */
+router.delete('/tasks/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const app = getRequiredApp(db, req);
+    const task = db.prepare('SELECT id FROM tasks WHERE id = ? AND app_id = ?').get(req.params.id, app.id);
+    if (!task) throw createError(404, 'Task not found');
+
+    db.prepare('DELETE FROM tasks WHERE id = ? AND app_id = ?').run(task.id, app.id);
+    res.json({ deleted: true });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }

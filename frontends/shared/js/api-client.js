@@ -335,6 +335,7 @@
     createProfile(data) { return this.post('/api/data/profiles', data); },
     updateProfile(id, data) { return this.put(`/api/data/profiles/${id}`, data); },
     deleteProfile(id) { return this.del(`/api/data/profiles/${id}`); },
+    deleteTask(id) { return this.del(`/api/data/tasks/${id}`); },
     getRecords(params) {
       const q = params ? '?' + new URLSearchParams(params) : '';
       return this.get(`/api/data/records${q}`);
@@ -353,7 +354,8 @@
       return {
         ...mapProfileToContact(profile),
         accounts: (profile.records || []).filter(record => record.kind === 'account').map(mapRecordToAccount),
-        envelopes: profile.envelopes || []
+        envelopes: profile.envelopes || [],
+        tasks: profile.tasks || []
       };
     },
     async createContact(data) {
