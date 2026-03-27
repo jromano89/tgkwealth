@@ -4,6 +4,7 @@ const MAESTRO_CONTACT_SOURCE = 'maestro-extension';
 const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
+const CLIENT_DETAIL_REFRESH_MS = 5000;
 
 function advisorApp() {
   return {
@@ -11,6 +12,8 @@ function advisorApp() {
     contacts: [],
     selectedContact: null,
     selectedContactAccounts: [],
+    selectedContactEnvelopes: [],
+    _clientDetailRefreshTimer: null,
     searchQuery: '',
     showOnboarding: false,
     maestroWorkflowId: window.TGK_DEMO?.config?.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
@@ -102,10 +105,51 @@ function advisorApp() {
         const detail = await TGK_API.getContact(contact.id);
         this.selectedContact = detail;
         this.selectedContactAccounts = detail.accounts || [];
+        this.selectedContactEnvelopes = detail.envelopes || [];
       } catch (e) {
         this.selectedContactAccounts = [];
+        this.selectedContactEnvelopes = [];
       }
       this.setView('client');
+      this.startClientDetailRefresh(contact.id);
+    },
+
+    startClientDetailRefresh(contactId) {
+      this.stopClientDetailRefresh();
+      const app = this;
+      this._clientDetailRefreshTimer = window.setInterval(async function () {
+        if (app.view !== 'client' || !app.selectedContact || app.selectedContact.id !== contactId) {
+          app.stopClientDetailRefresh();
+          return;
+        }
+        try {
+          const detail = await TGK_API.getContact(contactId);
+          app.selectedContact = detail;
+          app.selectedContactAccounts = detail.accounts || [];
+          app.selectedContactEnvelopes = detail.envelopes || [];
+          // Also refresh the contact in the main list so dashboard stays current
+          const idx = app.contacts.findIndex(c => c.id === contactId);
+          if (idx !== -1) {
+            app.contacts[idx] = { ...app.contacts[idx], ...detail, accounts: undefined, envelopes: undefined };
+          }
+        } catch (e) {
+          // Silently ignore refresh failures
+        }
+      }, CLIENT_DETAIL_REFRESH_MS);
+    },
+
+    stopClientDetailRefresh() {
+      if (this._clientDetailRefreshTimer) {
+        window.clearInterval(this._clientDetailRefreshTimer);
+        this._clientDetailRefreshTimer = null;
+      }
+    },
+
+    openEnvelopeInDocusign(envelope) {
+      const envelopeId = envelope.docusign_envelope_id;
+      if (!envelopeId) return;
+      const appsOrigin = TGK_API.getDocusignAppOrigin();
+      window.open(`${appsOrigin}/documents/details/${envelopeId}`, '_blank');
     },
 
     rememberSelectedContact(contactId) {
@@ -116,9 +160,11 @@ function advisorApp() {
     },
 
     goBack() {
+      this.stopClientDetailRefresh();
       this.setView('dashboard');
       this.selectedContact = null;
       this.selectedContactAccounts = [];
+      this.selectedContactEnvelopes = [];
     },
 
     resetOnboardingState() {

@@ -342,4 +342,92 @@ router.put('/records/:id', (req, res) => {
   }
 });
 
+// ── Envelopes (tracking-only CRUD — no Docusign call) ─────────────────
+
+/**
+ * @swagger
+ * /api/data/envelopes:
+ *   post:
+ *     summary: Create an envelope tracking row (no Docusign call)
+ *     tags: [Data]
+ */
+router.post('/envelopes', (req, res) => {
+  try {
+    const db = getDb();
+    const app = getRequiredApp(db, req);
+    const id = req.body.id || uuidv4();
+    const { docusignEnvelopeId, profileId, recordId, templateId, templateName, status, metadata, source } = req.body;
+
+    if (profileId) {
+      const profile = db.prepare('SELECT id FROM profiles WHERE id = ? AND app_id = ?').get(profileId, app.id);
+      if (!profile) throw createError(400, 'profileId must belong to the current app');
+    }
+
+    db.prepare(`
+      INSERT INTO envelopes (id, app_id, docusign_envelope_id, profile_id, record_id, template_id, template_name, status, metadata, source, sent_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      id, app.id,
+      docusignEnvelopeId || null,
+      profileId || null,
+      recordId || null,
+      templateId || null,
+      templateName || null,
+      status || 'sent',
+      serializeJson(metadata || {}),
+      source || 'api'
+    );
+
+    const envelope = db.prepare('SELECT * FROM envelopes WHERE id = ? AND app_id = ?').get(id, app.id);
+    res.status(201).json(parseJsonFields(envelope));
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/data/envelopes/{id}:
+ *   put:
+ *     summary: Update an envelope tracking row
+ *     tags: [Data]
+ */
+router.put('/envelopes/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const app = getRequiredApp(db, req);
+    const existing = db.prepare('SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)').get(app.id, req.params.id, req.params.id);
+
+    if (!existing) throw createError(404, 'Envelope not found');
+
+    const { docusignEnvelopeId, profileId, recordId, templateName, status, metadata } = req.body;
+
+    db.prepare(`
+      UPDATE envelopes SET
+        docusign_envelope_id = COALESCE(?, docusign_envelope_id),
+        profile_id = COALESCE(?, profile_id),
+        record_id = COALESCE(?, record_id),
+        template_name = COALESCE(?, template_name),
+        status = COALESCE(?, status),
+        metadata = COALESCE(?, metadata),
+        completed_at = CASE WHEN ? = 'completed' THEN datetime('now') ELSE completed_at END
+      WHERE id = ?
+    `).run(
+      docusignEnvelopeId,
+      profileId,
+      recordId,
+      templateName,
+      status,
+      metadata !== undefined ? serializeJson(metadata) : null,
+      status || existing.status,
+      existing.id
+    );
+
+    const updated = db.prepare('SELECT * FROM envelopes WHERE id = ?').get(existing.id);
+    res.json(parseJsonFields(updated));
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

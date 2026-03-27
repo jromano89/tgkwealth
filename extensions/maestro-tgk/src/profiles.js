@@ -1,9 +1,9 @@
-const { createProfile, getProfile, listProfiles, updateProfile } = require('./tgk-client');
+const { createProfile, createRecord: createBackendRecord, getProfile, listProfiles, updateProfile } = require('./tgk-client');
 const { TYPE_ALIASES, TYPE_DEFINITIONS, TYPE_NAME, TYPE_NAMES } = require('./profile-type-definitions');
 
 const COLOR_PALETTE = ['#3b5bdb', '#16a34a', '#0ea5e9', '#ec4899', '#f59f00', '#dc2626', '#7c3aed'];
 const RISK_PROFILES = ['Balanced', 'Moderate Growth', 'Growth', 'Conservative Income'];
-const ROLES = ['Prospective Client', 'New Investor', 'Pending Onboarding'];
+const DEFAULT_ROLE = 'Prospective Client';
 const ADVISORS = ['Gordon Gecko', 'Avery Quinn', 'Morgan Lee'];
 
 function createError(statusCode, code, message) {
@@ -116,7 +116,6 @@ function mapProfileToRecord(profile) {
     Role: data.role || '',
     AssignedTo: data.assignedTo || '',
     LifecycleStage: data.lifecycleStage || '',
-    CompletedEnvelopeId: data.completedEnvelopeId || '',
     CreatedAt: profile.created_at || '',
     UpdatedAt: profile.updated_at || '',
     ...((data.extensionFields && typeof data.extensionFields === 'object') ? data.extensionFields : {})
@@ -261,7 +260,6 @@ function buildProfilePayload(rawInput, existingProfile) {
     'Role', 'role',
     'AssignedTo', 'assignedTo',
     'LifecycleStage', 'lifecycleStage',
-    'CompletedEnvelopeId', 'completedEnvelopeId', 'EnvelopeId', 'envelopeId',
     'ExternalId', 'externalId'
   ]);
 
@@ -286,10 +284,6 @@ function buildProfilePayload(rawInput, existingProfile) {
     || existingData.lifecycleStage
     || (status === 'pending' ? 'pending_signature' : status);
 
-  const completedEnvelopeId = pick(mergedInput, ['CompletedEnvelopeId', 'completedEnvelopeId', 'EnvelopeId', 'envelopeId'])
-    || existingData.completedEnvelopeId
-    || null;
-
   const extensionFields = collectExtensionFields(input, consumedKeys);
   const existingExtensionFields = existingData.extensionFields && typeof existingData.extensionFields === 'object'
     ? existingData.extensionFields
@@ -305,11 +299,10 @@ function buildProfilePayload(rawInput, existingProfile) {
     netWorth,
     changePct: existingProfile ? normalizeNumber(existingData.changePct, 0) : 0,
     riskProfile: pick(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed),
-    role: pick(mergedInput, ['Role', 'role']) || existingData.role || deterministicPick(ROLES, sourceSeed),
+    role: pick(mergedInput, ['Role', 'role']) || existingData.role || DEFAULT_ROLE,
     assignedTo: pick(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || deterministicPick(ADVISORS, sourceSeed),
     avatar: existingData.avatar || deterministicPick(COLOR_PALETTE, sourceSeed),
     lifecycleStage,
-    completedEnvelopeId,
     externalId: pick(mergedInput, ['ExternalId', 'externalId']) || existingData.externalId || null,
     extensionFields: {
       ...existingExtensionFields,
@@ -346,6 +339,30 @@ async function createRecord(body) {
     ...(requestedId ? { Id: requestedId } : {})
   });
   const created = await createProfile(payload);
+
+  // Create a $0 Individual Brokerage account for every new profile
+  try {
+    await createBackendRecord({
+      profileId: created.id,
+      kind: 'account',
+      title: 'Individual Brokerage',
+      status: 'pending',
+      data: {
+        typeCode: 'type-a',
+        accountType: 'Taxable',
+        value: 0,
+        ytdReturn: 0,
+        allocEquity: 0,
+        allocFixed: 0,
+        allocAlt: 0,
+        allocCash: 100
+      },
+      source: 'maestro-extension'
+    });
+  } catch (err) {
+    console.warn('Could not create default account for profile:', err.message);
+  }
+
   return { recordId: created.id };
 }
 

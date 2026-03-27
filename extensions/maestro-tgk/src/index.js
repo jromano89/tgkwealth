@@ -3,6 +3,9 @@ const { config, getPublicBaseUrl } = require('./config');
 const { handlePreflight, readParsedBody, sendJson, sendText } = require('./http');
 const { buildManifest } = require('./manifest');
 const profileService = require('./profiles');
+const envelopeService = require('./envelopes');
+const profileTypeDefs = require('./profile-type-definitions');
+const envelopeTypeDefs = require('./envelope-type-definitions');
 
 function createErrorResponse(error) {
   if (error.code) {
@@ -104,21 +107,49 @@ async function handleDataIo(req, res, pathname) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
+  function resolveService(typeName) {
+    const normalized = String(typeName || '').toLowerCase();
+    if (envelopeTypeDefs.TYPE_ALIASES.has(normalized)) return envelopeService;
+    return profileService;
+  }
+
   try {
     if (pathname === '/api/dataio/createRecord') {
-      return sendJson(res, 200, await profileService.createRecord(body));
+      const service = resolveService(body?.typeName);
+      return sendJson(res, 200, await service.createRecord(body));
     }
     if (pathname === '/api/dataio/patchRecord') {
-      return sendJson(res, 200, await profileService.patchRecord(body));
+      const service = resolveService(body?.typeName);
+      return sendJson(res, 200, await service.patchRecord(body));
     }
     if (pathname === '/api/dataio/searchRecords') {
       return sendJson(res, 200, await profileService.searchRecords(body));
     }
     if (pathname === '/api/dataio/getTypeNames') {
-      return sendJson(res, 200, profileService.getTypeNames());
+      return sendJson(res, 200, {
+        typeNames: [...profileTypeDefs.TYPE_NAMES, ...envelopeTypeDefs.TYPE_NAMES]
+      });
     }
     if (pathname === '/api/dataio/getTypeDefinitions') {
-      return sendJson(res, 200, profileService.getTypeDefinitions(body));
+      const requested = new Set((body?.typeNames || []).map(item =>
+        String(typeof item === 'string' ? item : item?.typeName || '').toLowerCase()
+      ));
+      const declarations = [];
+      const errors = [];
+
+      const wantsProfile = [...requested].some(t => profileTypeDefs.TYPE_ALIASES.has(t));
+      const wantsEnvelope = [...requested].some(t => envelopeTypeDefs.TYPE_ALIASES.has(t));
+
+      if (wantsProfile) declarations.push(...profileTypeDefs.TYPE_DEFINITIONS.declarations);
+      if (wantsEnvelope) declarations.push(...envelopeTypeDefs.TYPE_DEFINITIONS.declarations);
+
+      if (!wantsProfile && !wantsEnvelope) {
+        for (const t of requested) {
+          errors.push({ typeName: t, code: 'UNKNOWN', message: `Unsupported type "${t}".` });
+        }
+      }
+
+      return sendJson(res, 200, { declarations, errors });
     }
   } catch (error) {
     logRequestError('dataio', error, {

@@ -77,9 +77,33 @@ function updateProfile(id, body) {
   });
 }
 
+function createRecord(body) {
+  return request('/api/data/records', {
+    method: 'POST',
+    body
+  });
+}
+
+function createEnvelope(body) {
+  return request('/api/data/envelopes', {
+    method: 'POST',
+    body
+  });
+}
+
+function updateEnvelope(id, body) {
+  return request(`/api/data/envelopes/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body
+  });
+}
+
 module.exports = {
+  createEnvelope,
   createProfile,
+  createRecord,
   getProfile,
   listProfiles,
+  updateEnvelope,
   updateProfile
 };

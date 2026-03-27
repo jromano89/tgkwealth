@@ -1,3 +1,5 @@
+const { mm, createDecorator, crudDecorator, createPropertyDeclaration } = require('./type-helpers');
+
 const TYPE_NAME = 'Profile';
 const NAMESPACE = 'org.tgk.maestro';
 const TYPE_ALIASES = new Set(['profile', 'investor']);
@@ -34,57 +36,9 @@ const FIELD_DEFINITIONS = [
   { name: 'Role', label: 'Role', type: 'String', optional: true },
   { name: 'AssignedTo', label: 'Assigned To', type: 'String', optional: true },
   { name: 'LifecycleStage', label: 'Lifecycle Stage', type: 'String', optional: true },
-  { name: 'CompletedEnvelopeId', label: 'Completed Envelope ID', type: 'String', optional: true },
   { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true },
   { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];
-
-// ── Concerto metamodel helpers (v1.0.0) ───────────────────────────────
-
-const METAMODEL = 'concerto.metamodel@1.0.0';
-
-function mm(className) {
-  return `${METAMODEL}.${className}`;
-}
-
-const PROPERTY_CLASS_MAP = {
-  String: mm('StringProperty'),
-  Double: mm('DoubleProperty'),
-  Integer: mm('IntegerProperty'),
-  Long: mm('LongProperty'),
-  DateTime: mm('DateTimeProperty'),
-  Boolean: mm('BooleanProperty')
-};
-
-function createDecorator(name, value) {
-  return {
-    $class: mm('Decorator'),
-    name,
-    arguments: [
-      {
-        $class: mm('DecoratorString'),
-        value
-      }
-    ]
-  };
-}
-
-function crudDecorator(readableOnly) {
-  return createDecorator('Crud', readableOnly ? 'Readable' : 'Createable,Readable,Updateable');
-}
-
-function createPropertyDeclaration(field) {
-  return {
-    $class: PROPERTY_CLASS_MAP[field.type] || PROPERTY_CLASS_MAP.String,
-    name: field.name,
-    isArray: false,
-    isOptional: !!field.optional,
-    decorators: [
-      createDecorator('Term', field.label),
-      crudDecorator(field.readableOnly)
-    ]
-  };
-}
 
 // ── Exported type definition (Concerto ConceptDeclaration) ────────────
 
