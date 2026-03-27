@@ -272,7 +272,7 @@ router.get('/:id/documents/:documentId/download', requireDocusignConnection, asy
       userId, accountId, envelope.docusign_envelope_id, req.params.documentId
     );
     res.set('Content-Type', contentType);
-    res.set('Content-Disposition', contentDisposition);
+    res.set('Content-Disposition', 'inline');
     res.send(buffer);
   } catch (err) {
     console.error('Document download error:', err);
