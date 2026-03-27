@@ -145,6 +145,16 @@ function advisorApp() {
       }
     },
 
+    async deleteContact(contact, event) {
+      event.stopPropagation();
+      try {
+        await TGK_API.deleteProfile(contact.id);
+        this.contacts = this.contacts.filter(c => c.id !== contact.id);
+      } catch (e) {
+        console.error('Failed to delete contact:', e);
+      }
+    },
+
     openEnvelopeInDocusign(envelope) {
       const envelopeId = envelope.docusign_envelope_id;
       if (!envelopeId) return;

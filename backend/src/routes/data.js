@@ -173,6 +173,30 @@ router.put('/profiles/:id', (req, res) => {
 
 /**
  * @swagger
+ * /api/data/profiles/{id}:
+ *   delete:
+ *     summary: Delete a profile and its related records and envelopes
+ *     tags: [Data]
+ */
+router.delete('/profiles/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const app = getRequiredApp(db, req);
+    const profile = db.prepare('SELECT id FROM profiles WHERE id = ? AND app_id = ?').get(req.params.id, app.id);
+    if (!profile) throw createError(404, 'Profile not found');
+
+    db.prepare('DELETE FROM envelopes WHERE profile_id = ? AND app_id = ?').run(profile.id, app.id);
+    db.prepare('DELETE FROM records WHERE profile_id = ? AND app_id = ?').run(profile.id, app.id);
+    db.prepare('DELETE FROM profiles WHERE id = ? AND app_id = ?').run(profile.id, app.id);
+
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
  * /api/data/records:
  *   get:
  *     summary: List app-scoped records

@@ -169,6 +169,7 @@
     get(path) { return this.request(path); },
     post(path, body) { return this.request(path, { method: 'POST', body }); },
     put(path, body) { return this.request(path, { method: 'PUT', body }); },
+    del(path) { return this.request(path, { method: 'DELETE' }); },
 
     // Apps
     getCurrentApp() { return this.get('/api/apps/current'); },
@@ -333,6 +334,7 @@
     getProfile(id) { return this.get(`/api/data/profiles/${id}`); },
     createProfile(data) { return this.post('/api/data/profiles', data); },
     updateProfile(id, data) { return this.put(`/api/data/profiles/${id}`, data); },
+    deleteProfile(id) { return this.del(`/api/data/profiles/${id}`); },
     getRecords(params) {
       const q = params ? '?' + new URLSearchParams(params) : '';
       return this.get(`/api/data/records${q}`);
