@@ -116,6 +116,8 @@ function advisorApp() {
 
     startClientDetailRefresh(contactId) {
       this.stopClientDetailRefresh();
+      // Only poll if the client is pending — no need to poll active clients
+      if (this.selectedContact?.metadata?.status !== 'pending') return;
       const app = this;
       this._clientDetailRefreshTimer = window.setInterval(async function () {
         if (app.view !== 'client' || !app.selectedContact || app.selectedContact.id !== contactId) {
@@ -127,10 +129,13 @@ function advisorApp() {
           app.selectedContact = detail;
           app.selectedContactAccounts = detail.accounts || [];
           app.selectedContactEnvelopes = detail.envelopes || [];
-          // Also refresh the contact in the main list so dashboard stays current
           const idx = app.contacts.findIndex(c => c.id === contactId);
           if (idx !== -1) {
             app.contacts[idx] = { ...app.contacts[idx], ...detail, accounts: undefined, envelopes: undefined };
+          }
+          // Stop polling once the client transitions to active
+          if (detail.metadata?.status === 'active') {
+            app.stopClientDetailRefresh();
           }
         } catch (e) {
           // Silently ignore refresh failures
