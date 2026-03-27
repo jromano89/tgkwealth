@@ -15,6 +15,7 @@ function advisorApp() {
     selectedContactEnvelopes: [],
     _clientDetailRefreshTimer: null,
     searchQuery: '',
+    envelopeDocModal: null,
     envelopeHistoryModal: null,
     showOnboarding: false,
     maestroWorkflowId: window.TGK_DEMO?.config?.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
@@ -161,12 +162,13 @@ function advisorApp() {
       }
     },
 
-    downloadEnvelopeDocs(envelope) {
+    viewEnvelopeDoc(envelope) {
       const id = envelope.docusign_envelope_id || envelope.id;
       if (!id) return;
       const base = TGK_API.baseUrl || '';
       const app = window.TGK_CONFIG?.appSlug || '';
-      window.open(`${base}/api/envelopes/${id}/documents/combined/download?app=${app}`, '_blank');
+      const title = envelope.metadata?.documentName || envelope.template_name || 'Document';
+      this.envelopeDocModal = { title, url: `${base}/api/envelopes/${id}/documents/combined/download?app=${app}` };
     },
 
     async viewEnvelopeHistory(envelope) {

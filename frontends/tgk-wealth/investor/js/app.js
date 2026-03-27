@@ -9,6 +9,7 @@ function investorApp() {
     selectedClient: null,
     accounts: [],
     envelopes: [],
+    envelopeDocModal: null,
     envelopeHistoryModal: null,
     sidebarCollapsed: false,
     loading: true,
@@ -109,12 +110,13 @@ function investorApp() {
       }
     },
 
-    downloadEnvelopeDocs(env) {
+    viewEnvelopeDoc(env) {
       const id = env.docusign_envelope_id || env.id;
       if (!id) return;
       const base = TGK_API.baseUrl || '';
       const app = window.TGK_CONFIG?.appSlug || '';
-      window.open(`${base}/api/envelopes/${id}/documents/combined/download?app=${app}`, '_blank');
+      const title = env.metadata?.documentName || env.template_name || 'Document';
+      this.envelopeDocModal = { title, url: `${base}/api/envelopes/${id}/documents/combined/download?app=${app}` };
     },
 
     async viewEnvelopeHistory(env) {
