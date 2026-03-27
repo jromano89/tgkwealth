@@ -13,7 +13,7 @@ function advisorApp() {
     selectedContactAccounts: [],
     searchQuery: '',
     showOnboarding: false,
-    maestroWorkflowId: '391f50a3-72cc-4623-b657-ed2a1ae81c18',
+    maestroWorkflowId: window.TGK_DEMO?.config?.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
     maestroInstanceUrl: '',
     maestroError: null,
     maestroLoading: false,

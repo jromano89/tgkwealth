@@ -429,6 +429,14 @@
                   <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
                 </div>
               </label>
+
+              <div class="p-3 rounded-lg border border-gray-100">
+                <label class="text-sm font-medium text-navy" for="idvWorkflowId">Maestro Workflow ID</label>
+                <div class="text-xs text-gray-400 mt-0.5 mb-2">Workflow used for account opening</div>
+                <input id="idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()"
+                  class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand font-mono"
+                  placeholder="workflow-id">
+              </div>
             </div>
           </div>
 

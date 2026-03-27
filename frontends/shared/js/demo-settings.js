@@ -58,7 +58,8 @@ function deriveSidebarLightColor(hex) {
       brandColor: '#3b5bdb'
     },
     config: {
-      idVerification: false
+      idVerification: false,
+      idvWorkflowId: '8a7bbe6b-badc-4413-818b-2e92868de402'
     }
   };
 
@@ -90,6 +91,7 @@ function demoSettingsPanel() {
     appName: window.TGK_DEMO.branding.appName,
     brandColor: window.TGK_DEMO.branding.brandColor,
     idVerification: window.TGK_DEMO.config.idVerification,
+    idvWorkflowId: window.TGK_DEMO.config.idvWorkflowId,
     dirty: false,
 
     applyColor(hex) {
@@ -115,7 +117,7 @@ function demoSettingsPanel() {
 
     saveConfig() {
       const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      existing.config = { ...existing.config, idVerification: this.idVerification };
+      existing.config = { ...existing.config, idVerification: this.idVerification, idvWorkflowId: this.idvWorkflowId };
       delete existing.config.countersignatures;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
     },
