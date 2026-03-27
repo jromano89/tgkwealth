@@ -59,4 +59,26 @@ async function getConsoleViewUrl(userId, accountId, envelopeId, returnUrl) {
   });
 }
 
-module.exports = { createEnvelope, getEnvelope, getSigningUrl, getConsoleViewUrl, getDocuments };
+async function getAuditEvents(userId, accountId, envelopeId) {
+  return docusignRequest(userId, accountId, `/envelopes/${envelopeId}/audit_events`, {
+    errorPrefix: 'Failed to get audit events'
+  });
+}
+
+async function downloadDocument(userId, accountId, envelopeId, documentId) {
+  const token = await getAccessToken(userId, accountId);
+  const response = await fetch(`${API_BASE()}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/documents/${documentId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Failed to download document: ${response.status} ${err}`);
+  }
+  return {
+    buffer: Buffer.from(await response.arrayBuffer()),
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    contentDisposition: response.headers.get('content-disposition') || `attachment; filename="document.pdf"`
+  };
+}
+
+module.exports = { createEnvelope, getEnvelope, getSigningUrl, getConsoleViewUrl, getDocuments, getAuditEvents, downloadDocument };

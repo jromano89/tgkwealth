@@ -226,4 +226,58 @@ router.get('/:id/documents', requireDocusignConnection, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/envelopes/{id}/audit-events:
+ *   get:
+ *     summary: Get envelope audit events/history
+ *     tags: [Envelopes]
+ */
+router.get('/:id/audit-events', requireDocusignConnection, async (req, res) => {
+  try {
+    const db = getDb();
+    const { userId, accountId } = req.docusign;
+    const envelope = findEnvelope(db, req.demoApp.id, req.params.id);
+
+    if (!envelope || !envelope.docusign_envelope_id) {
+      return res.status(404).json({ error: 'Envelope not found or not linked to Docusign' });
+    }
+
+    const result = await envelopeService.getAuditEvents(userId, accountId, envelope.docusign_envelope_id);
+    res.json(result);
+  } catch (err) {
+    console.error('Audit events error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/envelopes/{id}/documents/{documentId}/download:
+ *   get:
+ *     summary: Download a specific document from an envelope
+ *     tags: [Envelopes]
+ */
+router.get('/:id/documents/:documentId/download', requireDocusignConnection, async (req, res) => {
+  try {
+    const db = getDb();
+    const { userId, accountId } = req.docusign;
+    const envelope = findEnvelope(db, req.demoApp.id, req.params.id);
+
+    if (!envelope || !envelope.docusign_envelope_id) {
+      return res.status(404).json({ error: 'Envelope not found or not linked to Docusign' });
+    }
+
+    const { buffer, contentType, contentDisposition } = await envelopeService.downloadDocument(
+      userId, accountId, envelope.docusign_envelope_id, req.params.documentId
+    );
+    res.set('Content-Type', contentType);
+    res.set('Content-Disposition', contentDisposition);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Document download error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

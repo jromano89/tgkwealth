@@ -15,6 +15,7 @@ function advisorApp() {
     selectedContactEnvelopes: [],
     _clientDetailRefreshTimer: null,
     searchQuery: '',
+    envelopeHistoryModal: null,
     showOnboarding: false,
     maestroWorkflowId: window.TGK_DEMO?.config?.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
     maestroInstanceUrl: '',
@@ -160,14 +161,27 @@ function advisorApp() {
       }
     },
 
-    async openEnvelopeInDocusign(envelope) {
+    downloadEnvelopeDocs(envelope) {
+      const id = envelope.docusign_envelope_id || envelope.id;
+      if (!id) return;
+      const base = TGK_API.baseUrl || '';
+      const app = window.TGK_CONFIG?.appSlug || '';
+      window.open(`${base}/api/envelopes/${id}/documents/combined/download?app=${app}`, '_blank');
+    },
+
+    async viewEnvelopeHistory(envelope) {
       const id = envelope.docusign_envelope_id || envelope.id;
       if (!id) return;
       try {
-        const { url } = await TGK_API.post(`/api/envelopes/${id}/console-view`, { returnUrl: window.location.href });
-        window.open(url, '_blank');
+        const result = await TGK_API.get(`/api/envelopes/${id}/audit-events`);
+        const events = (result.auditEvents || []).map(e => {
+          const fields = {};
+          (e.eventFields || []).forEach(f => { fields[f.name] = f.value; });
+          return fields;
+        }).filter(f => f.Action);
+        this.envelopeHistoryModal = { envelopeId: id, events };
       } catch (e) {
-        window.open(`https://app.docusign.com/documents/details/${id}`, '_blank');
+        console.error('Failed to load history:', e);
       }
     },
 
