@@ -305,6 +305,7 @@
               <div class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white text-lg font-bold mb-3" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.first_name + ' ' + selectedContact.last_name)"></div>
               <h2 class="font-serif text-xl font-semibold text-navy" x-text="selectedContact.first_name + ' ' + selectedContact.last_name"></h2>
               <div class="text-sm text-gray-500 mt-1" x-text="selectedContact.metadata?.role || selectedContact.type"></div>
+              <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
               <div class="mt-4 space-y-2 text-left text-sm">
                 <div class="flex items-center gap-2 text-gray-500"><span>📞</span> <span x-text="selectedContact.phone || '—'"></span></div>
                 <div class="flex items-center gap-2 text-gray-500"><span>✉</span> <span x-text="selectedContact.email"></span></div>
