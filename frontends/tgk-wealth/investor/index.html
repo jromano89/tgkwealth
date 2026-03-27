@@ -304,7 +304,7 @@
                     <div class="text-sm font-medium text-navy truncate" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
                     <div class="text-[11px] text-gray-400 font-mono truncate" x-text="env.docusign_envelope_id || env.id || ''"></div>
                   </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-2 flex-shrink-0">
                     <button @click="viewEnvelopeDoc(env)" class="p-1.5 rounded-md text-gray-500 hover:text-brand hover:bg-blue-50 transition-colors" title="View document">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                     </button>
@@ -360,55 +360,18 @@
       <div x-show="tab === 'settings'" x-data="demoSettingsPanel()">
         <h1 class="text-xl font-semibold text-navy mb-6">Settings</h1>
 
-        <div class="grid grid-cols-2 gap-6 max-w-4xl">
-
-          <!-- Demo Branding -->
-          <div class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="font-semibold text-base text-navy mb-1">Demo Branding</h2>
-            <p class="text-xs text-gray-400 mb-5">Customize the look of this demo. Changes apply to both portals.</p>
-
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">App Name</label>
-                <input x-model="appName" @input="dirty = true" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="TGK Wealth">
-                <p class="text-[10px] text-gray-400 mt-1">The sidebar mark is generated automatically from the app name.</p>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-600 mb-2">Theme Color</label>
-                <div class="flex items-center gap-3">
-                  <label class="relative w-10 h-10 rounded-lg overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-gray-400 transition-colors" :style="`background:${brandColor}`">
-                    <input type="color" :value="brandColor" @input="applyColor($event.target.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
-                  </label>
-                  <span class="text-xs text-gray-500 font-mono" x-text="brandColor"></span>
-                  <span class="text-[10px] text-gray-400">Click to pick any color</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-2 mt-5">
-              <button @click="save()" :disabled="!dirty"
-                class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-                :class="dirty ? 'bg-brand hover:bg-brand-light' : 'bg-gray-300 cursor-not-allowed'">
-                Save &amp; Apply
-              </button>
-              <button @click="resetDefaults()" class="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors">
-                Reset Defaults
-              </button>
-            </div>
-          </div>
+        <div class="grid grid-cols-2 gap-5 max-w-4xl">
 
           <!-- Demo Config + Docusign -->
-          <div class="flex flex-col gap-6">
-            <div class="order-2 bg-white rounded-xl shadow-sm p-6">
-              <h2 class="font-semibold text-base text-navy mb-1">Demo Configuration</h2>
-              <p class="text-xs text-gray-400 mb-5">Toggle features for this demo scenario.</p>
+          <div class="flex flex-col gap-5">
+            <div class="order-1 bg-white rounded-xl shadow-sm p-5">
+              <h2 class="font-semibold text-sm text-navy mb-3">Demo Configuration</h2>
 
-              <div class="space-y-4">
-                <label class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
+              <div class="space-y-3">
+                <label class="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
                   <div>
                     <div class="text-sm font-medium text-navy">ID Verification</div>
-                    <div class="text-xs text-gray-400 mt-0.5">Require identity verification before signing</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Require identity verification before signing</div>
                   </div>
                   <div class="relative">
                     <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
@@ -416,15 +379,28 @@
                     <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
                   </div>
                 </label>
+
+                <div class="p-2.5 rounded-lg border border-gray-100">
+                  <label class="text-xs font-medium text-navy" for="inv-idvWorkflowId">Account Opening Workflow ID</label>
+                  <input id="inv-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()"
+                    class="w-full text-xs px-2.5 py-1.5 mt-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
+                    placeholder="workflow-id">
+                </div>
+
+                <div class="p-2.5 rounded-lg border border-gray-100">
+                  <label class="text-xs font-medium text-navy" for="inv-assetTransferWorkflowId">Asset Transfer Workflow ID</label>
+                  <input id="inv-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()"
+                    class="w-full text-xs px-2.5 py-1.5 mt-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
+                    placeholder="workflow-id">
+                </div>
               </div>
             </div>
 
             <!-- Docusign Connection -->
-            <div class="order-1 bg-white rounded-xl shadow-sm p-6" x-data="docusignSettings()">
-              <div class="flex items-start justify-between gap-4 mb-5">
+            <div class="order-2 bg-white rounded-xl shadow-sm p-5" x-data="docusignSettings()">
+              <div class="flex items-start justify-between gap-4 mb-3">
                 <div>
-                  <h2 class="font-semibold text-base text-navy mb-1">Docusign Connection</h2>
-                  <p class="text-xs text-gray-400">Manage the connected account.</p>
+                  <h2 class="font-semibold text-sm text-navy">Docusign Connection</h2>
                 </div>
                 <button @click="openScopesModal()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Scopes</button>
               </div>
@@ -531,6 +507,42 @@
           </div>
 
         </div>
+
+        <!-- Demo Branding -->
+        <div class="bg-white rounded-xl shadow-sm p-5 self-start">
+          <h2 class="font-semibold text-sm text-navy mb-3">Demo Branding</h2>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">App Name</label>
+              <input x-model="appName" @input="dirty = true" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="TGK Wealth">
+              <p class="text-[10px] text-gray-400 mt-1">Sidebar mark auto-generates from app name.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Theme Color</label>
+              <div class="flex items-center gap-2.5">
+                <label class="relative w-8 h-8 rounded-lg overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-gray-400 transition-colors" :style="`background:${brandColor}`">
+                  <input type="color" :value="brandColor" @input="applyColor($event.target.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                </label>
+                <span class="text-xs text-gray-500 font-mono" x-text="brandColor"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mt-4">
+            <button @click="save()" :disabled="!dirty"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+              :class="dirty ? 'bg-brand hover:bg-brand-light' : 'bg-gray-300 cursor-not-allowed'">
+              Save &amp; Apply
+            </button>
+            <button @click="resetDefaults()" class="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 transition-colors">
+              Reset Defaults
+            </button>
+          </div>
+        </div>
+
+      </div>
       </div>
 
     </div>
@@ -540,7 +552,7 @@
   <template x-if="envelopeDocModal">
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="envelopeDocModal = null">
       <div class="absolute inset-0 bg-black/40" @click="envelopeDocModal = null"></div>
-      <div class="relative w-full max-w-4xl h-[85vh] rounded-2xl bg-white shadow-2xl p-5 flex flex-col">
+      <div class="relative w-full max-w-5xl h-[92vh] rounded-2xl bg-white shadow-2xl p-5 flex flex-col">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-base font-semibold text-navy" x-text="envelopeDocModal.title"></h3>
           <button @click="envelopeDocModal = null" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>

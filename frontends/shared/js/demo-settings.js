@@ -59,7 +59,8 @@ function deriveSidebarLightColor(hex) {
     },
     config: {
       idVerification: false,
-      idvWorkflowId: '8a7bbe6b-badc-4413-818b-2e92868de402'
+      idvWorkflowId: '8a7bbe6b-badc-4413-818b-2e92868de402',
+      assetTransferWorkflowId: ''
     }
   };
 
@@ -92,6 +93,7 @@ function demoSettingsPanel() {
     brandColor: window.TGK_DEMO.branding.brandColor,
     idVerification: window.TGK_DEMO.config.idVerification,
     idvWorkflowId: window.TGK_DEMO.config.idvWorkflowId,
+    assetTransferWorkflowId: window.TGK_DEMO.config.assetTransferWorkflowId,
     dirty: false,
 
     applyColor(hex) {
@@ -117,7 +119,7 @@ function demoSettingsPanel() {
 
     saveConfig() {
       const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      existing.config = { ...existing.config, idVerification: this.idVerification, idvWorkflowId: this.idvWorkflowId };
+      existing.config = { ...existing.config, idVerification: this.idVerification, idvWorkflowId: this.idvWorkflowId, assetTransferWorkflowId: this.assetTransferWorkflowId };
       delete existing.config.countersignatures;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
     },
