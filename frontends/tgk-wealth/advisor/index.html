@@ -15,13 +15,13 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
-  <script defer src="../../shared/js/settings-panel.js?v=20260330-3"></script>
-  <script defer src="../../shared/js/api-client.js"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260330-7"></script>
+  <script defer src="../../shared/js/settings-panel.js?v=20260330-4"></script>
+  <script defer src="../../shared/js/api-client.js?v=20260330-1"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260330-9"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
-  <script defer src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
-  <script defer src="js/app.js?v=20260330-1"></script>
+  <script defer src="../../shared/js/docusign-settings.js?v=20260330-1"></script>
+  <script defer src="js/app.js?v=20260330-3"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f4f5f7; margin: 0; }
@@ -416,50 +416,204 @@
         <p class="text-gray-300 text-sm max-w-xl">A clean advisor view for signed packets, audit history, and Navigator-ready search.</p>
       </div>
 
-      <div class="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div class="flex items-center justify-between gap-4 mb-5">
-            <div>
-              <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Navigator Lane</div>
-              <h2 class="text-lg font-semibold text-navy">Advisor document queue</h2>
-              <p class="text-sm text-gray-500 mt-1">Surface recent packets, route exceptions, and shared search here.</p>
+      <div class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+        <div class="space-y-4">
+          <div class="grid gap-3 sm:grid-cols-4">
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Visible</div>
+              <div class="mt-2 text-2xl font-semibold text-navy" x-text="navigatorAgreementCount"></div>
+              <div class="mt-1 text-xs text-gray-500" x-text="navigatorHasLiveAgreements ? 'Live agreements from Navigator.' : 'Concept agreements for planning.'"></div>
             </div>
-            <div class="h-12 w-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center text-xl">📄</div>
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Active</div>
+              <div class="mt-2 text-2xl font-semibold text-navy" x-text="navigatorActiveAgreementCount"></div>
+              <div class="mt-1 text-xs text-gray-500">Agreements in good standing.</div>
+            </div>
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Linked</div>
+              <div class="mt-2 text-2xl font-semibold text-navy" x-text="navigatorLinkedAgreementCount"></div>
+              <div class="mt-1 text-xs text-gray-500">Parent-child relationships to surface.</div>
+            </div>
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Attention</div>
+              <div class="mt-2 text-2xl font-semibold text-navy" x-text="navigatorAttentionCount"></div>
+              <div class="mt-1 text-xs text-gray-500">Review-driven agreements to triage.</div>
+            </div>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
-              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Ready</div>
-              <div class="mt-2 text-2xl font-semibold text-navy">12</div>
-              <div class="mt-1 text-xs text-gray-500">Packets ready to review</div>
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-5">
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2" x-text="navigatorSourceLabel"></div>
+                <h2 class="text-lg font-semibold text-navy">Account agreements</h2>
+                <p class="text-sm text-gray-500 mt-1">Structured for advisor review, linked agreements, and quick triage.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="inline-flex rounded-xl border border-gray-200 bg-slate-50 p-1">
+                  <button @click="setNavigatorStatusFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors" :class="navigatorStatusFilter === 'all' ? 'bg-white text-navy shadow-sm' : 'text-gray-500 hover:text-navy'">All</button>
+                  <button @click="setNavigatorStatusFilter('active')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors" :class="navigatorStatusFilter === 'active' ? 'bg-white text-navy shadow-sm' : 'text-gray-500 hover:text-navy'">Active</button>
+                  <button @click="setNavigatorStatusFilter('review')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors" :class="navigatorStatusFilter === 'review' ? 'bg-white text-navy shadow-sm' : 'text-gray-500 hover:text-navy'">Review</button>
+                </div>
+                <button @click="refreshNavigatorAgreements()" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:border-gray-300 hover:text-navy">
+                  Refresh
+                </button>
+              </div>
             </div>
-            <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
-              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Waiting</div>
-              <div class="mt-2 text-2xl font-semibold text-navy">3</div>
-              <div class="mt-1 text-xs text-gray-500">Pending client actions</div>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center mb-5">
+              <label class="relative block flex-1">
+                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </span>
+                <input x-model="navigatorSearchQuery" type="search" placeholder="Search agreements, parties, or agreement type" class="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-navy placeholder:text-gray-400 focus:border-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/10">
+              </label>
+              <div class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-slate-50 px-3 py-2 text-[11px] font-medium text-gray-500">
+                <span class="h-2 w-2 rounded-full" :class="navigatorConnected ? 'bg-emerald-400' : 'bg-slate-300'"></span>
+                <span x-text="navigatorConnectionLoading ? 'Checking Docusign account' : (navigatorConnected ? (navigatorAccountName || 'Saved Docusign account') : 'No Docusign account saved')"></span>
+              </div>
             </div>
-            <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
-              <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Attention</div>
-              <div class="mt-2 text-2xl font-semibold text-navy">1</div>
-              <div class="mt-1 text-xs text-gray-500">Needs follow-up</div>
+
+            <div class="mb-5 flex flex-col gap-2 rounded-2xl border px-4 py-3 text-sm" :class="navigatorLiveStatusTone()">
+              <div class="font-medium" x-text="navigatorLiveStatusMessage()"></div>
+              <template x-if="navigatorLastSyncLabel()">
+                <div class="text-[11px] opacity-80">Last sync <span x-text="navigatorLastSyncLabel()"></span></div>
+              </template>
+            </div>
+
+            <template x-if="navigatorFilteredAgreements.length === 0">
+              <div class="rounded-2xl border border-dashed border-gray-200 bg-slate-50 px-5 py-8 text-sm text-gray-500">No agreements match the current filters.</div>
+            </template>
+
+            <div class="space-y-3" x-show="navigatorFilteredAgreements.length > 0">
+              <template x-for="agreement in navigatorFilteredAgreements" :key="agreement.id">
+                <button type="button" @click="selectNavigatorAgreement(agreement.id)" class="w-full rounded-2xl border px-4 py-4 text-left transition-all" :class="navigatorSelectedAgreement?.id === agreement.id ? 'border-brand/30 bg-brand/5 shadow-sm' : 'border-gray-100 bg-white hover:border-gray-200'">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <div class="text-sm font-semibold text-navy" x-text="agreement.title"></div>
+                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize" :class="navigatorAgreementStatusClasses(agreement.status)" x-text="agreement.status"></span>
+                        <template x-if="agreement.related_agreement_documents?.parent_agreement_document_id">
+                          <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Linked</span>
+                        </template>
+                      </div>
+                      <p class="mt-2 text-sm leading-6 text-gray-500" x-text="agreement.summary"></p>
+                    </div>
+                    <div class="text-right text-[11px] text-gray-400 whitespace-nowrap" x-text="navigatorAgreementDateLabel(agreement)"></div>
+                  </div>
+                  <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                    <span x-text="navigatorAgreementParties(agreement)"></span>
+                    <span class="h-1 w-1 rounded-full bg-gray-300"></span>
+                    <span x-text="agreement.category"></span>
+                    <span class="h-1 w-1 rounded-full bg-gray-300"></span>
+                    <span x-text="agreement.source_name"></span>
+                  </div>
+                </button>
+              </template>
             </div>
           </div>
         </div>
 
         <div class="space-y-4">
           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Connection</div>
-            <div class="text-base font-semibold text-navy">Docusign Navigator</div>
-            <p class="text-sm text-gray-500 mt-2">Connect Docusign to power live document search and preview handoffs.</p>
+            <template x-if="navigatorSelectedAgreement">
+              <div>
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Agreement detail</div>
+                    <h2 class="text-xl font-semibold text-navy leading-tight" x-text="navigatorSelectedAgreement.title"></h2>
+                    <p class="text-sm text-gray-500 mt-2" x-text="navigatorSelectedAgreement.summary"></p>
+                  </div>
+                  <span class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize whitespace-nowrap" :class="navigatorAgreementStatusClasses(navigatorSelectedAgreement.status)" x-text="navigatorSelectedAgreement.status"></span>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2 mt-5">
+                  <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Effective</div>
+                    <div class="mt-2 text-sm font-semibold text-navy" x-text="formatNavigatorDate(navigatorSelectedAgreement.provisions?.effective_date) || 'Not mapped'"></div>
+                  </div>
+                  <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Expires</div>
+                    <div class="mt-2 text-sm font-semibold text-navy" x-text="formatNavigatorDate(navigatorSelectedAgreement.provisions?.expiration_date) || 'Not mapped'"></div>
+                  </div>
+                  <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Annual value</div>
+                    <div class="mt-2 text-sm font-semibold text-navy" x-text="navigatorAgreementValue(navigatorSelectedAgreement)"></div>
+                  </div>
+                  <div class="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Source</div>
+                    <div class="mt-2 text-sm font-semibold text-navy" x-text="navigatorSelectedAgreement.source_name"></div>
+                  </div>
+                </div>
+
+                <div class="mt-6">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-3">Parties</div>
+                  <template x-if="navigatorSelectedAgreement.parties.length === 0">
+                    <div class="rounded-xl border border-dashed border-gray-200 bg-slate-50 px-4 py-3 text-sm text-gray-500">Party details are not exposed in the current list payload.</div>
+                  </template>
+                  <div class="space-y-2" x-show="navigatorSelectedAgreement.parties.length > 0">
+                    <template x-for="party in navigatorSelectedAgreement.parties" :key="party.id">
+                      <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3">
+                        <div class="text-sm font-medium text-navy" x-text="party.preferred_name || party.name_in_agreement"></div>
+                        <div class="text-[11px] text-gray-400">In agreement</div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="mt-6">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-3">Agreement family</div>
+                  <div class="space-y-3">
+                    <template x-for="node in navigatorAgreementHierarchy(navigatorSelectedAgreement)" :key="node.id">
+                      <div class="flex gap-3 rounded-xl border border-gray-100 bg-slate-50 px-4 py-3">
+                        <div class="mt-1 h-2.5 w-2.5 rounded-full flex-shrink-0" :class="navigatorSelectedAgreement.id === node.id ? 'bg-brand' : 'bg-slate-300'"></div>
+                        <div class="min-w-0">
+                          <div class="text-sm font-semibold text-navy" x-text="node.title"></div>
+                          <div class="mt-1 text-[11px] text-gray-500" x-text="navigatorHierarchyLabel(node)"></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="mt-6">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-3">Extracted provisions</div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                      <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400">Governing law</div>
+                      <div class="mt-2 text-sm font-medium text-navy" x-text="navigatorSelectedAgreement.provisions?.governing_law || 'Not mapped'"></div>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                      <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400">Renewal</div>
+                      <div class="mt-2 text-sm font-medium text-navy" x-text="navigatorSelectedAgreement.provisions?.renewal_type || 'Not mapped'"></div>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 sm:col-span-2">
+                      <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400">Termination</div>
+                      <div class="mt-2 text-sm font-medium text-navy" x-text="navigatorSelectedAgreement.provisions?.termination_period_for_convenience || 'Not mapped'"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template x-if="!navigatorSelectedAgreement">
+              <div class="rounded-2xl border border-dashed border-gray-200 bg-slate-50 px-5 py-10 text-sm text-gray-500">Select an agreement to inspect the detail view.</div>
+            </template>
           </div>
 
           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Next polish pass</div>
-            <ul class="space-y-2 pl-4 list-disc text-sm text-gray-500">
-              <li>Unified search across packets, history, and account context</li>
-              <li>Saved document views for advisor workflows</li>
-              <li>Navigator summaries beside live envelope status</li>
-            </ul>
+            <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Docusign account</div>
+            <template x-if="navigatorConnectionLoading">
+              <p class="text-sm text-gray-500">Checking the saved Docusign account.</p>
+            </template>
+            <template x-if="!navigatorConnectionLoading && navigatorConnected">
+              <div>
+                <div class="text-base font-semibold text-navy" x-text="navigatorAccountName || 'Saved Docusign account'"></div>
+                <p class="text-sm text-gray-500 mt-2" x-text="navigatorHasLiveAgreements ? 'Live Navigator results are coming from this account.' : 'This account is ready for live Navigator agreement queries.'"></p>
+                <div class="mt-3 text-[11px] font-mono text-gray-400 break-all" x-text="navigatorAccountId"></div>
+              </div>
+            </template>
+            <template x-if="!navigatorConnectionLoading && !navigatorConnected">
+              <p class="text-sm text-gray-500">Connect and save a Docusign account in Settings before enabling live Navigator agreement queries.</p>
+            </template>
           </div>
         </div>
       </div>

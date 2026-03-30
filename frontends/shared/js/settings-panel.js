@@ -144,6 +144,7 @@ function settingsPanelState() {
     applyColor(hex) {
       this.brandColor = normalizeHexColor(hex);
       this.dirty = true;
+      applyThemeColor(this.brandColor);
     },
 
     save() {

@@ -167,20 +167,6 @@ router.post('/:id/console-view', requireDocusignConnection, createAsyncRoute(asy
 
 /**
  * @swagger
- * /api/envelopes/{id}/documents:
- *   get:
- *     summary: List envelope documents
- *     tags: [Envelopes]
- */
-router.get('/:id/documents', requireDocusignConnection, createAsyncRoute(async (req, res) => {
-  const db = getDb();
-  const { userId, accountId } = req.docusign;
-  const envelope = requireLinkedEnvelope(getEnvelopeOrThrow(db, req.demoApp.id, req.params.id));
-  res.json(await envelopeService.getDocuments(userId, accountId, envelope.docusign_envelope_id));
-}));
-
-/**
- * @swagger
  * /api/envelopes/{id}/audit-events:
  *   get:
  *     summary: Get envelope audit events/history
@@ -209,30 +195,6 @@ router.get('/:id/documents/combined/download', requireDocusignConnection, create
     userId,
     accountId,
     envelope.docusign_envelope_id
-  );
-
-  res.set('Content-Type', contentType);
-  res.set('Content-Disposition', contentDisposition || 'inline');
-  res.send(buffer);
-}));
-
-/**
- * @swagger
- * /api/envelopes/{id}/documents/{documentId}/download:
- *   get:
- *     summary: Download a specific document from an envelope
- *     tags: [Envelopes]
- */
-router.get('/:id/documents/:documentId/download', requireDocusignConnection, createAsyncRoute(async (req, res) => {
-  const db = getDb();
-  const { userId, accountId } = req.docusign;
-  const envelope = requireLinkedEnvelope(getEnvelopeOrThrow(db, req.demoApp.id, req.params.id));
-
-  const { buffer, contentType, contentDisposition } = await envelopeService.downloadDocument(
-    userId,
-    accountId,
-    envelope.docusign_envelope_id,
-    req.params.documentId
   );
 
   res.set('Content-Type', contentType);

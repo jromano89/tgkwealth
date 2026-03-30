@@ -223,45 +223,10 @@ function sharedSettingsTemplate() {
     <section class="tgk-settings-shell">
       <div class="tgk-settings-grid">
         <div class="tgk-settings-stack">
-          <section class="tgk-settings-card">
-            <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Demo Configuration</div>
-              <p class="tgk-settings-card__text">Set the workflow IDs and signing rules used across the demo.</p>
-            </div>
-
-            <div class="tgk-settings-card__body">
-              <label class="tgk-settings-toggle-row">
-                <div class="tgk-settings-toggle-copy">
-                  <div class="tgk-settings-toggle-title">ID Verification</div>
-                  <div class="tgk-settings-toggle-text">Require ID verification before signing can finish.</div>
-                </div>
-                <div class="relative">
-                  <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
-                  <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                  <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                </div>
-              </label>
-
-              <div class="tgk-settings-field-grid">
-                <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow ID</label>
-                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
-                  <p class="tgk-help-text">Used for the account opening flow.</p>
-                </div>
-
-                <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow ID</label>
-                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
-                  <p class="tgk-help-text">Used for asset transfer packets.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section class="tgk-settings-card" x-data="docusignSettings()">
             <div class="tgk-settings-card__header tgk-settings-card__header--split">
               <div>
-                <div class="tgk-settings-card__eyebrow">Docusign Workspace</div>
+                <div class="tgk-settings-card__eyebrow">Docusign Account</div>
                 <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
               </div>
               <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
@@ -372,7 +337,7 @@ function sharedSettingsTemplate() {
                   </div>
 
                   <textarea x-model="requestedScopesText" rows="8" class="tgk-form-input tgk-form-textarea tgk-form-input--mono"></textarea>
-                  <p class="tgk-help-text mt-2">The required <span class="font-medium">signature</span>, <span class="font-medium">impersonation</span>, and <span class="font-medium">aow_manage</span> scopes are always included.</p>
+                  <p class="tgk-help-text mt-2">The required <span class="font-medium">signature</span>, <span class="font-medium">impersonation</span>, <span class="font-medium">aow_manage</span>, and <span class="font-medium">adm_store_unified_repo_read</span> scopes are always included.</p>
 
                   <div class="flex items-center justify-between gap-3 mt-5">
                     <button @click="resetRequestedScopes()" class="tgk-button tgk-button--secondary">Reset Default</button>
@@ -381,6 +346,39 @@ function sharedSettingsTemplate() {
                       <button @click="saveRequestedScopes()" class="tgk-button tgk-button--primary">Save Scopes</button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tgk-settings-card">
+            <div class="tgk-settings-card__header">
+              <div class="tgk-settings-card__eyebrow">Demo Configuration</div>
+              <p class="tgk-settings-card__text">Set the workflow IDs and signing rules used across the demo.</p>
+            </div>
+
+            <div class="tgk-settings-card__body">
+              <label class="tgk-settings-toggle-row">
+                <div class="tgk-settings-toggle-copy">
+                  <div class="tgk-settings-toggle-title">ID Verification</div>
+                  <div class="tgk-settings-toggle-text">Require ID verification before signing can finish.</div>
+                </div>
+                <div class="relative">
+                  <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
+                  <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
+                  <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                </div>
+              </label>
+
+              <div class="tgk-settings-field-grid">
+                <div class="tgk-field-card">
+                  <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow ID</label>
+                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
+                </div>
+
+                <div class="tgk-field-card">
+                  <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow ID</label>
+                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
                 </div>
               </div>
             </div>

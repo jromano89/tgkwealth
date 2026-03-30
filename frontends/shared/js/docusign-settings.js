@@ -12,7 +12,7 @@ function docusignSettings() {
       .map((scope) => scope.trim())
       .filter(Boolean);
 
-    return [...new Set(['signature', 'impersonation', 'aow_manage', ...values])].join(' ') || DEFAULT_SCOPES;
+    return [...new Set(['signature', 'impersonation', 'aow_manage', 'adm_store_unified_repo_read', ...values])].join(' ') || DEFAULT_SCOPES;
   }
 
   return {

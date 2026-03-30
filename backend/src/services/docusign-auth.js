@@ -1,8 +1,8 @@
 const crypto = require('crypto');
 
-// In-memory token cache: { [userId_accountId]: { token, expiresAt } }
+// In-memory token cache: { [userId_accountId_scope]: { token, expiresAt } }
 const tokenCache = new Map();
-const REQUIRED_SCOPES = ['signature', 'impersonation', 'aow_manage'];
+const REQUIRED_SCOPES = ['signature', 'impersonation', 'aow_manage', 'adm_store_unified_repo_read'];
 const REQUIRED_SCOPE_STRING = REQUIRED_SCOPES.join(' ');
 const CONSENT_STATE_MAX_AGE_MS = 60 * 60 * 1000;
 
@@ -33,7 +33,7 @@ function normalizeScopeString(scopes) {
  */
 async function getAccessToken(userId, accountId) {
   const scopeString = REQUIRED_SCOPE_STRING;
-  const cacheKey = `${userId}_${accountId}`;
+  const cacheKey = `${userId}_${accountId}_${scopeString}`;
   const cached = tokenCache.get(cacheKey);
 
   if (cached && cached.expiresAt > Date.now() + 60000) {

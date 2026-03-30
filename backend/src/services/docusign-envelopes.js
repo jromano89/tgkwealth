@@ -44,12 +44,6 @@ async function getSigningUrl(userId, accountId, envelopeId, recipientView) {
   });
 }
 
-async function getDocuments(userId, accountId, envelopeId) {
-  return docusignRequest(userId, accountId, `/envelopes/${envelopeId}/documents`, {
-    errorPrefix: 'Failed to get documents'
-  });
-}
-
 async function getConsoleViewUrl(userId, accountId, envelopeId, returnUrl) {
   return docusignRequest(userId, accountId, `/envelopes/${envelopeId}/views/console`, {
     method: 'POST',
@@ -65,15 +59,18 @@ async function getAuditEvents(userId, accountId, envelopeId) {
   });
 }
 
-async function downloadEnvelopeDocument(userId, accountId, envelopeId, documentPath, errorPrefix) {
+async function downloadCombinedDocument(userId, accountId, envelopeId) {
   const token = await getAccessToken(userId, accountId);
-  const response = await fetch(`${API_BASE()}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/documents/${documentPath}`, {
+  const url = new URL(`${API_BASE()}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/documents/combined`);
+  url.searchParams.set('certificate', 'true');
+
+  const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`${errorPrefix}: ${response.status} ${err}`);
+    throw new Error(`Failed to download combined document: ${response.status} ${err}`);
   }
 
   return {
@@ -83,37 +80,11 @@ async function downloadEnvelopeDocument(userId, accountId, envelopeId, documentP
   };
 }
 
-async function downloadCombinedDocument(userId, accountId, envelopeId) {
-  return downloadEnvelopeDocument(
-    userId,
-    accountId,
-    envelopeId,
-    'combined',
-    'Failed to download combined document'
-  );
-}
-
-async function downloadDocument(userId, accountId, envelopeId, documentId) {
-  if (String(documentId || '').trim().toLowerCase() === 'combined') {
-    return downloadCombinedDocument(userId, accountId, envelopeId);
-  }
-
-  return downloadEnvelopeDocument(
-    userId,
-    accountId,
-    envelopeId,
-    encodeURIComponent(documentId),
-    'Failed to download document'
-  );
-}
-
 module.exports = {
   createEnvelope,
   getEnvelope,
   getSigningUrl,
   getConsoleViewUrl,
-  getDocuments,
   getAuditEvents,
-  downloadCombinedDocument,
-  downloadDocument
+  downloadCombinedDocument
 };
