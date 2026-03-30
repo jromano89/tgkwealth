@@ -65,20 +65,55 @@ async function getAuditEvents(userId, accountId, envelopeId) {
   });
 }
 
-async function downloadDocument(userId, accountId, envelopeId, documentId) {
+async function downloadEnvelopeDocument(userId, accountId, envelopeId, documentPath, errorPrefix) {
   const token = await getAccessToken(userId, accountId);
-  const response = await fetch(`${API_BASE()}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/documents/${documentId}`, {
+  const response = await fetch(`${API_BASE()}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/documents/${documentPath}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
+
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Failed to download document: ${response.status} ${err}`);
+    throw new Error(`${errorPrefix}: ${response.status} ${err}`);
   }
+
   return {
     buffer: Buffer.from(await response.arrayBuffer()),
     contentType: response.headers.get('content-type') || 'application/pdf',
-    contentDisposition: response.headers.get('content-disposition') || `attachment; filename="document.pdf"`
+    contentDisposition: response.headers.get('content-disposition') || 'inline'
   };
 }
 
-module.exports = { createEnvelope, getEnvelope, getSigningUrl, getConsoleViewUrl, getDocuments, getAuditEvents, downloadDocument };
+async function downloadCombinedDocument(userId, accountId, envelopeId) {
+  return downloadEnvelopeDocument(
+    userId,
+    accountId,
+    envelopeId,
+    'combined',
+    'Failed to download combined document'
+  );
+}
+
+async function downloadDocument(userId, accountId, envelopeId, documentId) {
+  if (String(documentId || '').trim().toLowerCase() === 'combined') {
+    return downloadCombinedDocument(userId, accountId, envelopeId);
+  }
+
+  return downloadEnvelopeDocument(
+    userId,
+    accountId,
+    envelopeId,
+    encodeURIComponent(documentId),
+    'Failed to download document'
+  );
+}
+
+module.exports = {
+  createEnvelope,
+  getEnvelope,
+  getSigningUrl,
+  getConsoleViewUrl,
+  getDocuments,
+  getAuditEvents,
+  downloadCombinedDocument,
+  downloadDocument
+};

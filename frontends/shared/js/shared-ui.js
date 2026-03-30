@@ -19,6 +19,23 @@ function fmtPct(n) {
   return sign + n.toFixed(1) + '%';
 }
 
+function getEnvelopeTimestamp(envelope) {
+  return envelope?.sent_at || envelope?.created_at || '';
+}
+
+function envelopeTimestampLabel(envelope) {
+  const rawTimestamp = getEnvelopeTimestamp(envelope);
+  if (!rawTimestamp) return '';
+
+  const date = new Date(rawTimestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date);
+}
+
 // Status badge classes
 function statusClasses(status) {
   const map = {
@@ -69,14 +86,13 @@ function mountSharedTemplate(element, template) {
   }
 }
 
-function buildEnvelopeDocumentPath(envelopeId, documentId) {
+function buildCombinedEnvelopeDocumentPath(envelopeId) {
   const safeEnvelopeId = encodeURIComponent(envelopeId);
-  const safeDocumentId = encodeURIComponent(documentId || 'combined');
-  return TGK_API.withAppQuery(`/api/envelopes/${safeEnvelopeId}/documents/${safeDocumentId}/download`);
+  return TGK_API.withAppQuery(`/api/envelopes/${safeEnvelopeId}/documents/combined/download`);
 }
 
-function buildEnvelopeDocumentUrl(envelopeId, documentId) {
-  return new URL(buildEnvelopeDocumentPath(envelopeId, documentId), TGK_API.baseUrl).toString();
+function buildCombinedEnvelopeDocumentUrl(envelopeId) {
+  return new URL(buildCombinedEnvelopeDocumentPath(envelopeId), TGK_API.baseUrl).toString();
 }
 
 function revokeEnvelopePreview(modalState) {
@@ -106,7 +122,8 @@ function createEnvelopeModalHelpers() {
 
       const requestKey = `${envelopeId}:${Date.now()}`;
       const title = envelope?.metadata?.documentName || envelope?.template_name || 'Document';
-      const downloadUrl = buildEnvelopeDocumentUrl(envelopeId, 'combined');
+      const downloadPath = buildCombinedEnvelopeDocumentPath(envelopeId);
+      const downloadUrl = buildCombinedEnvelopeDocumentUrl(envelopeId);
 
       this.closeEnvelopeDocModal();
       this.envelopeDocModal = {
@@ -120,7 +137,7 @@ function createEnvelopeModalHelpers() {
       };
 
       try {
-        const response = await TGK_API.requestResponse(`/api/envelopes/${encodeURIComponent(envelopeId)}/documents/combined/download`);
+        const response = await TGK_API.requestResponse(downloadPath);
         const blob = await response.blob();
         const previewUrl = window.URL.createObjectURL(blob);
 
@@ -204,20 +221,11 @@ function createEnvelopeModalHelpers() {
 function sharedSettingsTemplate() {
   return `
     <section class="tgk-settings-shell">
-      <div class="tgk-settings-hero">
-        <div class="tgk-settings-hero__content">
-          <div class="tgk-settings-card__eyebrow tgk-settings-card__eyebrow--light">Shared Settings</div>
-          <h1 class="tgk-settings-hero__title">Settings</h1>
-          <p class="tgk-settings-hero__text">Branding, workflow settings, and the Docusign connection stay aligned across both portals.</p>
-        </div>
-      </div>
-
       <div class="tgk-settings-grid">
         <div class="tgk-settings-stack">
           <section class="tgk-settings-card">
             <div class="tgk-settings-card__header">
               <div class="tgk-settings-card__eyebrow">Demo Configuration</div>
-              <h2 class="tgk-settings-card__title">Demo Configuration</h2>
               <p class="tgk-settings-card__text">Set the workflow IDs and signing rules used across the demo.</p>
             </div>
 
@@ -254,7 +262,6 @@ function sharedSettingsTemplate() {
             <div class="tgk-settings-card__header tgk-settings-card__header--split">
               <div>
                 <div class="tgk-settings-card__eyebrow">Docusign Workspace</div>
-                <h2 class="tgk-settings-card__title">Docusign Workspace</h2>
                 <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
               </div>
               <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
@@ -384,8 +391,7 @@ function sharedSettingsTemplate() {
           <section class="tgk-settings-card tgk-settings-card--sticky">
             <div class="tgk-settings-card__header">
               <div class="tgk-settings-card__eyebrow">Demo Branding</div>
-              <h2 class="tgk-settings-card__title">Demo Branding</h2>
-              <p class="tgk-settings-card__text">Set the shared name and accent color used across both portals.</p>
+              <p class="tgk-settings-card__text">Set the shared name and accent color.</p>
             </div>
 
             <div class="tgk-settings-card__body">

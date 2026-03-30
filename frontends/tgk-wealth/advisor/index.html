@@ -11,13 +11,13 @@
   <meta property="og:description" content="Demonstration advisor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
-  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-2">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-4">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260330-3"></script>
   <script defer src="../../shared/js/api-client.js"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260330-3"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260330-7"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
@@ -368,25 +368,25 @@
               </template>
               <div class="space-y-3">
                 <template x-for="env in selectedContactEnvelopes" :key="env.id">
-                  <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        :class="{
-                          'bg-green-50 text-green-600': env.status === 'completed',
-                          'bg-blue-50 text-blue-600': env.status === 'sent',
-                          'bg-yellow-50 text-yellow-600': env.status === 'delivered',
-                          'bg-gray-50 text-gray-500': !['completed','sent','delivered'].includes(env.status)
-                        }"
-                        x-text="(env.metadata?.documentName || env.template_name || 'D')[0].toUpperCase()"></div>
-                      <div class="min-w-0">
-                        <div class="text-sm font-medium text-navy truncate" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
-                        <div class="text-[11px] text-gray-400 font-mono truncate" x-text="env.docusign_envelope_id || env.id || ''"></div>
+                  <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white transition-colors hover:border-gray-300">
+                    <div class="flex items-center gap-4 min-w-0 flex-1">
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-semibold leading-5 text-navy truncate" x-text="env.metadata?.documentName || env.template_name || 'Untitled'"></div>
+                        <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
+                          <span class="font-mono text-gray-400 truncate max-w-full" x-text="env.docusign_envelope_id || env.id || ''"></span>
+                          <template x-if="envelopeTimestampLabel(env)">
+                            <span class="inline-flex items-center gap-2 text-gray-500">
+                              <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                              <span x-text="envelopeTimestampLabel(env)"></span>
+                            </span>
+                          </template>
+                        </div>
                       </div>
                       <div class="flex items-center gap-2 flex-shrink-0">
-                        <button @click="viewEnvelopeDoc(env)" class="p-1.5 rounded-md text-gray-500 hover:text-brand hover:bg-blue-50 transition-colors" title="View document">
+                        <button @click="viewEnvelopeDoc(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View document">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </button>
-                        <button @click="viewEnvelopeHistory(env)" class="p-1.5 rounded-md text-gray-500 hover:text-brand hover:bg-blue-50 transition-colors" title="View history">
+                        <button @click="viewEnvelopeHistory(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View history">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                       </div>
