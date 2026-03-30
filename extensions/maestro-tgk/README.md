@@ -5,19 +5,19 @@ Optional DocuSign Maestro Data IO service for TGK. Enables realistic end-to-end 
 ## Design
 
 - Separate service — does not touch SQLite directly
-- Writes to the TGK backend API (`/api/data/profiles`)
+- Writes to the TGK backend API (`/api/data/contacts`)
 - Fake client-credentials auth (private demo use only)
 - TGK-specific for now; harder to share across verticals than the backend
 
 ## Data IO Contract
 
-Canonical type: `Profile` (alias: `Investor`)
+Canonical type: `Contact` (aliases: `Investor`, `Profile`)
 
-- `CreateRecord` -> create profile
-- `PatchRecord` -> update profile
+- `CreateRecord` -> create contact
+- `PatchRecord` -> update contact
 - `SearchRecords`, `GetTypeNames`, `GetTypeDefinitions` included for Data IO completeness
 
-Returned `recordId` is the TGK profile id.
+Returned `recordId` is the TGK contact id.
 
 ## Run
 

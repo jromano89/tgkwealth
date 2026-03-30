@@ -17,9 +17,7 @@ const FIELD_DEFINITIONS = [
   { name: 'DocusignEnvelopeId', label: 'Docusign Envelope ID', type: 'String', optional: true },
   { name: 'DocumentName', label: 'Document Name', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
-  { name: 'ProfileId', label: 'Profile ID', type: 'String', optional: true },
-  { name: 'RecordId', label: 'Record ID', type: 'String', optional: true },
-  { name: 'TemplateName', label: 'Template Name', type: 'String', optional: true },
+  { name: 'ContactId', label: 'Contact ID', type: 'String', optional: true },
   { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 

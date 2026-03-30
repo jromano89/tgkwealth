@@ -1,5 +1,12 @@
-const { v4: uuidv4 } = require('uuid');
-const JSON_FIELD_NAMES = ['tags', 'data', 'metadata', 'available_accounts'];
+const { randomUUID } = require('crypto');
+const JSON_FIELD_NAMES = ['data', 'available_accounts'];
+const DEFAULT_USER = {
+  displayName: 'Gordon Gecko',
+  email: 'g.gecko@tgkwealth.com',
+  phone: '(212) 555-0100',
+  title: 'Senior Advisor',
+  data: { avatar: 'GG' }
+};
 
 function createError(statusCode, message) {
   const err = new Error(message);
@@ -34,12 +41,8 @@ function normalizeSlug(slug) {
     .replace(/^-+|-+$/g, '');
 }
 
-function getRequestAppPayload(req) {
-  return isPlainObject(req.body) ? req.body.app : null;
-}
-
 function getAppSlug(req) {
-  const bodyApp = getRequestAppPayload(req);
+  const bodyApp = isPlainObject(req.body) ? req.body.app : null;
   return normalizeSlug(
     req.headers['x-demo-app'] ||
     req.query?.app ||
@@ -48,38 +51,57 @@ function getAppSlug(req) {
   );
 }
 
-function getAppConfigFromRequest(req) {
-  const bodyApp = getRequestAppPayload(req);
-  return {
-    slug: getAppSlug(req),
-    name: bodyApp?.name || req.body?.appName || req.query?.appName || null,
-    bootstrapVersion: bodyApp?.bootstrapVersion || req.body?.bootstrapVersion || req.query?.bootstrapVersion || null
-  };
-}
-
 function getAppBySlug(db, slug) {
   if (!slug) return null;
   return db.prepare('SELECT * FROM apps WHERE slug = ?').get(normalizeSlug(slug));
 }
 
-function upsertApp(db, { slug, name, bootstrapVersion }) {
+function upsertApp(db, { slug, name }) {
   const normalizedSlug = normalizeSlug(slug);
   if (!normalizedSlug) {
     throw createError(400, 'Missing app slug');
   }
 
   const existing = getAppBySlug(db, normalizedSlug);
-  const id = existing?.id || uuidv4();
+  const id = existing?.id || randomUUID();
   db.prepare(`
-    INSERT INTO apps (id, slug, name, bootstrap_version)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO apps (id, slug, name)
+    VALUES (?, ?, ?)
     ON CONFLICT(slug) DO UPDATE SET
       name = COALESCE(excluded.name, apps.name),
-      bootstrap_version = excluded.bootstrap_version,
       updated_at = CURRENT_TIMESTAMP
-  `).run(id, normalizedSlug, name || existing?.name || normalizedSlug, bootstrapVersion || null);
+  `).run(id, normalizedSlug, name || existing?.name || normalizedSlug);
 
   return getAppBySlug(db, normalizedSlug);
+}
+
+function ensureDefaultUser(db, app) {
+  if (!app) {
+    return null;
+  }
+
+  const existing = db.prepare('SELECT * FROM users WHERE app_id = ? ORDER BY created_at ASC LIMIT 1').get(app.id);
+  if (existing) {
+    return parseJsonFields(existing);
+  }
+
+  const id = randomUUID();
+  db.prepare(`
+    INSERT INTO users (id, app_id, display_name, email, phone, title, data)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    app.id,
+    DEFAULT_USER.displayName,
+    DEFAULT_USER.email,
+    DEFAULT_USER.phone,
+    DEFAULT_USER.title,
+    serializeJson(DEFAULT_USER.data)
+  );
+
+  return parseJsonFields(
+    db.prepare('SELECT * FROM users WHERE id = ?').get(id)
+  );
 }
 
 function getRequiredApp(db, req) {
@@ -88,11 +110,13 @@ function getRequiredApp(db, req) {
     throw createError(400, 'Missing app slug. Set TGK_CONFIG.appSlug on the frontend.');
   }
 
-  const app = getAppBySlug(db, slug);
-  if (!app) {
-    throw createError(404, `App "${slug}" has not been initialized yet.`);
-  }
+  const bodyApp = isPlainObject(req.body) ? req.body.app : null;
+  const app = upsertApp(db, {
+    slug,
+    name: bodyApp?.name || req.body?.appName || req.query?.appName || null
+  });
 
+  ensureDefaultUser(db, app);
   return app;
 }
 
@@ -110,7 +134,7 @@ function requireSelectedDocusignAccount(connection) {
 
 function upsertConnection(db, app, { userId, accountId, accountName, userName, email, availableAccounts }) {
   const existing = parseJsonFields(db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(app.id));
-  const id = existing?.id || uuidv4();
+  const id = existing?.id || randomUUID();
   const resolvedAccountId = accountId !== undefined ? accountId : existing?.docusign_account_id || null;
   const resolvedAccountName = accountName !== undefined ? accountName : existing?.account_name || null;
   const resolvedUserName = userName !== undefined ? userName : existing?.user_name || null;
@@ -146,22 +170,22 @@ function clearAppConnection(db, appId) {
   db.prepare('DELETE FROM docusign_connections WHERE app_id = ?').run(appId);
 }
 
-function getAppStats(db, appId) {
-  return db.prepare(`
-    SELECT
-      (SELECT COUNT(*) FROM profiles WHERE app_id = ?) AS profiles,
-      (SELECT COUNT(*) FROM records WHERE app_id = ?) AS records,
-      (SELECT COUNT(*) FROM envelopes WHERE app_id = ?) AS envelopes
-  `).get(appId, appId, appId);
+function asyncRoute(handler) {
+  return async function handleRoute(req, res) {
+    try {
+      await handler(req, res);
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ error: error.message });
+    }
+  };
 }
 
 module.exports = {
+  asyncRoute,
   clearAppConnection,
   createError,
   getAppBySlug,
-  getAppConfigFromRequest,
   getAppSlug,
-  getAppStats,
   getConnectionForApp,
   getRequiredApp,
   isPlainObject,
@@ -169,6 +193,7 @@ module.exports = {
   normalizeSlug,
   parseJsonFields,
   serializeJson,
+  ensureDefaultUser,
   upsertApp,
   upsertConnection
 };

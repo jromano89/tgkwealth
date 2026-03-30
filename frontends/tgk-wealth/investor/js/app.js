@@ -1,10 +1,14 @@
-const TGK_SELECTED_CONTACT_STORAGE_KEY = 'tgk_selected_client_id';
-const TGK_INVESTOR_TAB_STORAGE_KEY = 'tgk_investor_tab';
+function getBrandingAppName() {
+  return String(window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || 'TGK Wealth').trim() || 'TGK Wealth';
+}
 
 function investorApp() {
   return {
     ...createEnvelopeModalHelpers(),
     tab: 'overview',
+    brandingAppName: getBrandingAppName(),
+    advisors: [],
+    assignedAdvisor: null,
     contacts: [],
     selectedClientId: null,
     selectedClient: null,
@@ -15,18 +19,24 @@ function investorApp() {
 
     tasks: [],
 
+    syncBranding(detail = {}) {
+      this.brandingAppName = String(detail.appName || getBrandingAppName()).trim() || 'TGK Wealth';
+    },
+
+    get brandingInitial() {
+      return ((this.brandingAppName || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
+    },
+
     async init() {
+      window.addEventListener('tgk:branding-change', (event) => this.syncBranding(event.detail || {}));
       try {
+        this.advisors = await TGK_API.getUsers();
+        this.assignedAdvisor = this.advisors[0] || null;
         this.contacts = this.sortContacts(await TGK_API.getContacts());
-        this.setTab(this.restoreTab());
-        let requestedClientId = null;
-        try {
-          requestedClientId = window.localStorage.getItem(TGK_SELECTED_CONTACT_STORAGE_KEY);
-        } catch (e) {}
-        const initialClient = this.contacts.find(contact => contact.id === requestedClientId) || this.contacts[0];
+        this.setTab('overview');
+        const initialClient = this.contacts[0];
         if (initialClient) {
           this.selectedClientId = initialClient.id;
-          this.rememberSelectedClient(this.selectedClientId);
           await this.loadClient();
         }
       } catch (e) {
@@ -44,20 +54,9 @@ function investorApp() {
       });
     },
 
-    restoreTab() {
-      try {
-        return window.localStorage.getItem(TGK_INVESTOR_TAB_STORAGE_KEY) || 'overview';
-      } catch (e) {
-        return 'overview';
-      }
-    },
-
     setTab(nextTab) {
       const allowedTabs = new Set(['overview', 'documents', 'tasks', 'settings']);
       this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
-      try {
-        window.localStorage.setItem(TGK_INVESTOR_TAB_STORAGE_KEY, this.tab);
-      } catch (e) {}
     },
 
     async loadClient() {
@@ -68,20 +67,17 @@ function investorApp() {
         this.accounts = detail.accounts || [];
         this.envelopes = detail.envelopes || [];
         this.tasks = detail.tasks || [];
+        this.assignedAdvisor = detail.owner || this.advisors[0] || null;
       } catch (e) {
         console.error('Failed to load client:', e);
+        this.selectedClient = null;
+        this.accounts = [];
+        this.envelopes = [];
+        this.tasks = [];
       }
     },
 
-    rememberSelectedClient(clientId) {
-      if (!clientId) return;
-      try {
-        window.localStorage.setItem(TGK_SELECTED_CONTACT_STORAGE_KEY, clientId);
-      } catch (e) {}
-    },
-
     async switchClient() {
-      this.rememberSelectedClient(this.selectedClientId);
       await this.loadClient();
     },
 

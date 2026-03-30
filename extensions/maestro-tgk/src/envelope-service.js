@@ -7,14 +7,9 @@ function buildEnvelopePayload(rawInput) {
 
   return {
     docusignEnvelopeId: pickFirstDefined(input, ['DocusignEnvelopeId', 'docusignEnvelopeId', 'EnvelopeId', 'envelopeId']) || null,
-    templateName: pickFirstDefined(input, ['DocumentName', 'documentName', 'TemplateName', 'templateName']) || null,
+    contactId: pickFirstDefined(input, ['ContactId', 'contactId']) || null,
     status: pickFirstDefined(input, ['Status', 'status']) || 'sent',
-    profileId: pickFirstDefined(input, ['ProfileId', 'profileId']) || null,
-    recordId: pickFirstDefined(input, ['RecordId', 'recordId']) || null,
-    metadata: {
-      documentName: pickFirstDefined(input, ['DocumentName', 'documentName', 'TemplateName', 'templateName']) || null
-    },
-    source: 'maestro-extension'
+    documentName: pickFirstDefined(input, ['DocumentName', 'documentName']) || null
   };
 }
 

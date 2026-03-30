@@ -71,38 +71,32 @@ function createJsonRequest(method, pathname) {
   };
 }
 
-function createRecordRequest(method, pathnameBuilder) {
-  return function sendRecordRequest(idOrPayload, maybePayload) {
+function createMutationRequest(method, pathnameBuilder) {
+  return function sendMutationRequest(idOrPayload, maybePayload) {
     const pathname = pathnameBuilder(idOrPayload);
     const body = maybePayload === undefined ? idOrPayload : maybePayload;
     return request(pathname, { method, body });
   };
 }
 
-const createProfile = createJsonRequest('POST', '/api/data/profiles');
-const createRecord = createJsonRequest('POST', '/api/data/records');
+const createContact = createJsonRequest('POST', '/api/data/contacts');
 const createEnvelope = createJsonRequest('POST', '/api/data/envelopes');
-const updateProfile = createRecordRequest('PUT', (id) => `/api/data/profiles/${encodeURIComponent(id)}`);
-const updateEnvelope = createRecordRequest('PUT', (id) => `/api/data/envelopes/${encodeURIComponent(id)}`);
+const updateContact = createMutationRequest('PUT', (id) => `/api/data/contacts/${encodeURIComponent(id)}`);
+const updateEnvelope = createMutationRequest('PUT', (id) => `/api/data/envelopes/${encodeURIComponent(id)}`);
 
-function listProfiles() {
-  return request('/api/data/profiles', {
-    query: {
-      kind: 'investor'
-    }
-  });
+function listContacts() {
+  return request('/api/data/contacts');
 }
 
-function getProfile(id) {
-  return request(`/api/data/profiles/${encodeURIComponent(id)}`);
+function getContact(id) {
+  return request(`/api/data/contacts/${encodeURIComponent(id)}`);
 }
 
 module.exports = {
+  createContact,
   createEnvelope,
-  createProfile,
-  createRecord,
-  getProfile,
-  listProfiles,
-  updateEnvelope,
-  updateProfile
+  getContact,
+  listContacts,
+  updateContact,
+  updateEnvelope
 };

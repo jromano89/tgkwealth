@@ -6,7 +6,6 @@
     "check": "node scripts/check-syntax.js",
     "dev:backend": "npm --prefix backend run dev",
     "dev:maestro-extension": "npm --prefix extensions/maestro-tgk run dev",
-    "seed:tgk": "node scripts/seed-tgk.js",
     "start:backend": "npm --prefix backend run start",
     "start:frontend": "node scripts/serve-frontends.js",
     "start:maestro-extension": "npm --prefix extensions/maestro-tgk run start"

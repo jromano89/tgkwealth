@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDb } = require('../db/database');
+const { getDb } = require('../database');
 const { getRequiredApp } = require('../utils');
 const appDataService = require('../services/app-data-service');
 
@@ -19,155 +19,63 @@ function createJsonRoute(handler) {
   };
 }
 
-function getAppContext(req) {
-  const db = getDb();
-  return { db, app: getRequiredApp(db, req) };
+function withAppContext(handler) {
+  return createJsonRoute((req, res) => {
+    const db = getDb();
+    const app = getRequiredApp(db, req);
+    handler(req, res, db, app);
+  });
 }
 
-/**
- * @swagger
- * /api/data/profiles:
- *   get:
- *     summary: List app-scoped profiles
- *     tags: [Data]
- */
-router.get('/profiles', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.listProfilesForApp(db, app.id, req.query));
+router.get('/users', withAppContext((req, res, db, app) => {
+  res.json(appDataService.listUsersForApp(db, app.id, req.query));
 }));
 
-/**
- * @swagger
- * /api/data/profiles:
- *   post:
- *     summary: Create an app-scoped profile
- *     tags: [Data]
- */
-router.post('/profiles', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  const profile = appDataService.createProfileForApp(db, app.id, req.body);
-  res.status(201).json(profile);
+router.post('/users', withAppContext((req, res, db, app) => {
+  const user = appDataService.createUserForApp(db, app.id, req.body);
+  res.status(201).json(user);
 }));
 
-/**
- * @swagger
- * /api/data/profiles/{id}:
- *   get:
- *     summary: Get one profile with related records and envelopes
- *     tags: [Data]
- */
-router.get('/profiles/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.getProfileDetailsForApp(db, app.id, req.params.id));
+router.put('/users/:id', withAppContext((req, res, db, app) => {
+  res.json(appDataService.updateUserForApp(db, app.id, req.params.id, req.body));
 }));
 
-/**
- * @swagger
- * /api/data/profiles/{id}:
- *   put:
- *     summary: Update an app-scoped profile
- *     tags: [Data]
- */
-router.put('/profiles/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.updateProfileForApp(db, app.id, req.params.id, req.body));
+router.get('/contacts', withAppContext((req, res, db, app) => {
+  res.json(appDataService.listContactsForApp(db, app.id, req.query));
 }));
 
-/**
- * @swagger
- * /api/data/profiles/{id}:
- *   delete:
- *     summary: Delete an app-scoped profile and related data
- *     tags: [Data]
- */
-router.delete('/profiles/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.deleteProfileForApp(db, app.id, req.params.id));
+router.post('/contacts', withAppContext((req, res, db, app) => {
+  const contact = appDataService.createContactForApp(db, app.id, req.body);
+  res.status(201).json(contact);
 }));
 
-/**
- * @swagger
- * /api/data/records:
- *   get:
- *     summary: List app-scoped records
- *     tags: [Data]
- */
-router.get('/records', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.listRecordsForApp(db, app.id, req.query));
+router.get('/contacts/:id', withAppContext((req, res, db, app) => {
+  res.json(appDataService.getContactDetailsForApp(db, app.id, req.params.id));
 }));
 
-/**
- * @swagger
- * /api/data/records:
- *   post:
- *     summary: Create an app-scoped record
- *     tags: [Data]
- */
-router.post('/records', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  const record = appDataService.createRecordForApp(db, app.id, req.body);
-  res.status(201).json(record);
+router.put('/contacts/:id', withAppContext((req, res, db, app) => {
+  res.json(appDataService.updateContactForApp(db, app.id, req.params.id, req.body));
 }));
 
-/**
- * @swagger
- * /api/data/records/{id}:
- *   get:
- *     summary: Get one record with related envelopes
- *     tags: [Data]
- */
-router.get('/records/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.getRecordDetailsForApp(db, app.id, req.params.id));
+router.delete('/contacts/:id', withAppContext((req, res, db, app) => {
+  res.json(appDataService.deleteContactForApp(db, app.id, req.params.id));
 }));
 
-/**
- * @swagger
- * /api/data/records/{id}:
- *   put:
- *     summary: Update an app-scoped record
- *     tags: [Data]
- */
-router.put('/records/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.updateRecordForApp(db, app.id, req.params.id, req.body));
-}));
-
-/**
- * @swagger
- * /api/data/envelopes:
- *   post:
- *     summary: Create an app-scoped envelope
- *     tags: [Data]
- */
-router.post('/envelopes', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  const envelope = appDataService.createTrackedEnvelopeForApp(db, app.id, req.body);
+router.post('/envelopes', withAppContext((req, res, db, app) => {
+  const envelope = appDataService.createEnvelopeForApp(db, app.id, req.body);
   res.status(201).json(envelope);
 }));
 
-/**
- * @swagger
- * /api/data/envelopes/{id}:
- *   put:
- *     summary: Update an app-scoped envelope
- *     tags: [Data]
- */
-router.put('/envelopes/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
-  res.json(appDataService.updateTrackedEnvelopeForApp(db, app.id, req.params.id, req.body));
+router.put('/envelopes/:id', withAppContext((req, res, db, app) => {
+  res.json(appDataService.updateEnvelopeForApp(db, app.id, req.params.id, req.body));
 }));
 
-/**
- * @swagger
- * /api/data/tasks/{id}:
- *   delete:
- *     summary: Delete an app-scoped task
- *     tags: [Data]
- */
-router.delete('/tasks/:id', createJsonRoute((req, res) => {
-  const { db, app } = getAppContext(req);
+router.post('/tasks', withAppContext((req, res, db, app) => {
+  const task = appDataService.createTaskForApp(db, app.id, req.body);
+  res.status(201).json(task);
+}));
+
+router.delete('/tasks/:id', withAppContext((req, res, db, app) => {
   res.json(appDataService.deleteTaskForApp(db, app.id, req.params.id));
 }));
 

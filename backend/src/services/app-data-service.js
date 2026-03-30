@@ -1,96 +1,188 @@
-const { v4: uuidv4 } = require('uuid');
-const appDataStore = require('../repositories/app-data-store');
+const { randomUUID } = require('crypto');
+const appDataStore = require('../data-store');
 const { createError } = require('../utils');
 
-const DEFAULT_PROFILE_TASKS = [
-  {
-    title: 'Begin Asset Transfer',
-    description: 'Initiate the transfer of assets from your external accounts to your new brokerage account.'
-  }
-];
-
-function buildTaskSeed(tasks) {
+function buildTaskRecords(tasks, defaultUserId) {
   return tasks.map((task) => ({
-    id: uuidv4(),
-    title: task.title,
-    description: task.description || null
+    id: randomUUID(),
+    userId: task.userId || defaultUserId || null,
+    title: requireText(task.title, 'task title is required'),
+    description: task.description || null,
+    status: task.status || 'pending'
   }));
 }
 
-function assertRequired(value, message) {
-  if (!value) {
+function requireText(value, message) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
     throw createError(400, message);
   }
+  return normalized;
 }
 
-function listProfilesForApp(db, appId, filters) {
-  return appDataStore.listProfiles(db, appId, filters);
+function getObjectValue(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
-function createProfileForApp(db, appId, input) {
-  assertRequired(input.displayName, 'displayName is required');
+function buildContactData(input = {}, existingData = {}) {
+  const nextData = {
+    ...existingData,
+    ...getObjectValue(input.data)
+  };
 
-  const profile = appDataStore.createProfile(db, appId, {
+  if (!Array.isArray(nextData.accounts)) {
+    nextData.accounts = Array.isArray(existingData.accounts) ? existingData.accounts : [];
+  }
+
+  if (!Array.isArray(nextData.tags)) {
+    nextData.tags = Array.isArray(existingData.tags) ? existingData.tags : [];
+  }
+
+  if (!nextData.contactType && (input.contactType || existingData.contactType)) {
+    nextData.contactType = input.contactType || existingData.contactType;
+  }
+
+  return nextData;
+}
+
+function resolveOwnerUserId(db, appId, ownerUserId) {
+  if (ownerUserId) {
+    return appDataStore.ensureUserBelongsToApp(db, appId, ownerUserId).id;
+  }
+
+  const primaryUser = appDataStore.getPrimaryUser(db, appId);
+  if (!primaryUser) {
+    throw createError(400, 'No user is configured for this app');
+  }
+
+  return primaryUser.id;
+}
+
+function resolveContactId(db, appId, contactId) {
+  if (!contactId) {
+    return null;
+  }
+
+  return appDataStore.ensureContactBelongsToApp(db, appId, contactId).id;
+}
+
+function resolveAssociatedUserId(db, appId, inputUserId, contactId) {
+  if (inputUserId) {
+    return appDataStore.ensureUserBelongsToApp(db, appId, inputUserId).id;
+  }
+
+  if (contactId) {
+    return appDataStore.ensureContactBelongsToApp(db, appId, contactId).owner_user_id;
+  }
+
+  return null;
+}
+
+function listUsersForApp(db, appId, filters) {
+  return appDataStore.listUsers(db, appId, filters);
+}
+
+function createUserForApp(db, appId, input) {
+  return appDataStore.createUser(db, appId, {
     ...input,
-    id: input.id || uuidv4()
+    displayName: requireText(input.displayName, 'displayName is required'),
+    id: input.id || randomUUID()
+  });
+}
+
+function updateUserForApp(db, appId, userId, input) {
+  appDataStore.requireScopedRow(db, 'users', appId, userId, 'User');
+  return appDataStore.updateUser(db, appId, userId, input);
+}
+
+function listContactsForApp(db, appId, filters) {
+  return appDataStore.listContacts(db, appId, filters);
+}
+
+function createContactForApp(db, appId, input) {
+  const ownerUserId = resolveOwnerUserId(db, appId, input.ownerUserId);
+  const contact = appDataStore.createContact(db, appId, {
+    ...input,
+    displayName: requireText(input.displayName, 'displayName is required'),
+    id: input.id || randomUUID(),
+    ownerUserId,
+    data: buildContactData(input)
   });
 
-  const tasks = Array.isArray(input.tasks) ? input.tasks : DEFAULT_PROFILE_TASKS;
-  appDataStore.addTasks(db, appId, profile.id, buildTaskSeed(tasks));
-  return profile;
+  if (Array.isArray(input.tasks) && input.tasks.length > 0) {
+    appDataStore.createTasks(db, appId, contact.id, buildTaskRecords(input.tasks, ownerUserId));
+  }
+  return contact;
 }
 
-function getProfileDetailsForApp(db, appId, profileId) {
-  return appDataStore.getProfileDetails(db, appId, profileId);
+function getContactDetailsForApp(db, appId, contactId) {
+  return appDataStore.getContactDetails(db, appId, contactId);
 }
 
-function updateProfileForApp(db, appId, profileId, input) {
-  appDataStore.requireScopedRow(db, 'profiles', appId, profileId, 'Profile');
-  return appDataStore.updateProfile(db, appId, profileId, input);
+function updateContactForApp(db, appId, contactId, input) {
+  const existing = appDataStore.requireScopedRow(db, 'contacts', appId, contactId, 'Contact', (row) => row && ({
+    ...row,
+    data: row.data ? JSON.parse(row.data) : {}
+  }));
+  const ownerUserId = input.ownerUserId !== undefined
+    ? resolveOwnerUserId(db, appId, input.ownerUserId)
+    : undefined;
+
+  return appDataStore.updateContact(db, appId, contactId, {
+    ...input,
+    ownerUserId,
+    data: input.data !== undefined ? buildContactData(input, existing.data || {}) : undefined
+  });
 }
 
-function deleteProfileForApp(db, appId, profileId) {
-  appDataStore.requireScopedRow(db, 'profiles', appId, profileId, 'Profile');
-  appDataStore.deleteProfileCascade(db, appId, profileId);
+function deleteContactForApp(db, appId, contactId) {
+  appDataStore.requireScopedRow(db, 'contacts', appId, contactId, 'Contact');
+  appDataStore.deleteContactCascade(db, appId, contactId);
   return { deleted: true };
 }
 
-function listRecordsForApp(db, appId, filters) {
-  return appDataStore.listRecords(db, appId, filters);
-}
+function createEnvelopeForApp(db, appId, input) {
+  const contactId = resolveContactId(db, appId, input.contactId);
+  const userId = resolveAssociatedUserId(db, appId, input.userId, contactId);
 
-function createRecordForApp(db, appId, input) {
-  assertRequired(input.title, 'title is required');
-  appDataStore.ensureProfileBelongsToApp(db, appId, input.profileId);
-
-  return appDataStore.createRecord(db, appId, {
-    ...input,
-    id: input.id || uuidv4()
-  });
-}
-
-function getRecordDetailsForApp(db, appId, recordId) {
-  return appDataStore.getRecordDetails(db, appId, recordId);
-}
-
-function updateRecordForApp(db, appId, recordId, input) {
-  appDataStore.requireScopedRow(db, 'records', appId, recordId, 'Record');
-  appDataStore.ensureProfileBelongsToApp(db, appId, input.profileId);
-  return appDataStore.updateRecord(db, appId, recordId, input);
-}
-
-function createTrackedEnvelopeForApp(db, appId, input) {
-  appDataStore.ensureProfileBelongsToApp(db, appId, input.profileId);
+  if (!contactId && !userId) {
+    throw createError(400, 'contactId or userId is required');
+  }
 
   return appDataStore.createEnvelope(db, appId, {
     ...input,
-    id: input.id || uuidv4()
+    id: input.id || randomUUID(),
+    contactId,
+    userId
   });
 }
 
-function updateTrackedEnvelopeForApp(db, appId, envelopeId, input) {
-  appDataStore.ensureProfileBelongsToApp(db, appId, input.profileId);
-  return appDataStore.updateEnvelope(db, appId, envelopeId, input);
+function updateEnvelopeForApp(db, appId, envelopeId, input) {
+  const contactId = resolveContactId(db, appId, input.contactId);
+  const userId = resolveAssociatedUserId(db, appId, input.userId, contactId);
+  return appDataStore.updateEnvelope(db, appId, envelopeId, {
+    ...input,
+    contactId,
+    userId
+  });
+}
+
+function createTaskForApp(db, appId, input) {
+  const contactId = resolveContactId(db, appId, input.contactId);
+  const userId = resolveAssociatedUserId(db, appId, input.userId, contactId);
+
+  if (!contactId && !userId) {
+    throw createError(400, 'contactId or userId is required');
+  }
+
+  return appDataStore.createTask(db, appId, {
+    id: input.id || randomUUID(),
+    contactId,
+    userId,
+    title: requireText(input.title, 'title is required'),
+    description: input.description || null,
+    status: input.status || 'pending'
+  });
 }
 
 function deleteTaskForApp(db, appId, taskId) {
@@ -100,16 +192,16 @@ function deleteTaskForApp(db, appId, taskId) {
 }
 
 module.exports = {
-  createProfileForApp,
-  createRecordForApp,
-  createTrackedEnvelopeForApp,
-  deleteProfileForApp,
+  createContactForApp,
+  createEnvelopeForApp,
+  createTaskForApp,
+  createUserForApp,
+  deleteContactForApp,
   deleteTaskForApp,
-  getProfileDetailsForApp,
-  getRecordDetailsForApp,
-  listProfilesForApp,
-  listRecordsForApp,
-  updateProfileForApp,
-  updateRecordForApp,
-  updateTrackedEnvelopeForApp
+  getContactDetailsForApp,
+  listContactsForApp,
+  listUsersForApp,
+  updateContactForApp,
+  updateEnvelopeForApp,
+  updateUserForApp
 };

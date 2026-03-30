@@ -7,16 +7,16 @@ Reusable Docusign Intelligent Agreement Management demo platform for Solution Co
 - The backend is shared and app-scoped by slug. One deployed service can support multiple static frontends.
 - Frontends are static HTML with Alpine.js and Tailwind. There is no build step.
 - The Maestro extension is optional and only needed for realistic writeback demos.
-- This is a demo platform, not a production service. Open CORS, SQLite, and simplified auth are intentional trade-offs.
+- This is a demo platform, not a production service. Open cross-origin access, SQLite, and simplified auth are intentional trade-offs.
 
-Current seeded demo: `tgk-wealth` (advisor + investor portals).
+Current reference demo: `tgk-wealth` (advisor + investor portals).
 
 ## Architecture
 
 - `backend/src/routes/`: HTTP entrypoints only. Route files should stay thin.
-- `backend/src/repositories/app-data-store.js`: app-scoped SQLite access for profiles, records, envelopes, and tasks.
+- `backend/src/database.js`: SQLite schema setup and reset logic.
+- `backend/src/data-store.js`: app-scoped SQLite access for users, contacts, envelopes, and tasks.
 - `backend/src/services/app-data-service.js`: business rules for app data CRUD and tracked envelope updates.
-- `backend/src/services/app-bootstrap-service.js`: bootstrap/reset flow for seeded demo data.
 - `frontends/shared/js/api-client.js`: shared frontend HTTP client.
 - `frontends/shared/js/settings-panel.js`: shared settings state and theme persistence.
 - `frontends/shared/js/shared-ui.js`: shared settings layout and envelope modal UI.
@@ -27,24 +27,20 @@ Current seeded demo: `tgk-wealth` (advisor + investor portals).
 Current SQLite tables:
 
 - `apps`
+- `users`
+- `contacts`
 - `docusign_connections`
-- `profiles`
-- `records`
 - `envelopes`
 - `tasks`
-- `webhook_events`
 
-`profiles` and `records` are still the public demo API names because the current seed data, portals, and Maestro writeback contract already depend on them.
+Canonical model:
 
-For future vertical-agnostic growth, treat them conceptually as:
+- `users`: internal operators such as advisors. Each app gets one default user, `Gordon Gecko`, the first time it is used.
+- `contacts`: external people or organizations associated to a user. Frontend-specific account data lives inside `contacts.data.accounts`.
+- `envelopes`: tracked DocuSign envelopes linked to a contact.
+- `tasks`: lightweight contact tasks.
 
-- `profiles`: the primary entity surfaced in the UI. Today that is an investor, but it could also map to a claimant, employee, patient, partner, or case owner.
-- `records`: related business objects attached to the primary entity. Today that is an account, but it could also map to a policy, claim, application, workspace, or intake packet.
-
-Recommendation:
-
-- Keep `profiles` and `records` in the current API until there is a real need for a breaking change.
-- If the platform expands across more verticals, introduce a v2 compatibility layer with more neutral names such as `entities` and `resources` instead of renaming the live schema in place.
+The backend does not seed demo contacts anymore. New workspaces start with the advisor user only.
 
 ## Repository Structure
 
@@ -52,7 +48,7 @@ Recommendation:
 - `frontends/shared/`: shared scripts, styles, and UI templates
 - `backend/`: shared demo API and SQLite store
 - `extensions/maestro-tgk/`: optional Maestro Data IO service
-- `scripts/`: local utilities for seeding and runtime config generation
+- `scripts/`: local utilities for runtime config generation and static serving
 
 ## Build a New Frontend
 
@@ -61,7 +57,7 @@ To add another demo:
 1. Create a new directory under `frontends/`.
 2. Pick an app slug.
 3. Point the frontend at the shared backend.
-4. Seed demo data with `/api/apps/bootstrap`.
+4. Create users and contacts through `/api/data/*` or Maestro Data IO.
 5. Reuse the existing API contract before changing backend code.
 
 Use `frontends/tgk-wealth/` as the reference implementation.
@@ -83,31 +79,27 @@ Required backend envs:
 - `DOCUSIGN_RSA_PRIVATE_KEY`
 - `DOCUSIGN_SECRET_KEY`
 
+No session secret or cookie config is required. The backend is stateless.
+
 2. Start the backend.
 
 ```bash
 npm run dev:backend
 ```
 
-3. Seed the demo once.
-
-```bash
-npm run seed:tgk
-```
-
-4. Serve `frontends/`.
+3. Serve `frontends/`.
 
 ```bash
 npm run start:frontend
 ```
 
-5. Start the Maestro service only when needed.
+4. Start the Maestro service only when needed.
 
 ```bash
 npm run start:maestro-extension
 ```
 
-6. Run the shared JavaScript syntax check when you change backend, frontend, or extension code.
+5. Run the shared JavaScript syntax check when you change backend, frontend, or extension code.
 
 ```bash
 npm run check
@@ -116,7 +108,6 @@ npm run check
 Local URLs:
 
 - backend: [http://localhost:3000](http://localhost:3000)
-- API docs: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
 - advisor: [http://localhost:5500/tgk-wealth/advisor/](http://localhost:5500/tgk-wealth/advisor/)
 - investor: [http://localhost:5500/tgk-wealth/investor/](http://localhost:5500/tgk-wealth/investor/)
 - Maestro health: [http://localhost:3300/health](http://localhost:3300/health)
@@ -125,9 +116,10 @@ Local URLs:
 
 - Frontends stay static.
 - Docusign is connected per app, not per browser.
+- The backend does not use cookie sessions.
 - Runtime frontend config is generated into `frontends/<vertical>/runtime-config.js`.
 - `npm run build:frontend-config` is for deploy-time config generation.
-- SQLite is the demo store, and the backend creates the schema on startup.
+- SQLite is the demo store, and the backend creates or resets the lean CRM schema on startup when the local table shape is stale.
 
 ## Deploy Notes
 
@@ -150,11 +142,43 @@ Keep out of git:
 
 ## API Summary
 
-- `/api/apps/*` — app bootstrap and state
 - `/api/auth/*` — Docusign OAuth/JWT
-- `/api/data/*` — profiles, records, tracked envelopes, and tasks
-- `/api/envelopes/*` — live envelope actions and Docusign-backed document endpoints
-- `/api/webhooks/*` — Docusign Connect
-- `/api/proxy/*` — generic CORS pass-through
+- `/api/data/*` — users, contacts, tracked envelopes, and tasks
+- `/api/envelopes/*` — Docusign-backed audit history and combined document downloads
+- `/api/webhooks/*` — Docusign Connect sink (discard-only)
+- `/api/proxy` — generic POST-based CORS pass-through
 
-Docs are served at `/api-docs`.
+## Creating Contacts
+
+Use the existing API instead of a backend seed step.
+
+```bash
+curl --request POST 'http://localhost:3000/api/data/contacts?app=tgk-wealth' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "displayName": "Casey Investor",
+    "email": "casey@example.com",
+    "phone": "(555) 555-0112",
+    "organization": "Northwind Family Office",
+    "data": {
+      "firstName": "Casey",
+      "lastName": "Investor",
+      "contactType": "investor",
+      "riskProfile": "Balanced",
+      "value": 1250000,
+      "netWorth": 3800000,
+      "accounts": [
+        {
+          "name": "Individual Brokerage",
+          "accountType": "Taxable",
+          "typeCode": "type-a",
+          "value": 1250000,
+          "allocEquity": 62,
+          "allocFixed": 24,
+          "allocAlt": 8,
+          "allocCash": 6
+        }
+      ]
+    }
+  }'
+```

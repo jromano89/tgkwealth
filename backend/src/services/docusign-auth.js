@@ -244,7 +244,5 @@ module.exports = {
   getAccessToken,
   getConsentUrl,
   getUserInfoFromCode,
-  readConsentState,
-  normalizeScopes,
-  normalizeScopeString
+  readConsentState
 };

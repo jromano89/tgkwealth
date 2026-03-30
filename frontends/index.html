@@ -47,16 +47,14 @@
     </div>
 
     <div class="footer">
-      <p>Backend API: <a id="api-docs-link" href="#">API Docs</a> · <a id="health-link" href="#">Health Check</a></p>
+      <p>Backend API: <a id="health-link" href="#">Health Check</a></p>
       <p>Built with Alpine.js + Tailwind · Powered by Docusign</p>
     </div>
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const backendUrl = window.TGK_RUNTIME_CONFIG?.shared?.backendUrl || 'http://localhost:3000';
-      const apiDocsLink = document.getElementById('api-docs-link');
       const healthLink = document.getElementById('health-link');
-      if (apiDocsLink) apiDocsLink.href = `${backendUrl}/api-docs`;
       if (healthLink) healthLink.href = `${backendUrl}/api/health`;
     });
   </script>

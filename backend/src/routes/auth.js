@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDb } = require('../db/database');
+const { getDb } = require('../database');
 const {
   createConsentState,
   getAccessToken,
@@ -130,22 +130,6 @@ function getSessionPayload(db, appSlug) {
   };
 }
 
-/**
- * @swagger
- * /api/auth/login:
- *   get:
- *     summary: Initiate Docusign consent for the JWT-backed integration
- *     tags: [Auth]
- *     parameters:
- *       - in: query
- *         name: redirect
- *         schema:
- *           type: string
- *         description: URL to redirect back to after Docusign consent (the frontend URL)
- *     responses:
- *       302:
- *         description: Redirects to Docusign consent screen
- */
 router.get('/login', (req, res) => {
   const appSlug = getAppSlug(req);
   if (!appSlug) {
@@ -166,16 +150,6 @@ router.get('/login', (req, res) => {
   res.redirect(consentUrl);
 });
 
-/**
- * @swagger
- * /api/auth/callback:
- *   get:
- *     summary: Consent callback from Docusign
- *     tags: [Auth]
- *     responses:
- *       302:
- *         description: Redirects back to frontend with session established
- */
 router.get('/callback', async (req, res) => {
   let frontendRedirect = '/';
   let display = 'redirect';
@@ -235,25 +209,6 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /api/auth/account:
- *   post:
- *     summary: Select a Docusign account (if user has multiple)
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               accountId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Account selected
- */
 router.post('/account', (req, res) => {
   const { accountId } = req.body;
   if (!accountId) {
@@ -286,31 +241,11 @@ router.post('/account', (req, res) => {
   res.json({ success: true, account });
 });
 
-/**
- * @swagger
- * /api/auth/session:
- *   get:
- *     summary: Get current session info
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Session info or null if not connected
- */
 router.get('/session', (req, res) => {
   const db = getDb();
   res.json(getSessionPayload(db, getAppSlug(req)));
 });
 
-/**
- * @swagger
- * /api/auth/prewarm:
- *   get:
- *     summary: Warm the Docusign JWT token cache for the current app connection
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Returns session info and whether token warmup completed
- */
 router.get('/prewarm', async (req, res) => {
   const db = getDb();
   const session = getSessionPayload(db, getAppSlug(req));
@@ -332,16 +267,6 @@ router.get('/prewarm', async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /api/auth/logout:
- *   post:
- *     summary: Clear Docusign session
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Session cleared
- */
 router.post('/logout', (req, res) => {
   try {
     const db = getDb();

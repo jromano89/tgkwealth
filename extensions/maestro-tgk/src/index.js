@@ -2,9 +2,9 @@ const http = require('http');
 const { config, getPublicBaseUrl } = require('./config');
 const { handlePreflight, readParsedBody, sendJson, sendText } = require('./http');
 const { buildManifest } = require('./manifest');
-const profileService = require('./profile-service');
+const contactService = require('./contact-service');
 const envelopeService = require('./envelope-service');
-const profileTypeDefs = require('./profile-type-definitions');
+const contactTypeDefs = require('./contact-type-definitions');
 const envelopeTypeDefs = require('./envelope-type-definitions');
 
 const INFO_TEXT_ROUTES = {
@@ -101,7 +101,7 @@ async function handleOauthToken(req, res) {
 
 function resolveDataIoService(typeName) {
   const normalized = String(typeName || '').toLowerCase();
-  return envelopeTypeDefs.TYPE_ALIASES.has(normalized) ? envelopeService : profileService;
+  return envelopeTypeDefs.TYPE_ALIASES.has(normalized) ? envelopeService : contactService;
 }
 
 function getRequestedTypeNames(body) {
@@ -112,20 +112,20 @@ function getRequestedTypeNames(body) {
 
 function buildTypeDefinitionsResponse(body) {
   const requestedTypeNames = getRequestedTypeNames(body);
-  const wantsProfileTypes = [...requestedTypeNames].some((typeName) => profileTypeDefs.TYPE_ALIASES.has(typeName));
+  const wantsContactTypes = [...requestedTypeNames].some((typeName) => contactTypeDefs.TYPE_ALIASES.has(typeName));
   const wantsEnvelopeTypes = [...requestedTypeNames].some((typeName) => envelopeTypeDefs.TYPE_ALIASES.has(typeName));
   const declarations = [];
   const errors = [];
 
-  if (wantsProfileTypes) {
-    declarations.push(...profileTypeDefs.TYPE_DEFINITIONS.declarations);
+  if (wantsContactTypes) {
+    declarations.push(...contactTypeDefs.TYPE_DEFINITIONS.declarations);
   }
 
   if (wantsEnvelopeTypes) {
     declarations.push(...envelopeTypeDefs.TYPE_DEFINITIONS.declarations);
   }
 
-  if (!wantsProfileTypes && !wantsEnvelopeTypes) {
+  if (!wantsContactTypes && !wantsEnvelopeTypes) {
     for (const typeName of requestedTypeNames) {
       errors.push({
         typeName,
@@ -141,9 +141,9 @@ function buildTypeDefinitionsResponse(body) {
 const DATA_IO_HANDLERS = {
   '/api/dataio/createRecord': (body) => resolveDataIoService(body?.typeName).createRecord(body),
   '/api/dataio/patchRecord': (body) => resolveDataIoService(body?.typeName).patchRecord(body),
-  '/api/dataio/searchRecords': (body) => profileService.searchRecords(body),
+  '/api/dataio/searchRecords': (body) => contactService.searchRecords(body),
   '/api/dataio/getTypeNames': () => ({
-    typeNames: [...profileTypeDefs.TYPE_NAMES, ...envelopeTypeDefs.TYPE_NAMES]
+    typeNames: [...contactTypeDefs.TYPE_NAMES, ...envelopeTypeDefs.TYPE_NAMES]
   }),
   '/api/dataio/getTypeDefinitions': (body) => buildTypeDefinitionsResponse(body)
 };

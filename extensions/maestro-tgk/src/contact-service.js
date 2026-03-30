@@ -1,11 +1,13 @@
-const { createProfile, createRecord: createBackendRecord, getProfile, listProfiles, updateProfile } = require('./backend-client');
-const { TYPE_ALIASES, TYPE_NAME } = require('./profile-type-definitions');
+const { createContact, getContact, listContacts, updateContact } = require('./backend-client');
+const { TYPE_ALIASES, TYPE_NAME } = require('./contact-type-definitions');
 const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
 
 const COLOR_PALETTE = ['#3b5bdb', '#16a34a', '#0ea5e9', '#ec4899', '#f59f00', '#dc2626', '#7c3aed'];
 const RISK_PROFILES = ['Balanced', 'Moderate Growth', 'Growth', 'Conservative Income'];
 const DEFAULT_ROLE = 'Prospective Client';
-const ADVISORS = ['Gordon Gecko', 'Avery Quinn', 'Morgan Lee'];
+const DEFAULT_NEW_CONTACT_TASKS = [
+  { title: 'Begin Asset Transfer', description: 'Move assets into the new brokerage relationship.' }
+];
 
 function normalizeNumber(value, fallback = 0) {
   if (value === undefined || value === null || value === '') {
@@ -55,7 +57,7 @@ function buildDisplayName(firstName, lastName, fullName, existingDisplayName) {
     return String(fullName).trim();
   }
   const combined = [firstName, lastName].filter(Boolean).join(' ').trim();
-  return combined || existingDisplayName || 'Pending Investor';
+  return combined || existingDisplayName || 'Pending Contact';
 }
 
 function normalizeStatus(value, fallback = 'pending') {
@@ -73,21 +75,36 @@ function collectExtensionFields(input, consumedKeys) {
   return extensionFields;
 }
 
-function mapProfileToRecord(profile) {
-  const data = profile?.data || {};
+function buildDefaultAccount(refSeed) {
   return {
-    Id: profile.id,
-    Ref: profile.ref || '',
-    Kind: profile.kind || '',
-    DisplayName: profile.display_name || '',
-    FullName: profile.display_name || '',
+    kind: 'account',
+    status: 'pending',
+    name: 'Individual Brokerage',
+    accountType: 'Taxable',
+    typeCode: 'type-a',
+    value: 0,
+    ytdReturn: 0,
+    allocEquity: 0,
+    allocFixed: 0,
+    allocAlt: 0,
+    allocCash: 100
+  };
+}
+
+function mapContactToDataRecord(contact) {
+  const data = contact?.data || {};
+  return {
+    Id: contact.id,
+    Ref: contact.ref || '',
+    DisplayName: contact.display_name || '',
+    FullName: contact.display_name || '',
     FirstName: data.firstName || '',
     LastName: data.lastName || '',
-    Email: profile.email || '',
-    Phone: profile.phone || '',
-    Organization: profile.organization || '',
-    Status: profile.status || '',
-    Source: profile.source || '',
+    Email: contact.email || '',
+    Phone: contact.phone || '',
+    Organization: contact.organization || '',
+    Status: contact.status || '',
+    Source: contact.source || '',
     DataJson: JSON.stringify(data || {}),
     Aum: normalizeNumber(data.value, 0),
     NetWorth: normalizeNumber(data.netWorth, 0),
@@ -95,8 +112,8 @@ function mapProfileToRecord(profile) {
     Role: data.role || '',
     AssignedTo: data.assignedTo || '',
     LifecycleStage: data.lifecycleStage || '',
-    CreatedAt: profile.created_at || '',
-    UpdatedAt: profile.updated_at || '',
+    CreatedAt: contact.created_at || '',
+    UpdatedAt: contact.updated_at || '',
     ...((data.extensionFields && typeof data.extensionFields === 'object') ? data.extensionFields : {})
   };
 }
@@ -208,23 +225,22 @@ function parseDataValue(value) {
   return {};
 }
 
-function buildProfilePayload(rawInput, existingProfile) {
+function buildContactPayload(rawInput, existingContact) {
   const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
   const structuredData = parseDataValue(
-    pickFirstDefined(input, ['Data', 'data', 'ProfileData', 'profileData', 'Metadata', 'metadata', 'DataJson', 'dataJson'])
+    pickFirstDefined(input, ['Data', 'data', 'ContactData', 'contactData', 'Metadata', 'metadata', 'DataJson', 'dataJson'])
   );
   const mergedInput = {
     ...structuredData,
     ...input
   };
-  const existingData = existingProfile?.data || {};
+  const existingData = existingContact?.data || {};
 
   const consumedKeys = new Set([
     'Id', 'id',
     'Ref', 'ref',
-    'Kind', 'kind',
     'DisplayName', 'displayName',
-    'FullName', 'fullName', 'DisplayName', 'displayName',
+    'FullName', 'fullName',
     'FirstName', 'firstName',
     'LastName', 'lastName',
     'Email', 'email',
@@ -232,7 +248,7 @@ function buildProfilePayload(rawInput, existingProfile) {
     'Organization', 'organization', 'Company', 'company',
     'Status', 'status',
     'Source', 'source',
-    'Data', 'data', 'ProfileData', 'profileData', 'Metadata', 'metadata', 'DataJson', 'dataJson',
+    'Data', 'data', 'ContactData', 'contactData', 'Metadata', 'metadata', 'DataJson', 'dataJson',
     'Aum', 'aum', 'Value', 'value',
     'NetWorth', 'netWorth',
     'RiskProfile', 'riskProfile',
@@ -246,9 +262,9 @@ function buildProfilePayload(rawInput, existingProfile) {
   const lastName = pickFirstDefined(mergedInput, ['LastName', 'lastName']) || existingData.lastName || '';
   const displayNameInput = pickFirstDefined(mergedInput, ['DisplayName', 'displayName']);
   const fullName = displayNameInput || pickFirstDefined(mergedInput, ['FullName', 'fullName']);
-  const displayName = buildDisplayName(firstName, lastName, fullName, existingProfile?.display_name);
-  const status = normalizeStatus(pickFirstDefined(mergedInput, ['Status', 'status']), existingProfile?.status || 'pending');
-  const sourceSeed = pickFirstDefined(mergedInput, ['Ref', 'ref', 'Email', 'email']) || displayName || existingProfile?.id || Date.now();
+  const displayName = buildDisplayName(firstName, lastName, fullName, existingContact?.display_name);
+  const status = normalizeStatus(pickFirstDefined(mergedInput, ['Status', 'status']), existingContact?.status || 'pending');
+  const sourceSeed = pickFirstDefined(mergedInput, ['Ref', 'ref', 'Email', 'email']) || displayName || existingContact?.id || Date.now();
 
   const value = normalizeNumber(
     pickFirstDefined(mergedInput, ['Aum', 'aum', 'Value', 'value']),
@@ -256,33 +272,31 @@ function buildProfilePayload(rawInput, existingProfile) {
   );
   const netWorth = normalizeNumber(
     pickFirstDefined(mergedInput, ['NetWorth', 'netWorth']),
-    existingProfile ? normalizeNumber(existingData.netWorth, value) : value
+    existingContact ? normalizeNumber(existingData.netWorth, value) : value
   );
-
-  const lifecycleStage = pickFirstDefined(mergedInput, ['LifecycleStage', 'lifecycleStage'])
-    || existingData.lifecycleStage
-    || (status === 'pending' ? 'pending_signature' : status);
 
   const extensionFields = collectExtensionFields(input, consumedKeys);
   const existingExtensionFields = existingData.extensionFields && typeof existingData.extensionFields === 'object'
     ? existingData.extensionFields
     : {};
+  const existingAccounts = Array.isArray(existingData.accounts) ? existingData.accounts : [];
 
   const normalizedData = {
     ...existingData,
     ...structuredData,
     firstName,
     lastName,
-    profileType: 'investor',
+    contactType: 'investor',
     value,
     netWorth,
-    changePct: existingProfile ? normalizeNumber(existingData.changePct, 0) : 0,
+    changePct: existingContact ? normalizeNumber(existingData.changePct, 0) : 0,
     riskProfile: pickFirstDefined(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed),
     role: pickFirstDefined(mergedInput, ['Role', 'role']) || existingData.role || DEFAULT_ROLE,
-    assignedTo: pickFirstDefined(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || deterministicPick(ADVISORS, sourceSeed),
+    assignedTo: pickFirstDefined(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || 'Gordon Gecko',
     avatar: existingData.avatar || deterministicPick(COLOR_PALETTE, sourceSeed),
-    lifecycleStage,
+    lifecycleStage: pickFirstDefined(mergedInput, ['LifecycleStage', 'lifecycleStage']) || existingData.lifecycleStage || (status === 'pending' ? 'pending_signature' : status),
     externalId: pickFirstDefined(mergedInput, ['ExternalId', 'externalId']) || existingData.externalId || null,
+    accounts: existingAccounts.length > 0 ? existingAccounts : [buildDefaultAccount(sourceSeed)],
     extensionFields: {
       ...existingExtensionFields,
       ...extensionFields
@@ -290,16 +304,15 @@ function buildProfilePayload(rawInput, existingProfile) {
   };
 
   return {
-    id: pickFirstDefined(mergedInput, ['Id', 'id']) || existingProfile?.id,
-    ref: pickFirstDefined(mergedInput, ['Ref', 'ref']) || existingProfile?.ref || `${slugify(displayName) || 'profile'}-${Date.now().toString(36)}`,
-    kind: pickFirstDefined(mergedInput, ['Kind', 'kind']) || existingProfile?.kind || 'investor',
+    id: pickFirstDefined(mergedInput, ['Id', 'id']) || existingContact?.id,
+    ref: pickFirstDefined(mergedInput, ['Ref', 'ref']) || existingContact?.ref || `${slugify(displayName) || 'contact'}-${Date.now().toString(36)}`,
     displayName,
-    email: pickFirstDefined(mergedInput, ['Email', 'email']) || existingProfile?.email || null,
-    phone: normalizePhone(pickFirstDefined(mergedInput, ['Phone', 'phone'])) || existingProfile?.phone || null,
-    organization: pickFirstDefined(mergedInput, ['Organization', 'organization', 'Company', 'company']) || existingProfile?.organization || null,
+    email: pickFirstDefined(mergedInput, ['Email', 'email']) || existingContact?.email || null,
+    phone: normalizePhone(pickFirstDefined(mergedInput, ['Phone', 'phone'])) || existingContact?.phone || null,
+    organization: pickFirstDefined(mergedInput, ['Organization', 'organization', 'Company', 'company']) || existingContact?.organization || null,
     status,
     data: normalizedData,
-    source: pickFirstDefined(mergedInput, ['Source', 'source']) || existingProfile?.source || 'maestro-extension'
+    source: pickFirstDefined(mergedInput, ['Source', 'source']) || existingContact?.source || 'maestro-extension'
   };
 }
 
@@ -313,35 +326,12 @@ async function createRecord(body) {
   }
 
   requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
-  const payload = buildProfilePayload({
+  const payload = buildContactPayload({
     ...data,
     ...(requestedId ? { Id: requestedId } : {})
   });
-  const created = await createProfile(payload);
-
-  // Create a $0 Individual Brokerage account for every new profile
-  try {
-    await createBackendRecord({
-      profileId: created.id,
-      kind: 'account',
-      title: 'Individual Brokerage',
-      status: 'pending',
-      data: {
-        typeCode: 'type-a',
-        accountType: 'Taxable',
-        value: 0,
-        ytdReturn: 0,
-        allocEquity: 0,
-        allocFixed: 0,
-        allocAlt: 0,
-        allocCash: 100
-      },
-      source: 'maestro-extension'
-    });
-  } catch (err) {
-    console.warn('Could not create default account for profile:', err.message);
-  }
-
+  payload.tasks = DEFAULT_NEW_CONTACT_TASKS;
+  const created = await createContact(payload);
   return { recordId: created.id };
 }
 
@@ -357,13 +347,13 @@ async function patchRecord(body) {
   requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
   let existing;
   try {
-    existing = await getProfile(recordId);
+    existing = await getContact(recordId);
   } catch (error) {
     throw createServiceError(error.statusCode === 404 ? 404 : 500, error.statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR', error.message);
   }
 
-  const payload = buildProfilePayload(data, existing);
-  await updateProfile(recordId, payload);
+  const payload = buildContactPayload(data, existing);
+  await updateContact(recordId, payload);
   return { success: true };
 }
 
@@ -376,14 +366,14 @@ async function searchRecords(body) {
   }
 
   requireSupportedType(query.from, TYPE_ALIASES, TYPE_NAME);
-  const profiles = await listProfiles();
-  const records = profiles
-    .map(mapProfileToRecord)
+  const contacts = await listContacts();
+  const results = contacts
+    .map(mapContactToDataRecord)
     .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
     .slice(Math.max(0, pagination.skip || 0), Math.max(0, pagination.skip || 0) + Math.max(0, pagination.limit || 50))
     .map((record) => filterAttributes(record, query.attributesToSelect));
 
-  return { records };
+  return { records: results };
 }
 
 module.exports = {

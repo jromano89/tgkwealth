@@ -2,7 +2,7 @@
  * Shared UI helpers and mount points for TGK frontends.
  */
 
-// Format cents to display value (e.g. 472000000 -> "$4.72M")
+// Format numeric values to a compact currency display.
 function fmtMoney(cents) {
   if (cents == null) return '$0';
   const dollars = cents / 100;
@@ -19,12 +19,8 @@ function fmtPct(n) {
   return sign + n.toFixed(1) + '%';
 }
 
-function getEnvelopeTimestamp(envelope) {
-  return envelope?.sent_at || envelope?.created_at || '';
-}
-
 function envelopeTimestampLabel(envelope) {
-  const rawTimestamp = getEnvelopeTimestamp(envelope);
+  const rawTimestamp = envelope?.created_at || '';
   if (!rawTimestamp) return '';
 
   const date = new Date(rawTimestamp);
@@ -51,19 +47,6 @@ function statusClasses(status) {
   return map[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-600';
 }
 
-// Activity type dot color
-function activityDotColor(type) {
-  const map = {
-    call: 'bg-blue-500',
-    document: 'bg-amber-500',
-    meeting: 'bg-green-500',
-    alert: 'bg-red-500',
-    trade: 'bg-purple-500',
-    note: 'bg-gray-400'
-  };
-  return map[type] || 'bg-gray-400';
-}
-
 // Generate initials from a name
 function initials(name) {
   if (!name) return '?';
@@ -84,15 +67,6 @@ function mountSharedTemplate(element, template) {
   if (window.Alpine && typeof window.Alpine.initTree === 'function') {
     window.Alpine.initTree(element);
   }
-}
-
-function buildCombinedEnvelopeDocumentPath(envelopeId) {
-  const safeEnvelopeId = encodeURIComponent(envelopeId);
-  return TGK_API.withAppQuery(`/api/envelopes/${safeEnvelopeId}/documents/combined/download`);
-}
-
-function buildCombinedEnvelopeDocumentUrl(envelopeId) {
-  return new URL(buildCombinedEnvelopeDocumentPath(envelopeId), TGK_API.baseUrl).toString();
 }
 
 function revokeEnvelopePreview(modalState) {
@@ -121,15 +95,12 @@ function createEnvelopeModalHelpers() {
       if (!envelopeId) return;
 
       const requestKey = `${envelopeId}:${Date.now()}`;
-      const title = envelope?.metadata?.documentName || envelope?.template_name || 'Document';
-      const downloadPath = buildCombinedEnvelopeDocumentPath(envelopeId);
-      const downloadUrl = buildCombinedEnvelopeDocumentUrl(envelopeId);
+      const title = envelope?.document_name || 'Document';
 
       this.closeEnvelopeDocModal();
       this.envelopeDocModal = {
         envelopeId,
         title,
-        downloadUrl,
         previewUrl: '',
         loading: true,
         error: null,
@@ -137,7 +108,15 @@ function createEnvelopeModalHelpers() {
       };
 
       try {
-        const response = await TGK_API.requestResponse(downloadPath);
+        const response = await TGK_API.requestResponse('/api/proxy', {
+          method: 'POST',
+          body: {
+            method: 'GET',
+            path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
+            query: { certificate: 'true' },
+            authMode: 'docusign'
+          }
+        });
         const blob = await response.blob();
         const previewUrl = window.URL.createObjectURL(blob);
 
@@ -169,7 +148,7 @@ function createEnvelopeModalHelpers() {
       const envelopeId = envelope?.docusign_envelope_id || envelope?.id;
       if (!envelopeId) return;
 
-      const title = envelope?.metadata?.documentName || envelope?.template_name || 'Document';
+      const title = envelope?.document_name || 'Document';
       const requestKey = `${envelopeId}:${Date.now()}`;
 
       this.envelopeHistoryModal = {
@@ -182,7 +161,11 @@ function createEnvelopeModalHelpers() {
       };
 
       try {
-        const result = await TGK_API.get(`/api/envelopes/${encodeURIComponent(envelopeId)}/audit-events`);
+        const result = await TGK_API.proxy({
+          method: 'GET',
+          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`,
+          authMode: 'docusign'
+        });
         const events = (result.auditEvents || [])
           .map((event) => {
             const fields = {};
@@ -395,7 +378,7 @@ function sharedSettingsTemplate() {
             <div class="tgk-settings-card__body">
               <div class="tgk-field-card">
                 <label class="tgk-field-label" for="tgk-appName">App Name</label>
-                <input id="tgk-appName" x-model="appName" @input="dirty = true" class="tgk-form-input" placeholder="TGK Wealth">
+                <input id="tgk-appName" x-model="appName" @input="previewAppName($event.target.value)" class="tgk-form-input" placeholder="TGK Wealth">
                 <p class="tgk-help-text">Used in both portal sidebars.</p>
               </div>
 
@@ -437,7 +420,6 @@ function sharedEnvelopeModalTemplate() {
               <div class="tgk-modal-meta" x-text="envelopeDocModal.envelopeId"></div>
             </div>
             <div class="tgk-inline-actions tgk-inline-actions--end">
-              <a :href="envelopeDocModal.downloadUrl" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">Open in New Tab</a>
               <button @click="closeEnvelopeDocModal()" class="tgk-modal-close" aria-label="Close document preview">&times;</button>
             </div>
           </div>

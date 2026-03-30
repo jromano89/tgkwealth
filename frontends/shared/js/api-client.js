@@ -31,81 +31,71 @@
     return query ? `${path}?${query}` : path;
   }
 
-  function getResourcePath(collectionPath, id) {
+  function getItemPath(collectionPath, id) {
     return `${collectionPath}/${encodeURIComponent(id)}`;
   }
 
-  function mapProfileToContact(profile) {
-    const data = profile?.data || {};
-    const name = splitDisplayName(profile?.display_name);
+  function mapUser(user) {
+    const data = user?.data || {};
+    const name = splitDisplayName(user?.display_name);
     return {
-      id: profile.id,
-      ref: profile.ref,
+      id: user.id,
       first_name: data.firstName || name.firstName,
       last_name: data.lastName || name.lastName,
-      email: profile.email,
-      phone: profile.phone,
-      company: profile.organization,
-      type: data.profileType || profile.kind,
-      tags: profile.tags || [],
+      name: user.display_name || '',
+      email: user.email,
+      phone: user.phone,
+      title: user.title || data.title || '',
       metadata: {
         ...data,
-        status: profile.status || data.status
+        title: user.title || data.title || ''
       },
-      source: profile.source,
-      created_at: profile.created_at
+      created_at: user.created_at
     };
   }
 
-  function mapRecordToAccount(record) {
-    const data = record?.data || {};
+  function mapEmbeddedAccount(account, contactId) {
+    const data = account && typeof account === 'object' ? account : {};
     return {
-      id: record.id,
-      ref: record.ref,
-      contact_id: record.profile_id,
-      account_type: data.typeCode || record.kind,
-      status: record.status,
-      metadata: {
-        ...data,
-        name: record.title
-      },
-      source: record.source,
-      created_at: record.created_at
-    };
-  }
-
-  function mapContactPayload(data) {
-    return {
-      ref: data.ref,
-      kind: data.kind || 'investor',
-      displayName: [data.firstName, data.lastName].filter(Boolean).join(' ') || data.displayName,
-      email: data.email,
-      phone: data.phone,
-      organization: data.company,
-      status: data.metadata?.status || data.status || 'active',
-      tags: data.tags || [],
-      data: {
-        ...data.metadata,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        profileType: data.type
-      },
-      source: data.source
-    };
-  }
-
-  function mapAccountPayload(data) {
-    return {
-      ref: data.ref,
-      profileId: data.contactId || data.profileId,
-      kind: data.kind || 'account',
-      title: data.metadata?.name || data.title || 'Untitled Record',
+      id: data.id,
+      contact_id: contactId,
+      account_type: data.typeCode || data.accountType || data.kind || 'account',
       status: data.status || 'active',
-      data: {
-        ...data.metadata,
-        typeCode: data.accountType || data.account_type
+      metadata: {
+        ...data,
+        name: data.name || data.title || 'Untitled Account'
       },
-      source: data.source
+      source: data.source || 'api',
+      created_at: data.created_at || ''
+    };
+  }
+
+  function mapEnvelope(envelope) {
+    return {
+      ...envelope,
+      document_name: envelope?.document_name || ''
+    };
+  }
+
+  function mapContactToView(contact) {
+    const data = contact?.data || {};
+    const name = splitDisplayName(contact?.display_name);
+    return {
+      id: contact.id,
+      first_name: data.firstName || name.firstName,
+      last_name: data.lastName || name.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      company: contact.organization,
+      type: data.contactType || 'investor',
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      metadata: {
+        ...data,
+        status: contact.status || data.status
+      },
+      owner: contact.owner ? mapUser(contact.owner) : null,
+      source: contact.source,
+      created_at: contact.created_at
     };
   }
 
@@ -206,8 +196,7 @@
       const requestPath = this.withAppQuery(path);
       const requestOptions = {
         ...options,
-        method,
-        credentials: 'include'
+        method
       };
 
       if (requestOptions.body !== undefined) {
@@ -251,10 +240,6 @@
     },
     del(path) {
       return this.request(path, { method: 'DELETE' });
-    },
-
-    getCurrentApp() {
-      return this.get('/api/apps/current');
     },
 
     cacheSession(session) {
@@ -417,96 +402,44 @@
       return `${this.baseUrl}/api/auth/login?${params.toString()}`;
     },
 
-    getProfiles(params) {
-      return this.get(withSearchParams('/api/data/profiles', params));
+    getUsers(params) {
+      return this.get(withSearchParams('/api/data/users', params)).then((users) => users.map(mapUser));
     },
-    getProfile(id) {
-      return this.get(getResourcePath('/api/data/profiles', id));
+    getContactsRaw(params) {
+      return this.get(withSearchParams('/api/data/contacts', params));
     },
-    createProfile(data) {
-      return this.post('/api/data/profiles', data);
+    getContactRaw(id) {
+      return this.get(getItemPath('/api/data/contacts', id));
     },
-    updateProfile(id, data) {
-      return this.put(getResourcePath('/api/data/profiles', id), data);
-    },
-    deleteProfile(id) {
-      return this.del(getResourcePath('/api/data/profiles', id));
+    deleteContactRaw(id) {
+      return this.del(getItemPath('/api/data/contacts', id));
     },
     deleteTask(id) {
-      return this.del(getResourcePath('/api/data/tasks', id));
-    },
-    getRecords(params) {
-      return this.get(withSearchParams('/api/data/records', params));
-    },
-    getRecord(id) {
-      return this.get(getResourcePath('/api/data/records', id));
-    },
-    createRecord(data) {
-      return this.post('/api/data/records', data);
-    },
-    updateRecord(id, data) {
-      return this.put(getResourcePath('/api/data/records', id), data);
+      return this.del(getItemPath('/api/data/tasks', id));
     },
 
     async getContacts(params) {
-      const profiles = await this.getProfiles({ kind: 'investor', ...params });
-      return profiles.map(mapProfileToContact);
+      const contacts = await this.getContactsRaw(params);
+      return contacts.map(mapContactToView);
     },
     async getContact(id) {
-      const profile = await this.getProfile(id);
+      const contact = await this.getContactRaw(id);
       return {
-        ...mapProfileToContact(profile),
-        accounts: (profile.records || []).filter((record) => record.kind === 'account').map(mapRecordToAccount),
-        envelopes: profile.envelopes || [],
-        tasks: profile.tasks || []
+        ...mapContactToView(contact),
+        accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
+        envelopes: (contact.envelopes || []).map(mapEnvelope),
+        tasks: contact.tasks || []
       };
     },
-    async createContact(data) {
-      const profile = await this.createProfile(mapContactPayload(data));
-      return mapProfileToContact(profile);
-    },
-    async updateContact(id, data) {
-      const profile = await this.updateProfile(id, mapContactPayload(data));
-      return mapProfileToContact(profile);
-    },
-    async getAccounts(params) {
-      const records = await this.getRecords({ kind: 'account', ...params });
-      return records.map(mapRecordToAccount);
-    },
-    async getAccount(id) {
-      const record = await this.getRecord(id);
-      return {
-        ...mapRecordToAccount(record),
-        envelopes: record.envelopes || []
-      };
-    },
-    async createAccount(data) {
-      const record = await this.createRecord(mapAccountPayload(data));
-      return mapRecordToAccount(record);
+    deleteContact(id) {
+      return this.deleteContactRaw(id);
     },
 
-    createEnvelope(data) {
-      return this.post('/api/envelopes', data);
-    },
-    getEnvelopes(params) {
-      return this.get(withSearchParams('/api/envelopes', params));
-    },
-    getEnvelope(id) {
-      return this.get(getResourcePath('/api/envelopes', id));
-    },
-    getSigningUrl(id, data) {
-      return this.post(`${getResourcePath('/api/envelopes', id)}/signing-url`, data);
-    },
-
-    proxy(methodOrOptions, path, body) {
-      if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-        return this.request('/api/proxy', {
-          method: 'POST',
-          body: buildProxyPayload(methodOrOptions)
-        });
-      }
-
-      return this.request(`/api/proxy/${path}`, { method: methodOrOptions, body });
+    proxy(options) {
+      return this.request('/api/proxy', {
+        method: 'POST',
+        body: buildProxyPayload(options)
+      });
     },
 
     proxyText(options) {
@@ -534,10 +467,6 @@
         authMode: 'docusign',
         query: params
       });
-    },
-
-    health() {
-      return this.get('/api/health');
     }
   };
 

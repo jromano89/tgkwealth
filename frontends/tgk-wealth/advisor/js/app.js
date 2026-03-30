@@ -1,14 +1,8 @@
-const TGK_SELECTED_CONTACT_STORAGE_KEY = 'tgk_selected_client_id';
-const TGK_ADVISOR_VIEW_STORAGE_KEY = 'tgk_advisor_view';
 const MAESTRO_CONTACT_SOURCE = 'maestro-extension';
 const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
-
-function getContactDisplayName(contact) {
-  return `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-}
 
 function formatNavigatorDate(dateString, options = {}) {
   if (!dateString) return '';
@@ -35,207 +29,6 @@ function formatNavigatorMoney(amount, currencyCode = 'USD') {
   } catch (error) {
     return `$${Math.round(amount).toLocaleString()}`;
   }
-}
-
-function buildNavigatorMockAgreements(contacts) {
-  const fallbackNames = [
-    'Catherine Beaumont',
-    'James Holden',
-    'Sophia Reyes-Martin',
-    'David Nakamura'
-  ];
-  const agreementNames = [
-    ...new Set([...(contacts || []).map(getContactDisplayName).filter(Boolean), ...fallbackNames])
-  ];
-  const [primary, secondary, tertiary, quaternary] = agreementNames;
-
-  return [
-    {
-      id: 'agr-household-msa',
-      title: `${primary} Household Advisory Agreement`,
-      file_name: 'household-advisory-agreement.pdf',
-      type: 'agreement',
-      category: 'Master agreement',
-      summary: 'Core advisory engagement covering portfolio management, reporting cadence, and household service scope.',
-      status: 'active',
-      parties: [
-        { id: 'party-client-1', preferred_name: primary, name_in_agreement: primary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2025-01-12',
-        expiration_date: '2027-01-11',
-        governing_law: 'New York',
-        renewal_type: 'Auto-renews annually',
-        termination_period_for_convenience: '60 days',
-        annual_agreement_value: 185000,
-        annual_agreement_value_currency_code: 'USD'
-      },
-      related_agreement_documents: {},
-      source_name: 'eSign',
-      source_id: 'env-household-msa',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2025-01-12T14:10:00Z',
-        modified_at: '2026-03-22T17:40:00Z'
-      }
-    },
-    {
-      id: 'agr-household-fee-amendment',
-      title: `${primary} Fee Schedule Amendment`,
-      file_name: 'fee-schedule-amendment.pdf',
-      type: 'amendment',
-      category: 'Fee amendment',
-      summary: 'Adjusts the advisory fee schedule and household billing thresholds.',
-      status: 'active',
-      parties: [
-        { id: 'party-client-1', preferred_name: primary, name_in_agreement: primary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2025-09-01',
-        expiration_date: '2027-01-11',
-        governing_law: 'New York',
-        renewal_type: 'Follows parent agreement',
-        termination_period_for_convenience: '60 days',
-        annual_agreement_value: 210000,
-        annual_agreement_value_currency_code: 'USD'
-      },
-      related_agreement_documents: {
-        parent_agreement_document_id: 'agr-household-msa'
-      },
-      source_name: 'eSign',
-      source_id: 'env-fee-amendment',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2025-09-01T13:30:00Z',
-        modified_at: '2026-02-14T15:05:00Z'
-      }
-    },
-    {
-      id: 'agr-household-ips',
-      title: `${primary} Investment Policy Statement`,
-      file_name: 'investment-policy-statement.pdf',
-      type: 'policy',
-      category: 'Investment policy',
-      summary: 'Defines allocation guardrails, liquidity parameters, and household-specific risk tolerances.',
-      status: 'review',
-      parties: [
-        { id: 'party-client-1', preferred_name: primary, name_in_agreement: primary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2025-01-12',
-        expiration_date: '2026-06-30',
-        governing_law: 'New York',
-        renewal_type: 'Manual review',
-        termination_period_for_convenience: '30 days',
-        annual_agreement_value: 185000,
-        annual_agreement_value_currency_code: 'USD'
-      },
-      related_agreement_documents: {
-        parent_agreement_document_id: 'agr-household-msa'
-      },
-      source_name: 'Navigator import',
-      source_id: 'nav-ips-001',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2025-01-12T14:15:00Z',
-        modified_at: '2026-03-18T12:25:00Z'
-      }
-    },
-    {
-      id: 'agr-retirement-advisory',
-      title: `${secondary} Retirement Advisory Agreement`,
-      file_name: 'retirement-advisory-agreement.pdf',
-      type: 'agreement',
-      category: 'Retirement account',
-      summary: 'IRA-focused advisory agreement with beneficiary servicing and rollover support.',
-      status: 'active',
-      parties: [
-        { id: 'party-client-2', preferred_name: secondary, name_in_agreement: secondary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2024-11-04',
-        expiration_date: '2026-11-03',
-        governing_law: 'California',
-        renewal_type: 'Auto-renews annually',
-        termination_period_for_convenience: '45 days',
-        annual_agreement_value: 92000,
-        annual_agreement_value_currency_code: 'USD'
-      },
-      related_agreement_documents: {},
-      source_name: 'eSign',
-      source_id: 'env-retirement-001',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2024-11-04T16:45:00Z',
-        modified_at: '2026-01-09T11:20:00Z'
-      }
-    },
-    {
-      id: 'agr-retirement-disclosure',
-      title: `${secondary} Custody & Sweep Disclosure`,
-      file_name: 'custody-sweep-disclosure.pdf',
-      type: 'disclosure',
-      category: 'Disclosure',
-      summary: 'Supporting disclosure for custody, sweep mechanics, and settlement timing.',
-      status: 'active',
-      parties: [
-        { id: 'party-client-2', preferred_name: secondary, name_in_agreement: secondary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2024-11-04',
-        expiration_date: '2026-11-03',
-        governing_law: 'California',
-        renewal_type: 'Follows parent agreement',
-        termination_period_for_convenience: '45 days'
-      },
-      related_agreement_documents: {
-        parent_agreement_document_id: 'agr-retirement-advisory'
-      },
-      source_name: 'Navigator import',
-      source_id: 'nav-disclosure-001',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2024-11-04T16:50:00Z',
-        modified_at: '2025-12-20T09:45:00Z'
-      }
-    },
-    {
-      id: 'agr-trust-services',
-      title: `${tertiary} Trust Services Amendment`,
-      file_name: 'trust-services-amendment.pdf',
-      type: 'amendment',
-      category: 'Trust services',
-      summary: 'Captures trustee support, distribution review, and trust reporting cadence.',
-      status: 'review',
-      parties: [
-        { id: 'party-client-3', preferred_name: tertiary, name_in_agreement: tertiary },
-        { id: 'party-client-4', preferred_name: quaternary, name_in_agreement: quaternary },
-        { id: 'party-advisor', preferred_name: 'TGK Wealth', name_in_agreement: 'TGK Wealth' }
-      ],
-      provisions: {
-        effective_date: '2025-07-22',
-        expiration_date: '2026-05-15',
-        governing_law: 'Delaware',
-        renewal_type: 'Manual review',
-        termination_period_for_convenience: '30 days',
-        annual_agreement_value: 128000,
-        annual_agreement_value_currency_code: 'USD'
-      },
-      related_agreement_documents: {},
-      source_name: 'CLM',
-      source_id: 'clm-trust-004',
-      source_account_id: 'mock-account',
-      metadata: {
-        created_at: '2025-07-22T10:20:00Z',
-        modified_at: '2026-03-25T14:55:00Z'
-      }
-    }
-  ];
 }
 
 function getNestedNavigatorValue(source, path) {
@@ -449,10 +242,16 @@ function normalizeNavigatorAgreement(agreement, index) {
   };
 }
 
+function getBrandingAppName() {
+  return String(window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || 'TGK Wealth').trim() || 'TGK Wealth';
+}
+
 function advisorApp() {
   return {
     ...createEnvelopeModalHelpers(),
     view: 'dashboard',
+    brandingAppName: getBrandingAppName(),
+    currentUser: null,
     contacts: [],
     selectedContact: null,
     selectedContactAccounts: [],
@@ -470,67 +269,59 @@ function advisorApp() {
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
     loading: true,
-    navigatorMockAgreements: [],
     navigatorLiveAgreements: [],
     navigatorSearchQuery: '',
     navigatorStatusFilter: 'all',
-    navigatorSelectedAgreementId: null,
-    navigatorConnectionLoading: true,
+    navigatorOpenAgreementId: null,
+    navigatorConnectionLoading: false,
     navigatorConnected: false,
     navigatorAccountName: '',
     navigatorAccountId: '',
     navigatorLiveLoading: false,
     navigatorLiveError: null,
     navigatorLastSyncAt: '',
+    _navigatorLoadPromise: null,
     _maestroCreationPollTimer: null,
     _maestroRedirectTimer: null,
     _maestroTrackingStarted: false,
     _maestroKnownContactIds: new Set(),
 
-    async init() {
-      try {
-        this.contacts = await TGK_API.getContacts();
-        const requestedView = this.restoreView();
-        const requestedClientId = this.restoreSelectedContactId();
-        const requestedContact = this.contacts.find((contact) => contact.id === requestedClientId);
+    syncBranding(detail = {}) {
+      this.brandingAppName = String(detail.appName || getBrandingAppName()).trim() || 'TGK Wealth';
+    },
 
-        if (requestedView === 'client' && requestedContact) {
-          await this.viewClient(requestedContact);
-        } else {
-          this.setView(requestedView === 'client' ? 'dashboard' : requestedView);
-        }
+    get brandingInitial() {
+      return ((this.brandingAppName || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
+    },
+
+    async init() {
+      window.addEventListener('tgk:branding-change', (event) => this.syncBranding(event.detail || {}));
+      try {
+        const users = await TGK_API.getUsers();
+        this.currentUser = users[0] || null;
+        this.contacts = await TGK_API.getContacts();
+        this.setView('dashboard');
       } catch (e) {
         console.error('Failed to load contacts:', e);
       }
-
-      this.refreshNavigatorMockAgreements();
-      await this.loadNavigatorConnection();
       this.loading = false;
       TGK_API.scheduleDocusignWarmup();
     },
 
-    restoreView() {
-      try {
-        return window.localStorage.getItem(TGK_ADVISOR_VIEW_STORAGE_KEY) || 'dashboard';
-      } catch (e) {
-        return 'dashboard';
-      }
-    },
-
-    restoreSelectedContactId() {
-      try {
-        return window.localStorage.getItem(TGK_SELECTED_CONTACT_STORAGE_KEY);
-      } catch (e) {
-        return null;
-      }
-    },
-
     setView(nextView) {
       const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
-      this.view = allowedViews.has(nextView) ? nextView : 'dashboard';
-      try {
-        window.localStorage.setItem(TGK_ADVISOR_VIEW_STORAGE_KEY, this.view);
-      } catch (e) {}
+      const resolvedView = allowedViews.has(nextView) ? nextView : 'dashboard';
+      const enteringDocuments = resolvedView === 'documents' && this.view !== 'documents';
+
+      this.view = resolvedView;
+
+      if (resolvedView !== 'documents') {
+        this.closeNavigatorAgreementModal();
+      }
+
+      if (enteringDocuments) {
+        this.loadNavigatorConnection();
+      }
     },
 
     get filteredContacts() {
@@ -558,7 +349,6 @@ function advisorApp() {
     },
 
     async viewClient(contact) {
-      this.rememberSelectedContact(contact?.id);
       this.selectedContact = contact;
       try {
         const detail = await TGK_API.getContact(contact.id);
@@ -612,19 +402,14 @@ function advisorApp() {
     async deleteContact(contact, event) {
       event.stopPropagation();
       try {
-        await TGK_API.deleteProfile(contact.id);
+        await TGK_API.deleteContact(contact.id);
         this.contacts = this.contacts.filter(c => c.id !== contact.id);
-        this.refreshNavigatorMockAgreements();
+        if (this.selectedContact?.id === contact.id) {
+          this.goBack();
+        }
       } catch (e) {
         console.error('Failed to delete contact:', e);
       }
-    },
-
-    rememberSelectedContact(contactId) {
-      if (!contactId) return;
-      try {
-        window.localStorage.setItem(TGK_SELECTED_CONTACT_STORAGE_KEY, contactId);
-      } catch (e) {}
     },
 
     goBack() {
@@ -636,41 +421,45 @@ function advisorApp() {
     },
 
     async loadNavigatorConnection() {
-      this.navigatorConnectionLoading = true;
-      try {
-        const session = await TGK_API.getSession();
-        this.navigatorConnected = !!session?.connected;
-        this.navigatorAccountName = session?.accountName || '';
-        this.navigatorAccountId = session?.accountId || '';
-        if (this.navigatorConnected && this.navigatorAccountId) {
-          await this.loadNavigatorAgreements();
-        } else {
-          this.navigatorLiveAgreements = [];
-          this.navigatorLiveError = null;
-          this.navigatorLastSyncAt = '';
-          this.syncNavigatorSelection();
-        }
-      } catch (error) {
-        this.navigatorConnected = false;
-        this.navigatorAccountName = '';
-        this.navigatorAccountId = '';
-        this.navigatorLiveAgreements = [];
-        this.navigatorLiveError = error.message || 'Unable to load the saved Docusign account.';
-        this.navigatorLastSyncAt = '';
-        this.syncNavigatorSelection();
-      } finally {
-        this.navigatorConnectionLoading = false;
+      if (this._navigatorLoadPromise) {
+        return this._navigatorLoadPromise;
       }
+
+      this._navigatorLoadPromise = (async () => {
+        this.navigatorConnectionLoading = true;
+        try {
+          const session = await TGK_API.getSession();
+          this.navigatorConnected = !!session?.connected;
+          this.navigatorAccountName = session?.accountName || '';
+          this.navigatorAccountId = session?.accountId || '';
+          if (this.navigatorConnected && this.navigatorAccountId) {
+            await this.loadNavigatorAgreements();
+          } else {
+            this.navigatorLiveAgreements = [];
+            this.navigatorLiveError = null;
+            this.navigatorLastSyncAt = '';
+            this.syncNavigatorAgreementModal();
+          }
+        } catch (error) {
+          this.navigatorConnected = false;
+          this.navigatorAccountName = '';
+          this.navigatorAccountId = '';
+          this.navigatorLiveAgreements = [];
+          this.navigatorLiveError = error.message || 'Unable to load the saved Docusign account.';
+          this.navigatorLastSyncAt = '';
+          this.syncNavigatorAgreementModal();
+        } finally {
+          this.navigatorConnectionLoading = false;
+          this._navigatorLoadPromise = null;
+        }
+      })();
+
+      return this._navigatorLoadPromise;
     },
 
-    refreshNavigatorMockAgreements() {
-      this.navigatorMockAgreements = buildNavigatorMockAgreements(this.contacts);
-      this.syncNavigatorSelection();
-    },
-
-    syncNavigatorSelection() {
-      if (!this.navigatorDisplayAgreements.some((agreement) => agreement.id === this.navigatorSelectedAgreementId)) {
-        this.navigatorSelectedAgreementId = this.navigatorDisplayAgreements[0]?.id || null;
+    syncNavigatorAgreementModal() {
+      if (!this.navigatorLiveAgreements.some((agreement) => agreement.id === this.navigatorOpenAgreementId)) {
+        this.navigatorOpenAgreementId = null;
       }
     },
 
@@ -679,7 +468,7 @@ function advisorApp() {
         this.navigatorLiveAgreements = [];
         this.navigatorLiveError = null;
         this.navigatorLastSyncAt = '';
-        this.syncNavigatorSelection();
+        this.syncNavigatorAgreementModal();
         return;
       }
 
@@ -704,7 +493,7 @@ function advisorApp() {
         this.navigatorLastSyncAt = '';
       } finally {
         this.navigatorLiveLoading = false;
-        this.syncNavigatorSelection();
+        this.syncNavigatorAgreementModal();
       }
     },
 
@@ -712,26 +501,8 @@ function advisorApp() {
       return this.loadNavigatorConnection();
     },
 
-    get navigatorHasLiveAgreements() {
+    get navigatorHasAgreements() {
       return this.navigatorLiveAgreements.length > 0;
-    },
-
-    get navigatorUsingMockData() {
-      return !this.navigatorLiveLoading && !this.navigatorHasLiveAgreements;
-    },
-
-    get navigatorDisplayAgreements() {
-      return this.navigatorHasLiveAgreements ? this.navigatorLiveAgreements : this.navigatorMockAgreements;
-    },
-
-    get navigatorSourceLabel() {
-      if (this.navigatorLiveLoading) return 'Loading live agreements';
-      if (this.navigatorHasLiveAgreements) return 'Live Navigator';
-      return 'Concept dataset';
-    },
-
-    get navigatorAgreementCount() {
-      return this.navigatorDisplayAgreements.length;
     },
 
     navigatorLiveStatusMessage() {
@@ -751,19 +522,19 @@ function advisorApp() {
         return this.navigatorLiveError;
       }
 
-      if (this.navigatorHasLiveAgreements) {
+      if (this.navigatorHasAgreements) {
         const noun = this.navigatorLiveAgreements.length === 1 ? 'agreement' : 'agreements';
         return `Showing ${this.navigatorLiveAgreements.length} live ${noun} from ${this.navigatorAccountName || 'the saved Docusign account'}.`;
       }
 
-      return `Live Navigator returned 0 agreements for ${this.navigatorAccountName || 'the saved Docusign account'}. Showing concept data for planning.`;
+      return `No agreements were returned for ${this.navigatorAccountName || 'the saved Docusign account'}.`;
     },
 
     navigatorLiveStatusTone() {
       if (this.navigatorLiveError) {
         return 'border-red-200 bg-red-50 text-red-700';
       }
-      if (this.navigatorHasLiveAgreements) {
+      if (this.navigatorHasAgreements) {
         return 'border-emerald-200 bg-emerald-50 text-emerald-700';
       }
       if (this.navigatorConnected && !this.navigatorLiveLoading) {
@@ -788,14 +559,18 @@ function advisorApp() {
       this.navigatorStatusFilter = nextFilter;
     },
 
-    selectNavigatorAgreement(agreementId) {
-      this.navigatorSelectedAgreementId = agreementId;
+    openNavigatorAgreement(agreementId) {
+      this.navigatorOpenAgreementId = agreementId;
+    },
+
+    closeNavigatorAgreementModal() {
+      this.navigatorOpenAgreementId = null;
     },
 
     get navigatorFilteredAgreements() {
       const query = this.navigatorSearchQuery.trim().toLowerCase();
 
-      return this.navigatorDisplayAgreements.filter((agreement) => {
+      return this.navigatorLiveAgreements.filter((agreement) => {
         if (this.navigatorStatusFilter !== 'all' && agreement.status !== this.navigatorStatusFilter) {
           return false;
         }
@@ -821,30 +596,8 @@ function advisorApp() {
       });
     },
 
-    get navigatorSelectedAgreement() {
-      return this.navigatorFilteredAgreements.find((agreement) => agreement.id === this.navigatorSelectedAgreementId)
-        || this.navigatorFilteredAgreements[0]
-        || null;
-    },
-
-    get navigatorActiveAgreementCount() {
-      return this.navigatorDisplayAgreements.filter((agreement) => agreement.status === 'active').length;
-    },
-
-    get navigatorLinkedAgreementCount() {
-      return this.navigatorDisplayAgreements.filter((agreement) => agreement.related_agreement_documents?.parent_agreement_document_id).length;
-    },
-
-    get navigatorRenewalCount() {
-      const threshold = Date.now() + (1000 * 60 * 60 * 24 * 180);
-      return this.navigatorDisplayAgreements.filter((agreement) => {
-        const expirationDate = new Date(agreement.provisions?.expiration_date || '').getTime();
-        return expirationDate && expirationDate <= threshold;
-      }).length;
-    },
-
-    get navigatorAttentionCount() {
-      return this.navigatorDisplayAgreements.filter((agreement) => agreement.status === 'review').length;
+    get navigatorOpenAgreement() {
+      return this.navigatorLiveAgreements.find((agreement) => agreement.id === this.navigatorOpenAgreementId) || null;
     },
 
     navigatorAgreementStatusClasses(status) {
@@ -879,8 +632,8 @@ function advisorApp() {
 
       const parentId = agreement.related_agreement_documents?.parent_agreement_document_id;
       const rootId = parentId || agreement.id;
-      const rootAgreement = this.navigatorDisplayAgreements.find((candidate) => candidate.id === rootId) || agreement;
-      const children = this.navigatorDisplayAgreements.filter((candidate) => candidate.related_agreement_documents?.parent_agreement_document_id === rootAgreement.id);
+      const rootAgreement = this.navigatorLiveAgreements.find((candidate) => candidate.id === rootId) || agreement;
+      const children = this.navigatorLiveAgreements.filter((candidate) => candidate.related_agreement_documents?.parent_agreement_document_id === rootAgreement.id);
       return [rootAgreement, ...children];
     },
 
@@ -944,7 +697,6 @@ function advisorApp() {
       try {
         const contacts = await TGK_API.getContacts();
         this.contacts = contacts;
-        this.refreshNavigatorMockAgreements();
         return contacts.find((contact) => contact.id === targetId) || null;
       } catch (e) {
         return null;
@@ -1100,18 +852,6 @@ function advisorApp() {
         this.maestroLoading = false;
         this.stopOnboardingLoading();
       }
-    },
-
-    // Activity feed (mock for now — use relative labels so it does not go stale)
-    activities: [
-      { client: 'James & Priya Holden', action: 'Called to discuss rebalancing IRA', date: 'Today', type: 'call' },
-      { client: 'Catherine Beaumont', action: 'Trust distribution request submitted', date: 'Today', type: 'document' },
-      { client: 'Richard & Elena Ashworth', action: 'Quarterly review meeting scheduled', date: 'Today', type: 'meeting' },
-      { client: 'David Nakamura', action: 'Risk tolerance questionnaire overdue', date: '1 day ago', type: 'alert' },
-      { client: 'Sophia Reyes-Martin', action: 'New account paperwork pending signature', date: '1 day ago', type: 'document' },
-      { client: 'Mary Jones', action: 'Portfolio rebalance executed', date: '2 days ago', type: 'trade' },
-      { client: 'Bud Fox', action: 'Annual review completed', date: '3 days ago', type: 'meeting' },
-      { client: 'Catherine Beaumont', action: 'Updated beneficiary designations', date: '3 days ago', type: 'document' }
-    ]
+    }
   };
 }

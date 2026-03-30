@@ -1,25 +1,19 @@
 const { mm, createDecorator, crudDecorator, createPropertyDeclaration } = require('./type-helpers');
 
-const TYPE_NAME = 'Profile';
-const NAMESPACE = 'org.tgk.maestro';
-const TYPE_ALIASES = new Set(['profile', 'investor']);
+const TYPE_NAME = 'Contact';
+const TYPE_ALIASES = new Set(['contact', 'investor']);
 
 const TYPE_NAMES = [
   {
     typeName: TYPE_NAME,
-    label: 'Profile',
-    description: 'TGK profile row'
+    label: 'Contact',
+    description: 'TGK contact row'
   }
 ];
 
-// ── Field schema ──────────────────────────────────────────────────────
-// Each entry drives both the Concerto metamodel output and record mapping.
-// `type` must be one of: String, Double, DateTime, Integer, Long, Boolean.
-
 const FIELD_DEFINITIONS = [
-  { name: 'Id', label: 'Profile ID', type: 'String', optional: false, readableOnly: true },
+  { name: 'Id', label: 'Contact ID', type: 'String', optional: false, readableOnly: true },
   { name: 'Ref', label: 'Reference', type: 'String', optional: true },
-  { name: 'Kind', label: 'Kind', type: 'String', optional: true },
   { name: 'DisplayName', label: 'Display Name', type: 'String', optional: true },
   { name: 'FullName', label: 'Full Name', type: 'String', optional: true },
   { name: 'FirstName', label: 'First Name', type: 'String', optional: true },
@@ -40,8 +34,6 @@ const FIELD_DEFINITIONS = [
   { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 
-// ── Exported type definition (Concerto ConceptDeclaration) ────────────
-
 const TYPE_DEFINITIONS = {
   declarations: [
     {
@@ -53,7 +45,7 @@ const TYPE_DEFINITIONS = {
         name: 'Id'
       },
       decorators: [
-        createDecorator('Term', 'Profile'),
+        createDecorator('Term', 'Contact'),
         crudDecorator(false)
       ],
       properties: FIELD_DEFINITIONS.map(createPropertyDeclaration)

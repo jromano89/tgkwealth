@@ -1,9 +1,6 @@
 require('dotenv/config');
 const express = require('express');
-const cors = require('cors');
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const { getDb } = require('./db/database');
+const { getDb } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,32 +9,23 @@ const localUrl = `http://localhost:${PORT}`;
 // Railway terminates TLS at the edge, so trust the first proxy hop for req.protocol/hostname.
 app.set('trust proxy', 1);
 
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Demo-App');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-// Webhooks need the raw request body, so mount them before JSON parsing.
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+// Connect payloads can arrive outside the normal JSON parser, so mount the sink first.
 app.use('/api/webhooks', require('./routes/webhooks'));
 
 app.use(express.json());
 getDb();
-
-const swaggerSpec = swaggerJsdoc({
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'TGK Demo Backend API',
-      version: '1.0.0',
-      description: 'Shared demo backend for app bootstrap, Docusign auth, envelopes, webhooks, and app-scoped demo data.'
-    },
-    servers: [{ url: '/' }]
-  },
-  apis: ['./src/index.js', './src/routes/*.js']
-});
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'TGK Demo Backend API'
-}));
 
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
@@ -52,29 +40,16 @@ a:hover{background:#5c7cfa}
 .tag{font-size:.75rem;color:#6b7280;margin-top:1.5rem}</style></head>
 <body><div class="c">
 <h1>TGK Demo Backend</h1>
-<p>Shared demo backend for app bootstrap, Docusign auth, envelopes, webhooks, and app-scoped demo data.</p>
-<a href="/api-docs">API Docs</a>
+<p>Shared demo backend for Docusign auth, envelopes, a discard-only webhook sink, and app-scoped demo data.</p>
 <a href="/api/health">Health Check</a>
 <div class="tag">v1.0.0</div>
 </div></body></html>`);
 });
 
-app.use('/api/apps', require('./routes/apps'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/data', require('./routes/app-data'));
-app.use('/api/envelopes', require('./routes/envelopes'));
 app.use('/api/proxy', require('./routes/proxy'));
 
-/**
- * @swagger
- * /api/health:
- *   get:
- *     summary: Health check
- *     tags: [Utility]
- *     responses:
- *       200:
- *         description: Service is running
- */
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -90,6 +65,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`TGK Demo Backend running on ${localUrl}`);
-  console.log(`API docs: ${localUrl}/api-docs`);
   console.log(`Docusign configured: ${!!(process.env.DOCUSIGN_INTEGRATION_KEY && process.env.DOCUSIGN_RSA_PRIVATE_KEY)}`);
 });

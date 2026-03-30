@@ -4,6 +4,7 @@
  */
 
 const TGK_DEMO_SETTINGS_STORAGE_KEY = 'tgk_demo_settings';
+const TGK_BRANDING_EVENT = 'tgk:branding-change';
 const TGK_DEMO_DEFAULTS = {
   branding: {
     appName: 'TGK Wealth',
@@ -120,16 +121,40 @@ function buildDemoSettingsSnapshot(savedSettings) {
 }
 
 function applyThemeColor(brandColor) {
-  const root = document.documentElement.style;
-  root.setProperty('--color-brand', brandColor);
-  root.setProperty('--color-brand-light', deriveBrandLight(brandColor));
-  root.setProperty('--color-navy', deriveSidebarColor(brandColor));
-  root.setProperty('--color-navy-light', deriveSidebarLightColor(brandColor));
+  [document.documentElement, document.body].forEach((element) => {
+    if (!element) return;
+
+    const style = element.style;
+    style.setProperty('--color-brand', brandColor);
+    style.setProperty('--color-brand-light', deriveBrandLight(brandColor));
+    style.setProperty('--color-navy', deriveSidebarColor(brandColor));
+    style.setProperty('--color-navy-light', deriveSidebarLightColor(brandColor));
+  });
+}
+
+function applyBrandingPreview(nextBranding = {}) {
+  const branding = {
+    appName: String(nextBranding.appName || TGK_DEMO_DEFAULTS.branding.appName).trim() || TGK_DEMO_DEFAULTS.branding.appName,
+    brandColor: normalizeHexColor(nextBranding.brandColor)
+  };
+
+  if (!window.TGK_DEMO) {
+    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
+  }
+
+  window.TGK_DEMO.branding = {
+    ...(window.TGK_DEMO.branding || {}),
+    ...branding
+  };
+
+  applyThemeColor(branding.brandColor);
+  window.dispatchEvent(new CustomEvent(TGK_BRANDING_EVENT, { detail: branding }));
+  return branding;
 }
 
 (function initializeDemoTheme() {
   window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
-  applyThemeColor(window.TGK_DEMO.branding.brandColor);
+  applyBrandingPreview(window.TGK_DEMO.branding);
 })();
 
 function settingsPanelState() {
@@ -141,18 +166,32 @@ function settingsPanelState() {
     assetTransferWorkflowId: window.TGK_DEMO.config.assetTransferWorkflowId,
     dirty: false,
 
+    previewBranding() {
+      applyBrandingPreview({
+        appName: this.appName,
+        brandColor: this.brandColor
+      });
+    },
+
+    previewAppName(value) {
+      this.appName = value;
+      this.dirty = true;
+      this.previewBranding();
+    },
+
     applyColor(hex) {
       this.brandColor = normalizeHexColor(hex);
       this.dirty = true;
-      applyThemeColor(this.brandColor);
+      this.previewBranding();
     },
 
     save() {
       const existing = readStoredSettings();
       const nextBrandColor = normalizeHexColor(this.brandColor);
+      const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
       writeStoredSettings({
         branding: {
-          appName: this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName,
+          appName: nextAppName,
           brandColor: nextBrandColor
         },
         config: {
@@ -164,6 +203,10 @@ function settingsPanelState() {
         }
       });
 
+      applyBrandingPreview({
+        appName: nextAppName,
+        brandColor: nextBrandColor
+      });
       window.location.reload();
     },
 
@@ -181,6 +224,7 @@ function settingsPanelState() {
 
     resetDefaults() {
       clearStoredSettings();
+      applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
       window.location.reload();
     }
   };
