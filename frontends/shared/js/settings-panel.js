@@ -144,15 +144,15 @@ function settingsPanelState() {
     applyColor(hex) {
       this.brandColor = normalizeHexColor(hex);
       this.dirty = true;
-      applyThemeColor(this.brandColor);
     },
 
     save() {
       const existing = readStoredSettings();
+      const nextBrandColor = normalizeHexColor(this.brandColor);
       writeStoredSettings({
         branding: {
           appName: this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName,
-          brandColor: normalizeHexColor(this.brandColor)
+          brandColor: nextBrandColor
         },
         config: {
           ...window.TGK_DEMO.DEFAULTS.config,

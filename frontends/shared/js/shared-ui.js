@@ -206,20 +206,9 @@ function sharedSettingsTemplate() {
     <section class="tgk-settings-shell">
       <div class="tgk-settings-hero">
         <div class="tgk-settings-hero__content">
-          <div class="tgk-settings-card__eyebrow tgk-settings-card__eyebrow--light">Shared Controls</div>
+          <div class="tgk-settings-card__eyebrow tgk-settings-card__eyebrow--light">Shared Settings</div>
           <h1 class="tgk-settings-hero__title">Settings</h1>
           <p class="tgk-settings-hero__text">Branding, workflow settings, and the Docusign connection stay aligned across both portals.</p>
-        </div>
-
-        <div class="tgk-settings-hero__preview">
-          <div class="tgk-settings-hero__chip">Live Theme</div>
-          <div class="tgk-settings-hero__preview-card">
-            <div class="tgk-settings-hero__mark" x-text="((appName.trim() || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase()"></div>
-            <div class="tgk-settings-hero__preview-copy">
-              <div class="tgk-settings-hero__preview-title" x-text="appName.trim() || 'TGK Wealth'"></div>
-              <div class="tgk-settings-hero__preview-meta">Advisor and investor settings stay in sync.</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -227,9 +216,9 @@ function sharedSettingsTemplate() {
         <div class="tgk-settings-stack">
           <section class="tgk-settings-card">
             <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Experience Controls</div>
+              <div class="tgk-settings-card__eyebrow">Demo Configuration</div>
               <h2 class="tgk-settings-card__title">Demo Configuration</h2>
-              <p class="tgk-settings-card__text">Set the shared workflow IDs and signing rules used across the demo.</p>
+              <p class="tgk-settings-card__text">Set the workflow IDs and signing rules used across the demo.</p>
             </div>
 
             <div class="tgk-settings-card__body">
@@ -264,9 +253,9 @@ function sharedSettingsTemplate() {
           <section class="tgk-settings-card" x-data="docusignSettings()">
             <div class="tgk-settings-card__header tgk-settings-card__header--split">
               <div>
-                <div class="tgk-settings-card__eyebrow">Connection</div>
+                <div class="tgk-settings-card__eyebrow">Docusign Workspace</div>
                 <h2 class="tgk-settings-card__title">Docusign Workspace</h2>
-                <p class="tgk-settings-card__text">Connect once, then save the Docusign account used across both portals.</p>
+                <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
               </div>
               <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
             </div>
@@ -394,9 +383,9 @@ function sharedSettingsTemplate() {
         <aside class="tgk-settings-stack">
           <section class="tgk-settings-card tgk-settings-card--sticky">
             <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Brand Studio</div>
+              <div class="tgk-settings-card__eyebrow">Demo Branding</div>
               <h2 class="tgk-settings-card__title">Demo Branding</h2>
-              <p class="tgk-settings-card__text">Preview the shared portal chrome as you update the name and accent color.</p>
+              <p class="tgk-settings-card__text">Set the shared name and accent color used across both portals.</p>
             </div>
 
             <div class="tgk-settings-card__body">
@@ -419,37 +408,9 @@ function sharedSettingsTemplate() {
                 </div>
               </div>
 
-              <div class="tgk-brand-preview">
-                <div class="tgk-brand-preview__sidebar">
-                  <div class="tgk-brand-preview__logo">
-                    <div class="tgk-brand-preview__logo-mark" x-text="((appName.trim() || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase()"></div>
-                    <div class="tgk-brand-preview__logo-copy">
-                      <div class="tgk-brand-preview__logo-title" x-text="appName.trim() || 'TGK Wealth'"></div>
-                      <div class="tgk-brand-preview__logo-meta">Shared chrome preview</div>
-                    </div>
-                  </div>
-                  <div class="tgk-brand-preview__nav">
-                    <span class="tgk-brand-preview__nav-item tgk-brand-preview__nav-item--active">Overview</span>
-                    <span class="tgk-brand-preview__nav-item">Documents</span>
-                    <span class="tgk-brand-preview__nav-item">Settings</span>
-                  </div>
-                </div>
-                <div class="tgk-brand-preview__surface">
-                  <div class="tgk-brand-preview__card">
-                    <div class="tgk-brand-preview__eyebrow">Primary Accent</div>
-                    <div class="tgk-brand-preview__pill">Live</div>
-                  </div>
-                  <div class="tgk-brand-preview__panel">
-                    <div class="tgk-brand-preview__line tgk-brand-preview__line--strong"></div>
-                    <div class="tgk-brand-preview__line"></div>
-                    <div class="tgk-brand-preview__line tgk-brand-preview__line--short"></div>
-                  </div>
-                </div>
-              </div>
-
               <div class="tgk-inline-actions">
-                <button @click="save()" :disabled="!dirty" class="tgk-button tgk-button--primary">Apply Changes</button>
-                <button @click="resetDefaults()" class="tgk-button tgk-button--secondary">Reset</button>
+                <button @click="save()" :disabled="!dirty" class="tgk-button tgk-button--primary">Save Branding</button>
+                <button @click="resetDefaults()" class="tgk-button tgk-button--secondary">Reset Defaults</button>
               </div>
             </div>
           </section>
