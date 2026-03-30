@@ -1,32 +1,11 @@
-const { createProfile, createRecord: createBackendRecord, getProfile, listProfiles, updateProfile } = require('./tgk-client');
-const { TYPE_ALIASES, TYPE_DEFINITIONS, TYPE_NAME, TYPE_NAMES } = require('./profile-type-definitions');
+const { createProfile, createRecord: createBackendRecord, getProfile, listProfiles, updateProfile } = require('./backend-client');
+const { TYPE_ALIASES, TYPE_NAME } = require('./profile-type-definitions');
+const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
 
 const COLOR_PALETTE = ['#3b5bdb', '#16a34a', '#0ea5e9', '#ec4899', '#f59f00', '#dc2626', '#7c3aed'];
 const RISK_PROFILES = ['Balanced', 'Moderate Growth', 'Growth', 'Conservative Income'];
 const DEFAULT_ROLE = 'Prospective Client';
 const ADVISORS = ['Gordon Gecko', 'Avery Quinn', 'Morgan Lee'];
-
-function createError(statusCode, code, message) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  error.code = code;
-  return error;
-}
-
-function requireSupportedType(typeName) {
-  if (!TYPE_ALIASES.has(String(typeName || '').toLowerCase())) {
-    throw createError(400, 'BAD_REQUEST', `Unsupported typeName "${typeName}". Use "${TYPE_NAME}".`);
-  }
-}
-
-function pick(input, keys) {
-  for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(input, key) && input[key] !== undefined && input[key] !== null && input[key] !== '') {
-      return input[key];
-    }
-  }
-  return undefined;
-}
 
 function normalizeNumber(value, fallback = 0) {
   if (value === undefined || value === null || value === '') {
@@ -232,7 +211,7 @@ function parseDataValue(value) {
 function buildProfilePayload(rawInput, existingProfile) {
   const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
   const structuredData = parseDataValue(
-    pick(input, ['Data', 'data', 'ProfileData', 'profileData', 'Metadata', 'metadata', 'DataJson', 'dataJson'])
+    pickFirstDefined(input, ['Data', 'data', 'ProfileData', 'profileData', 'Metadata', 'metadata', 'DataJson', 'dataJson'])
   );
   const mergedInput = {
     ...structuredData,
@@ -263,24 +242,24 @@ function buildProfilePayload(rawInput, existingProfile) {
     'ExternalId', 'externalId'
   ]);
 
-  const firstName = pick(mergedInput, ['FirstName', 'firstName']) || existingData.firstName || '';
-  const lastName = pick(mergedInput, ['LastName', 'lastName']) || existingData.lastName || '';
-  const displayNameInput = pick(mergedInput, ['DisplayName', 'displayName']);
-  const fullName = displayNameInput || pick(mergedInput, ['FullName', 'fullName']);
+  const firstName = pickFirstDefined(mergedInput, ['FirstName', 'firstName']) || existingData.firstName || '';
+  const lastName = pickFirstDefined(mergedInput, ['LastName', 'lastName']) || existingData.lastName || '';
+  const displayNameInput = pickFirstDefined(mergedInput, ['DisplayName', 'displayName']);
+  const fullName = displayNameInput || pickFirstDefined(mergedInput, ['FullName', 'fullName']);
   const displayName = buildDisplayName(firstName, lastName, fullName, existingProfile?.display_name);
-  const status = normalizeStatus(pick(mergedInput, ['Status', 'status']), existingProfile?.status || 'pending');
-  const sourceSeed = pick(mergedInput, ['Ref', 'ref', 'Email', 'email']) || displayName || existingProfile?.id || Date.now();
+  const status = normalizeStatus(pickFirstDefined(mergedInput, ['Status', 'status']), existingProfile?.status || 'pending');
+  const sourceSeed = pickFirstDefined(mergedInput, ['Ref', 'ref', 'Email', 'email']) || displayName || existingProfile?.id || Date.now();
 
   const value = normalizeNumber(
-    pick(mergedInput, ['Aum', 'aum', 'Value', 'value']),
+    pickFirstDefined(mergedInput, ['Aum', 'aum', 'Value', 'value']),
     normalizeNumber(existingData.value, 0)
   );
   const netWorth = normalizeNumber(
-    pick(mergedInput, ['NetWorth', 'netWorth']),
+    pickFirstDefined(mergedInput, ['NetWorth', 'netWorth']),
     existingProfile ? normalizeNumber(existingData.netWorth, value) : value
   );
 
-  const lifecycleStage = pick(mergedInput, ['LifecycleStage', 'lifecycleStage'])
+  const lifecycleStage = pickFirstDefined(mergedInput, ['LifecycleStage', 'lifecycleStage'])
     || existingData.lifecycleStage
     || (status === 'pending' ? 'pending_signature' : status);
 
@@ -298,12 +277,12 @@ function buildProfilePayload(rawInput, existingProfile) {
     value,
     netWorth,
     changePct: existingProfile ? normalizeNumber(existingData.changePct, 0) : 0,
-    riskProfile: pick(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed),
-    role: pick(mergedInput, ['Role', 'role']) || existingData.role || DEFAULT_ROLE,
-    assignedTo: pick(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || deterministicPick(ADVISORS, sourceSeed),
+    riskProfile: pickFirstDefined(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed),
+    role: pickFirstDefined(mergedInput, ['Role', 'role']) || existingData.role || DEFAULT_ROLE,
+    assignedTo: pickFirstDefined(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || deterministicPick(ADVISORS, sourceSeed),
     avatar: existingData.avatar || deterministicPick(COLOR_PALETTE, sourceSeed),
     lifecycleStage,
-    externalId: pick(mergedInput, ['ExternalId', 'externalId']) || existingData.externalId || null,
+    externalId: pickFirstDefined(mergedInput, ['ExternalId', 'externalId']) || existingData.externalId || null,
     extensionFields: {
       ...existingExtensionFields,
       ...extensionFields
@@ -311,16 +290,16 @@ function buildProfilePayload(rawInput, existingProfile) {
   };
 
   return {
-    id: pick(mergedInput, ['Id', 'id']) || existingProfile?.id,
-    ref: pick(mergedInput, ['Ref', 'ref']) || existingProfile?.ref || `${slugify(displayName) || 'profile'}-${Date.now().toString(36)}`,
-    kind: pick(mergedInput, ['Kind', 'kind']) || existingProfile?.kind || 'investor',
+    id: pickFirstDefined(mergedInput, ['Id', 'id']) || existingProfile?.id,
+    ref: pickFirstDefined(mergedInput, ['Ref', 'ref']) || existingProfile?.ref || `${slugify(displayName) || 'profile'}-${Date.now().toString(36)}`,
+    kind: pickFirstDefined(mergedInput, ['Kind', 'kind']) || existingProfile?.kind || 'investor',
     displayName,
-    email: pick(mergedInput, ['Email', 'email']) || existingProfile?.email || null,
-    phone: normalizePhone(pick(mergedInput, ['Phone', 'phone'])) || existingProfile?.phone || null,
-    organization: pick(mergedInput, ['Organization', 'organization', 'Company', 'company']) || existingProfile?.organization || null,
+    email: pickFirstDefined(mergedInput, ['Email', 'email']) || existingProfile?.email || null,
+    phone: normalizePhone(pickFirstDefined(mergedInput, ['Phone', 'phone'])) || existingProfile?.phone || null,
+    organization: pickFirstDefined(mergedInput, ['Organization', 'organization', 'Company', 'company']) || existingProfile?.organization || null,
     status,
     data: normalizedData,
-    source: pick(mergedInput, ['Source', 'source']) || existingProfile?.source || 'maestro-extension'
+    source: pickFirstDefined(mergedInput, ['Source', 'source']) || existingProfile?.source || 'maestro-extension'
   };
 }
 
@@ -330,10 +309,10 @@ async function createRecord(body) {
   const typeName = body?.typeName;
 
   if (!data || !typeName) {
-    throw createError(400, 'BAD_REQUEST', 'data or typeName missing in request');
+    throw createServiceError(400, 'BAD_REQUEST', 'data or typeName missing in request');
   }
 
-  requireSupportedType(typeName);
+  requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
   const payload = buildProfilePayload({
     ...data,
     ...(requestedId ? { Id: requestedId } : {})
@@ -372,15 +351,15 @@ async function patchRecord(body) {
   const recordId = body?.recordId;
 
   if (!data || !typeName || !recordId) {
-    throw createError(400, 'BAD_REQUEST', 'data, typeName or recordId missing in request');
+    throw createServiceError(400, 'BAD_REQUEST', 'data, typeName or recordId missing in request');
   }
 
-  requireSupportedType(typeName);
+  requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
   let existing;
   try {
     existing = await getProfile(recordId);
   } catch (error) {
-    throw createError(error.statusCode === 404 ? 404 : 500, error.statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR', error.message);
+    throw createServiceError(error.statusCode === 404 ? 404 : 500, error.statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR', error.message);
   }
 
   const payload = buildProfilePayload(data, existing);
@@ -393,10 +372,10 @@ async function searchRecords(body) {
   const pagination = body?.pagination || { limit: 50, skip: 0 };
 
   if (!query) {
-    throw createError(400, 'BAD_REQUEST', 'Query missing in request');
+    throw createServiceError(400, 'BAD_REQUEST', 'Query missing in request');
   }
 
-  requireSupportedType(query.from);
+  requireSupportedType(query.from, TYPE_ALIASES, TYPE_NAME);
   const profiles = await listProfiles();
   const records = profiles
     .map(mapProfileToRecord)
@@ -407,46 +386,8 @@ async function searchRecords(body) {
   return { records };
 }
 
-function getTypeNames() {
-  return { typeNames: TYPE_NAMES };
-}
-
-function getTypeDefinitions(body) {
-  const typeNames = body?.typeNames;
-  if (!Array.isArray(typeNames) || typeNames.length === 0) {
-    throw createError(400, 'BAD_REQUEST', 'Missing typeNames in request');
-  }
-
-  const requested = new Set(typeNames.map((item) => {
-    if (typeof item === 'string') {
-      return item.toLowerCase();
-    }
-    return String(item?.typeName || '').toLowerCase();
-  }));
-  const errors = [];
-  const hasSupportedType = [...requested].some((typeName) => TYPE_ALIASES.has(typeName));
-
-  if (!hasSupportedType) {
-    for (const typeName of requested) {
-      errors.push({
-        typeName,
-        code: 'UNKNOWN',
-        message: `Unsupported type "${typeName}".`
-      });
-    }
-    return { declarations: [], errors };
-  }
-
-  return {
-    declarations: TYPE_DEFINITIONS.declarations,
-    errors
-  };
-}
-
 module.exports = {
   createRecord,
-  getTypeDefinitions,
-  getTypeNames,
   patchRecord,
   searchRecords
 };

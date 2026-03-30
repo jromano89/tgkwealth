@@ -80,7 +80,7 @@ function newsPanel() {
       summary = summary.slice(0, -source.length).trim();
     }
     if (summary === title || !summary) {
-      return source ? `Source: ${source}.` : 'Latest market coverage.';
+      return source ? `${source}.` : 'Latest market coverage.';
     }
     return summary.length > 160 ? `${summary.slice(0, 157).trim()}...` : summary;
   }
@@ -163,12 +163,12 @@ function newsPanel() {
           this.loaded = true;
         } else {
           this.items = [];
-          this.error = 'Failed to load live market news.';
+          this.error = 'Unable to load live headlines.';
         }
       } catch (error) {
         this.items = [];
-        this.error = 'Failed to load live market news.';
-        console.error('Failed to refresh market news:', error);
+        this.error = 'Unable to load live headlines.';
+        console.error('Failed to refresh headlines:', error);
       } finally {
         this.loading = false;
       }

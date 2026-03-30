@@ -1,4 +1,4 @@
-const TGK_SELECTED_CLIENT_STORAGE_KEY = 'tgk_selected_client_id';
+const TGK_SELECTED_CONTACT_STORAGE_KEY = 'tgk_selected_client_id';
 const TGK_ADVISOR_VIEW_STORAGE_KEY = 'tgk_advisor_view';
 const MAESTRO_CONTACT_SOURCE = 'maestro-extension';
 const MAESTRO_POLL_INTERVAL_MS = 1500;
@@ -8,6 +8,7 @@ const CLIENT_DETAIL_REFRESH_MS = 5000;
 
 function advisorApp() {
   return {
+    ...createEnvelopeModalHelpers(),
     view: 'dashboard',
     contacts: [],
     selectedContact: null,
@@ -15,8 +16,6 @@ function advisorApp() {
     selectedContactEnvelopes: [],
     _clientDetailRefreshTimer: null,
     searchQuery: '',
-    envelopeDocModal: null,
-    envelopeHistoryModal: null,
     showOnboarding: false,
     maestroWorkflowId: window.TGK_DEMO?.config?.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
     maestroInstanceUrl: '',
@@ -62,7 +61,7 @@ function advisorApp() {
 
     restoreSelectedContactId() {
       try {
-        return window.localStorage.getItem(TGK_SELECTED_CLIENT_STORAGE_KEY);
+        return window.localStorage.getItem(TGK_SELECTED_CONTACT_STORAGE_KEY);
       } catch (e) {
         return null;
       }
@@ -162,35 +161,10 @@ function advisorApp() {
       }
     },
 
-    viewEnvelopeDoc(envelope) {
-      const id = envelope.docusign_envelope_id || envelope.id;
-      if (!id) return;
-      const base = TGK_API.baseUrl || '';
-      const app = window.TGK_CONFIG?.appSlug || '';
-      const title = envelope.metadata?.documentName || envelope.template_name || 'Document';
-      this.envelopeDocModal = { title, url: `${base}/api/envelopes/${id}/documents/combined/download?app=${app}` };
-    },
-
-    async viewEnvelopeHistory(envelope) {
-      const id = envelope.docusign_envelope_id || envelope.id;
-      if (!id) return;
-      try {
-        const result = await TGK_API.get(`/api/envelopes/${id}/audit-events`);
-        const events = (result.auditEvents || []).map(e => {
-          const fields = {};
-          (e.eventFields || []).forEach(f => { fields[f.name] = f.value; });
-          return fields;
-        }).filter(f => f.Action);
-        this.envelopeHistoryModal = { envelopeId: id, events };
-      } catch (e) {
-        console.error('Failed to load history:', e);
-      }
-    },
-
     rememberSelectedContact(contactId) {
       if (!contactId) return;
       try {
-        window.localStorage.setItem(TGK_SELECTED_CLIENT_STORAGE_KEY, contactId);
+        window.localStorage.setItem(TGK_SELECTED_CONTACT_STORAGE_KEY, contactId);
       } catch (e) {}
     },
 

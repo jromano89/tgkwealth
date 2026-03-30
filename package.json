@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build:frontend-config": "node scripts/generate-frontend-runtime-config.js",
+    "check": "node scripts/check-syntax.js",
     "dev:backend": "npm --prefix backend run dev",
     "dev:maestro-extension": "npm --prefix extensions/maestro-tgk run dev",
     "seed:tgk": "node scripts/seed-tgk.js",

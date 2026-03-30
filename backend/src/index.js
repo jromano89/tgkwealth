@@ -29,7 +29,7 @@ const swaggerSpec = swaggerJsdoc({
     info: {
       title: 'TGK Demo Backend API',
       version: '1.0.0',
-      description: 'Docusign Demo Backend-as-a-Service. Handles app bootstrap, Docusign integration, consent, envelopes, webhooks, and generic demo data so SE frontends don\'t need a backend.'
+      description: 'Shared demo backend for app bootstrap, Docusign auth, envelopes, webhooks, and app-scoped demo data.'
     },
     servers: [{ url: '/' }]
   },
@@ -52,7 +52,7 @@ a:hover{background:#5c7cfa}
 .tag{font-size:.75rem;color:#6b7280;margin-top:1.5rem}</style></head>
 <body><div class="c">
 <h1>TGK Demo Backend</h1>
-<p>Docusign Demo Backend-as-a-Service — handles app bootstrap, consent, envelopes, webhooks, and generic demo data so SE frontends don't need a backend.</p>
+<p>Shared demo backend for app bootstrap, Docusign auth, envelopes, webhooks, and app-scoped demo data.</p>
 <a href="/api-docs">API Docs</a>
 <a href="/api/health">Health Check</a>
 <div class="tag">v1.0.0</div>
@@ -61,7 +61,7 @@ a:hover{background:#5c7cfa}
 
 app.use('/api/apps', require('./routes/apps'));
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/data', require('./routes/data'));
+app.use('/api/data', require('./routes/app-data'));
 app.use('/api/envelopes', require('./routes/envelopes'));
 app.use('/api/proxy', require('./routes/proxy'));
 

@@ -4,23 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TGK Demo — Investor Portal</title>
-  <meta name="description" content="TGK demonstration investor portal for product showcase and testing. For demo purposes only, not a real financial services portal.">
+  <meta name="description" content="TGK investor demo portal for portfolio, document, and task workflows.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <meta name="application-name" content="TGK Demo">
   <meta property="og:title" content="TGK Demo — Investor Portal">
   <meta property="og:description" content="Demonstration investor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-1">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
-  <script defer src="../../shared/js/demo-settings.js"></script>
+  <script defer src="../../shared/js/settings-panel.js?v=20260330-2"></script>
   <script defer src="../../shared/js/api-client.js"></script>
-  <script defer src="../../shared/js/shared-components.js"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260330-2"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260325-4"></script>
-  <script defer src="js/app.js?v=20260325-4"></script>
+  <script defer src="js/app.js?v=20260330-1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: #f5f7fb; margin: 0; --color-navy: #202443; --color-navy-light: #30365f; --color-brand: #4c6ef5; --color-brand-light: #7c91ff; }
@@ -93,14 +94,14 @@
     </nav>
 
     <div class="px-4 pb-3" x-show="!sidebarCollapsed">
-      <div class="text-[10px] uppercase tracking-wide text-gray-500">For demo purposes only</div>
+      <div class="text-[10px] uppercase tracking-wide text-gray-500">Demo environment</div>
     </div>
 
     <!-- Portal Switch -->
     <div class="px-3 pb-2" x-show="!sidebarCollapsed">
       <a href="../advisor/index.html" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-        Switch to Advisor Portal
+        Advisor View
       </a>
     </div>
 
@@ -122,22 +123,22 @@
       <div x-show="tab !== 'settings'" class="flex items-center justify-between mb-2">
         <div>
           <h1 class="text-xl font-semibold text-navy">Good afternoon, <span x-text="selectedClient?.first_name || ''"></span></h1>
-          <p class="text-sm text-gray-400">Your portfolio as of March 20, 2026</p>
+          <p class="text-sm text-gray-400">Portfolio snapshot as of <span x-text="portfolioDateLabel"></span></p>
         </div>
         <div class="flex items-center gap-3">
           <div x-data="newsPanel()">
             <button @click="toggleOpen()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
-              <span>📺</span> News <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+              <span>📺</span> Headlines <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
             </button>
             <template x-if="open">
               <div>
                 <div class="fixed inset-0 bg-black/30 z-40" @click="open = false"></div>
                 <div class="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 overflow-auto p-6 transition-transform">
                   <div class="flex justify-between items-center mb-4">
-                    <h2 class="font-semibold text-lg text-navy">Market News</h2>
+                    <h2 class="font-semibold text-lg text-navy">Market Headlines</h2>
                     <button @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
                   </div>
-                  <input x-model="search" placeholder="Search news..." class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
+                  <input x-model="search" placeholder="Filter headlines" class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
                   <div class="flex gap-1.5 flex-wrap mb-4">
                     <template x-for="cat in categories" :key="cat">
                       <button @click="activeCategory = cat" class="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide transition-colors"
@@ -147,12 +148,12 @@
                   </div>
                   <template x-if="loading && !loaded">
                     <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-6 text-center text-sm text-gray-500">
-                      Loading live market news...
+                      Loading live headlines...
                     </div>
                   </template>
                   <template x-if="!loading && error && !loaded">
                     <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">
-                      Failed to load live market news.
+                      Unable to load live headlines.
                     </div>
                   </template>
                   <template x-if="!loading && !error && loaded && filteredItems.length === 0">
@@ -185,7 +186,7 @@
                     </template>
                   </div>
                   <div class="mt-4 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1.5" x-show="loaded && filteredItems.length > 0">
-                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live updates
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live feed
                   </div>
                 </div>
               </div>
@@ -281,7 +282,13 @@
       <!-- DOCUMENTS TAB -->
       <div x-show="tab === 'documents'">
         <div class="bg-white rounded-xl shadow-sm p-5">
-          <h3 class="font-semibold text-base text-navy mb-4">Documents</h3>
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="font-semibold text-base text-navy">Documents</h3>
+              <p class="text-xs text-gray-400 mt-1">Signed packets and live status updates in one place.</p>
+            </div>
+            <div class="px-3 py-1 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600" x-text="envelopes.length + ' packet' + (envelopes.length === 1 ? '' : 's')"></div>
+          </div>
           <template x-if="envelopes.length === 0">
             <div class="text-center py-8 text-gray-400">
               <div class="text-3xl mb-2">📄</div>
@@ -334,7 +341,7 @@
           <template x-if="tasks.length === 0">
             <div class="text-center py-8 text-gray-400">
               <div class="text-3xl mb-2">✓</div>
-              <p class="text-sm">All caught up — no pending tasks.</p>
+              <p class="text-sm">All caught up. No open tasks.</p>
             </div>
           </template>
           <div class="space-y-3">
@@ -357,239 +364,16 @@
       </div>
 
       <!-- SETTINGS TAB -->
-      <div x-show="tab === 'settings'" x-data="demoSettingsPanel()">
-        <h1 class="text-xl font-semibold text-navy mb-6">Settings</h1>
-
-        <div class="grid grid-cols-2 gap-5 max-w-4xl">
-
-          <!-- Demo Config + Docusign -->
-          <div class="flex flex-col gap-5">
-            <div class="order-1 bg-white rounded-xl shadow-sm p-5">
-              <h2 class="font-semibold text-sm text-navy mb-3">Demo Configuration</h2>
-
-              <div class="space-y-3">
-                <label class="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:border-gray-200 cursor-pointer transition-colors">
-                  <div>
-                    <div class="text-sm font-medium text-navy">ID Verification</div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">Require identity verification before signing</div>
-                  </div>
-                  <div class="relative">
-                    <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
-                    <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                    <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                  </div>
-                </label>
-
-                <div class="p-2.5 rounded-lg border border-gray-100">
-                  <label class="text-xs font-medium text-navy" for="inv-idvWorkflowId">Account Opening Workflow ID</label>
-                  <input id="inv-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()"
-                    class="w-full text-xs px-2.5 py-1.5 mt-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
-                    placeholder="workflow-id">
-                </div>
-
-                <div class="p-2.5 rounded-lg border border-gray-100">
-                  <label class="text-xs font-medium text-navy" for="inv-assetTransferWorkflowId">Asset Transfer Workflow ID</label>
-                  <input id="inv-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()"
-                    class="w-full text-xs px-2.5 py-1.5 mt-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
-                    placeholder="workflow-id">
-                </div>
-              </div>
-            </div>
-
-            <!-- Docusign Connection -->
-            <div class="order-2 bg-white rounded-xl shadow-sm p-5" x-data="docusignSettings()">
-              <div class="flex items-start justify-between gap-4 mb-3">
-                <div>
-                  <h2 class="font-semibold text-sm text-navy">Docusign Connection</h2>
-                </div>
-                <button @click="openScopesModal()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Scopes</button>
-              </div>
-
-              <template x-if="loading"><p class="text-sm text-gray-400">Checking connection...</p></template>
-              <template x-if="error"><p class="text-sm text-red-500 mb-3" x-text="error"></p></template>
-              <template x-if="notice"><p class="text-sm text-brand mb-3" x-text="notice"></p></template>
-
-              <template x-if="!loading && hasSavedAccount()">
-                <div class="space-y-4">
-                  <div class="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-                    <div class="flex items-start justify-between gap-4">
-                      <div>
-                        <div class="flex items-center gap-2 mb-2">
-                          <span class="w-2 h-2 rounded-full bg-brand"></span>
-                          <span class="text-sm font-medium text-brand">Connected</span>
-                        </div>
-                        <div class="text-sm font-medium text-navy" x-text="session.accountName"></div>
-                        <div class="text-xs text-gray-500 mt-1" x-text="session.name || session.email"></div>
-                        <div class="text-[11px] text-gray-400 mt-1" x-text="session.accountId"></div>
-                      </div>
-                      <div class="flex flex-wrap gap-2 justify-end">
-                        <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="text-xs text-gray-500 hover:text-brand px-3 py-1.5 rounded-lg border border-gray-200 hover:border-brand/30 transition-colors">Change Account</button>
-                        <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <template x-if="shouldShowAccountPicker()">
-                    <div class="space-y-3 rounded-xl border border-gray-200 p-4">
-                      <div class="text-sm font-medium text-navy">Change Account</div>
-                      <div class="text-xs text-gray-500">Choose a different Docusign account and save it for this demo.</div>
-                      <select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40">
-                        <template x-for="account in availableAccounts()" :key="account.accountId">
-                          <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option>
-                        </template>
-                      </select>
-                      <div class="flex gap-2">
-                        <button @click="cancelAccountSelection()" class="flex-1 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 hover:border-gray-300 transition-colors">Cancel</button>
-                        <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="flex-1 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Selected Account'"></button>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </template>
-
-              <template x-if="!loading && needsAccountSelection()">
-                <div class="space-y-4">
-                  <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
-                    <div class="flex items-start justify-between gap-4">
-                      <div>
-                        <div class="flex items-center gap-2 mb-2">
-                          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                          <span class="text-sm font-medium text-amber-700">Connection Ready</span>
-                        </div>
-                        <div class="text-sm font-medium text-navy" x-text="session.name || session.email"></div>
-                        <div class="text-xs text-gray-500 mt-1">Select the Docusign account to save for this demo.</div>
-                      </div>
-                      <div class="flex flex-wrap gap-2 justify-end">
-                        <button @click="logout()" class="text-xs text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">Disconnect</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="space-y-3 rounded-xl border border-gray-200 p-4">
-                    <div class="text-sm font-medium text-navy">Choose Account</div><div class="text-xs text-gray-500">Your connection is authorized. Save the account you want this demo to use.</div><select x-model="selectedAccountId" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40"><template x-for="account in availableAccounts()" :key="account.accountId"><option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="`${account.accountName}${account.isDefault ? ' (Default)' : ''}`"></option></template></select><button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="w-full bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed" x-text="savingAccount ? 'Saving…' : 'Save Account'"></button>
-                  </div>
-                </div>
-              </template>
-
-              <template x-if="!loading && !hasConnection()">
-                <div class="space-y-4">
-                  <div class="rounded-xl border border-gray-200 bg-slate-50/70 p-4">
-                    <div class="text-sm font-medium text-navy">No account connected</div>
-                    <div class="text-xs text-gray-500 mt-1">Connect a Docusign account to enable live demo actions.</div>
-                  </div>
-                  <div class="flex items-center gap-2"><button @click="login()" class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-light transition-colors" x-text="authInProgress ? 'Connecting…' : 'Connect Docusign Account'"></button></div>
-                </div>
-              </template>
-
-              <div x-show="showScopesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="absolute inset-0 bg-black/40" @click="closeScopesModal()"></div>
-                <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6">
-                  <div class="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
-                      <p class="text-xs text-gray-400 mt-1">Edit the scope string used on the next connect.</p>
-                    </div>
-                    <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-                  </div>
-
-                  <textarea x-model="requestedScopesText" rows="8" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand/40"></textarea>
-                  <p class="text-[11px] text-gray-400 mt-2">The required <span class="font-medium">signature</span>, <span class="font-medium">impersonation</span>, and <span class="font-medium">aow_manage</span> scopes are always included.</p>
-
-                  <div class="flex items-center justify-between gap-3 mt-5">
-                    <button @click="resetRequestedScopes()" class="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">Reset Default</button>
-                    <div class="flex gap-2">
-                      <button @click="closeScopesModal()" class="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">Cancel</button>
-                      <button @click="saveRequestedScopes()" class="text-xs bg-brand text-white px-3 py-2 rounded-lg hover:bg-brand-light transition-colors">Save Scopes</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+      <div x-show="tab === 'settings'">
+        <div x-data="settingsPanelState()">
+          <div x-init="mountSettingsPanel($el)"></div>
         </div>
-
-        <!-- Demo Branding -->
-        <div class="bg-white rounded-xl shadow-sm p-5 self-start">
-          <h2 class="font-semibold text-sm text-navy mb-3">Demo Branding</h2>
-
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">App Name</label>
-              <input x-model="appName" @input="dirty = true" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="TGK Wealth">
-              <p class="text-[10px] text-gray-400 mt-1">Sidebar mark auto-generates from app name.</p>
-            </div>
-
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Theme Color</label>
-              <div class="flex items-center gap-2.5">
-                <label class="relative w-8 h-8 rounded-lg overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-gray-400 transition-colors" :style="`background:${brandColor}`">
-                  <input type="color" :value="brandColor" @input="applyColor($event.target.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
-                </label>
-                <span class="text-xs text-gray-500 font-mono" x-text="brandColor"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex gap-2 mt-4">
-            <button @click="save()" :disabled="!dirty"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
-              :class="dirty ? 'bg-brand hover:bg-brand-light' : 'bg-gray-300 cursor-not-allowed'">
-              Save &amp; Apply
-            </button>
-            <button @click="resetDefaults()" class="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 transition-colors">
-              Reset Defaults
-            </button>
-          </div>
-        </div>
-
-      </div>
       </div>
 
     </div>
   </main>
 
-  <!-- Envelope Document Modal -->
-  <template x-if="envelopeDocModal">
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="envelopeDocModal = null">
-      <div class="absolute inset-0 bg-black/40" @click="envelopeDocModal = null"></div>
-      <div class="relative w-full max-w-5xl h-[92vh] rounded-2xl bg-white shadow-2xl p-5 flex flex-col">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-base font-semibold text-navy" x-text="envelopeDocModal.title"></h3>
-          <button @click="envelopeDocModal = null" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-        </div>
-        <iframe :src="envelopeDocModal.url" class="flex-1 w-full rounded-lg border border-gray-200"></iframe>
-      </div>
-    </div>
-  </template>
-
-  <!-- Envelope History Modal -->
-  <template x-if="envelopeHistoryModal">
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="envelopeHistoryModal = null">
-      <div class="absolute inset-0 bg-black/40" @click="envelopeHistoryModal = null"></div>
-      <div class="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5 max-h-[70vh] flex flex-col">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-base font-semibold text-navy">Envelope History</h3>
-          <button @click="envelopeHistoryModal = null" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-        </div>
-        <div class="text-[11px] text-gray-400 font-mono mb-3" x-text="envelopeHistoryModal.envelopeId"></div>
-        <div class="overflow-auto flex-1 space-y-2">
-          <template x-for="(evt, i) in envelopeHistoryModal.events" :key="i">
-            <div class="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 text-sm">
-              <div class="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 flex-shrink-0"></div>
-              <div class="min-w-0">
-                <div class="font-medium text-navy text-xs" x-text="evt.Action"></div>
-                <div class="text-[11px] text-gray-400" x-text="evt.UserName || evt.LogTime || ''"></div>
-              </div>
-              <div class="ml-auto text-[10px] text-gray-400 flex-shrink-0" x-text="evt.LogTime ? new Date(evt.LogTime).toLocaleString() : ''"></div>
-            </div>
-          </template>
-          <template x-if="envelopeHistoryModal.events.length === 0">
-            <p class="text-sm text-gray-400 text-center py-4">No events found.</p>
-          </template>
-        </div>
-      </div>
-    </div>
-  </template>
+  <div x-init="mountEnvelopeModals($el)"></div>
 </div>
 
 </body>

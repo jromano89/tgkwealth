@@ -1,8 +1,15 @@
 const express = require('express');
 const { getAccessToken } = require('../services/docusign-auth');
-const { createError, getConnectionForApp, getRequiredApp, requireSelectedDocusignAccount } = require('../utils');
+const {
+  createError,
+  getConnectionForApp,
+  getRequiredApp,
+  isPlainObject,
+  requireSelectedDocusignAccount
+} = require('../utils');
 
 const router = express.Router();
+const SUPPORTED_AUTH_MODES = new Set(['none', 'bearer', 'docusign']);
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
   'content-length',
@@ -19,6 +26,7 @@ const CONTROL_QUERY_KEYS = new Set([
   'bearerToken',
   'url'
 ]);
+const CONTROL_BODY_KEYS = ['url', 'path', 'baseUrl', 'authMode', 'bearerToken', 'headers', 'query'];
 
 /**
  * @swagger
@@ -179,38 +187,51 @@ router.all('/*', handleProxy);
 
 async function handleProxy(req, res) {
   try {
-    const authMode = getAuthMode(req);
-    const docusign = authMode === 'docusign' ? getDocusignSession(req) : null;
-    const upstreamMethod = getUpstreamMethod(req);
-    const targetUrl = buildTargetUrl(req, docusign);
-    const fetchOptions = await buildFetchOptions(req, authMode, docusign, upstreamMethod);
+    const context = await buildProxyContext(req);
+    const targetUrl = buildTargetUrl(req, context);
+    const fetchOptions = await buildFetchOptions(req, context);
     const response = await fetch(targetUrl, fetchOptions);
 
-    forwardResponse(response, res);
-  } catch (err) {
-    const status = err.statusCode || 500;
-    console.error('Proxy error:', err);
-    res.status(status).json({ error: err.message });
+    await forwardResponse(response, res);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(error.statusCode || 500).json({ error: error.message });
   }
-}
-
-function getControlValue(req, key) {
-  if (req.body && typeof req.body === 'object' && !Array.isArray(req.body) && req.body[key] !== undefined) {
-    return req.body[key];
-  }
-  if (req.query && req.query[key] !== undefined) {
-    return req.query[key];
-  }
-  return undefined;
 }
 
 function hasLegacyPath(req) {
   return !!(req.params && req.params[0]);
 }
 
-function getAuthMode(req) {
-  const authMode = String(getControlValue(req, 'authMode') || (hasLegacyPath(req) ? 'docusign' : 'none')).toLowerCase();
-  if (!['none', 'bearer', 'docusign'].includes(authMode)) {
+function getBodyEnvelope(req) {
+  return isPlainObject(req.body) ? req.body : null;
+}
+
+function getControlEnvelope(req) {
+  const body = getBodyEnvelope(req);
+  if (!body) {
+    return null;
+  }
+
+  return CONTROL_BODY_KEYS.some((key) => body[key] !== undefined) ? body : null;
+}
+
+function getControlValue(req, key) {
+  const body = getBodyEnvelope(req);
+  if (body && body[key] !== undefined) {
+    return body[key];
+  }
+
+  if (req.query && req.query[key] !== undefined) {
+    return req.query[key];
+  }
+
+  return undefined;
+}
+
+function getAuthMode(req, isLegacyRequest) {
+  const authMode = String(getControlValue(req, 'authMode') || (isLegacyRequest ? 'docusign' : 'none')).toLowerCase();
+  if (!SUPPORTED_AUTH_MODES.has(authMode)) {
     throw createError(400, `Unsupported authMode: ${authMode}`);
   }
   return authMode;
@@ -234,37 +255,16 @@ function getDocusignSession(req) {
   };
 }
 
-function buildTargetUrl(req, docusign) {
-  const explicitUrl = getControlValue(req, 'url');
-  if (explicitUrl) {
-    return applyDocusignPlaceholders(explicitUrl, docusign);
-  }
-
-  const path = hasLegacyPath(req)
-    ? req.params[0]
-    : getControlValue(req, 'path');
-
-  if (!path) {
-    throw createError(400, 'Missing proxy target. Provide "url" or a relative path.');
-  }
-
-  const baseUrl = getControlValue(req, 'baseUrl') || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi';
-  const resolvedBase = applyDocusignPlaceholders(baseUrl, docusign);
-  const resolvedPath = applyDocusignPlaceholders(path, docusign);
-  const url = new URL(resolvedPath, ensureTrailingSlash(resolvedBase));
-
-  if (hasLegacyPath(req)) {
-    for (const [key, value] of Object.entries(req.query || {})) {
-      if (CONTROL_QUERY_KEYS.has(key) || value === undefined) continue;
-      appendQueryValue(url.searchParams, key, value);
-    }
-  } else if (req.body && typeof req.body === 'object' && req.body.query && typeof req.body.query === 'object') {
-    for (const [key, value] of Object.entries(req.body.query)) {
-      appendQueryValue(url.searchParams, key, value);
-    }
-  }
-
-  return url.toString();
+async function buildProxyContext(req) {
+  const legacyRequest = hasLegacyPath(req);
+  const authMode = getAuthMode(req, legacyRequest);
+  return {
+    authMode,
+    controlEnvelope: getControlEnvelope(req),
+    docusign: authMode === 'docusign' ? getDocusignSession(req) : null,
+    isLegacyRequest: legacyRequest,
+    upstreamMethod: getUpstreamMethod(req)
+  };
 }
 
 function ensureTrailingSlash(url) {
@@ -272,7 +272,10 @@ function ensureTrailingSlash(url) {
 }
 
 function applyDocusignPlaceholders(value, docusign) {
-  if (!docusign || typeof value !== 'string') return value;
+  if (!docusign || typeof value !== 'string') {
+    return value;
+  }
+
   return value.replace(/\{accountId\}/g, docusign.accountId || '');
 }
 
@@ -283,63 +286,82 @@ function appendQueryValue(searchParams, key, value) {
     }
     return;
   }
+
   searchParams.append(key, value);
 }
 
-async function buildFetchOptions(req, authMode, docusign, upstreamMethod) {
-  const headers = buildOutboundHeaders(req);
+function appendQueryParams(url, query) {
+  if (!isPlainObject(query)) {
+    return;
+  }
 
-  if (authMode === 'bearer') {
-    const bearerToken = getControlValue(req, 'bearerToken');
-    if (!bearerToken) {
-      throw createError(400, 'Missing bearerToken for authMode=bearer');
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
     }
-    headers.Authorization = `Bearer ${bearerToken}`;
+    appendQueryValue(url.searchParams, key, value);
   }
-
-  if (authMode === 'docusign') {
-    const token = await getAccessToken(docusign.userId, docusign.accountId);
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const fetchOptions = {
-    method: upstreamMethod,
-    headers
-  };
-
-  if (upstreamMethod !== 'GET' && upstreamMethod !== 'HEAD') {
-    const outboundBody = getOutboundBody(req);
-    if (outboundBody !== undefined) {
-      fetchOptions.body = outboundBody;
-    }
-  }
-
-  return fetchOptions;
 }
 
-function buildOutboundHeaders(req) {
+function buildTargetUrl(req, context) {
+  const explicitUrl = getControlValue(req, 'url');
+  if (explicitUrl) {
+    return applyDocusignPlaceholders(explicitUrl, context.docusign);
+  }
+
+  const path = context.isLegacyRequest ? req.params[0] : getControlValue(req, 'path');
+  if (!path) {
+    throw createError(400, 'Missing proxy target. Provide "url" or a relative path.');
+  }
+
+  const baseUrl = getControlValue(req, 'baseUrl') || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi';
+  const resolvedUrl = new URL(
+    applyDocusignPlaceholders(path, context.docusign),
+    ensureTrailingSlash(applyDocusignPlaceholders(baseUrl, context.docusign))
+  );
+
+  if (context.isLegacyRequest) {
+    for (const [key, value] of Object.entries(req.query || {})) {
+      if (CONTROL_QUERY_KEYS.has(key) || value === undefined) {
+        continue;
+      }
+      appendQueryValue(resolvedUrl.searchParams, key, value);
+    }
+  } else {
+    appendQueryParams(resolvedUrl, context.controlEnvelope?.query);
+  }
+
+  return resolvedUrl.toString();
+}
+
+function buildOutboundHeaders(req, context) {
   const headers = {};
-  const isControlEnvelope = hasControlEnvelope(req);
-  const requestedHeaders = req.body && typeof req.body === 'object' && !Array.isArray(req.body) && req.body.headers
-    ? req.body.headers
-    : null;
+  const requestedHeaders = isPlainObject(context.controlEnvelope?.headers) ? context.controlEnvelope.headers : null;
 
   if (req.headers.accept) {
     headers.Accept = req.headers.accept;
   }
 
-  if (requestedHeaders && typeof requestedHeaders === 'object') {
+  if (requestedHeaders) {
     for (const [key, value] of Object.entries(requestedHeaders)) {
-      if (!key || value === undefined || HOP_BY_HOP_HEADERS.has(key.toLowerCase())) continue;
+      if (!key || value === undefined || HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
+        continue;
+      }
       headers[key] = value;
     }
-  } else if (req.headers['content-type'] && !isControlEnvelope) {
+    return headers;
+  }
+
+  if (req.headers['content-type'] && !context.controlEnvelope) {
     headers['Content-Type'] = req.headers['content-type'];
-  } else if (
-    isControlEnvelope
-    && req.body?.body !== undefined
-    && (typeof req.body.body === 'object' || Array.isArray(req.body.body))
-    && !(req.body.body instanceof Buffer)
+    return headers;
+  }
+
+  const controlBody = context.controlEnvelope?.body;
+  if (
+    controlBody !== undefined
+    && (isPlainObject(controlBody) || Array.isArray(controlBody))
+    && !(controlBody instanceof Buffer)
   ) {
     headers['Content-Type'] = 'application/json';
   }
@@ -347,35 +369,12 @@ function buildOutboundHeaders(req) {
   return headers;
 }
 
-function hasControlEnvelope(req) {
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-    return false;
-  }
-
-  return ['url', 'path', 'baseUrl', 'authMode', 'bearerToken', 'headers', 'query'].some(key => req.body[key] !== undefined);
-}
-
-function getOutboundBody(req) {
-  if (req.body === undefined || req.body === null) {
-    return undefined;
-  }
-
-  if (hasControlEnvelope(req)) {
-    if (req.body.body === undefined) {
-      return undefined;
-    }
-    return serializeBody(req.body.body, req.body.headers);
-  }
-
-  return serializeBody(req.body, { 'Content-Type': req.headers['content-type'] });
-}
-
 function serializeBody(body, headers = {}) {
   if (body === undefined || body === null) {
     return undefined;
   }
 
-  const contentTypeHeader = Object.keys(headers || {}).find(key => key.toLowerCase() === 'content-type');
+  const contentTypeHeader = Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
   const contentType = contentTypeHeader ? String(headers[contentTypeHeader] || '') : '';
 
   if (typeof body === 'string' || body instanceof Buffer) {
@@ -393,6 +392,56 @@ function serializeBody(body, headers = {}) {
   return JSON.stringify(body);
 }
 
+function getOutboundBody(req, context) {
+  if (req.body === undefined || req.body === null) {
+    return undefined;
+  }
+
+  if (context.controlEnvelope) {
+    if (context.controlEnvelope.body === undefined) {
+      return undefined;
+    }
+    return serializeBody(context.controlEnvelope.body, context.controlEnvelope.headers);
+  }
+
+  return serializeBody(req.body, { 'Content-Type': req.headers['content-type'] });
+}
+
+async function applyAuthorization(req, headers, context) {
+  if (context.authMode === 'bearer') {
+    const bearerToken = getControlValue(req, 'bearerToken');
+    if (!bearerToken) {
+      throw createError(400, 'Missing bearerToken for authMode=bearer');
+    }
+    headers.Authorization = `Bearer ${bearerToken}`;
+    return;
+  }
+
+  if (context.authMode === 'docusign') {
+    const token = await getAccessToken(context.docusign.userId, context.docusign.accountId);
+    headers.Authorization = `Bearer ${token}`;
+  }
+}
+
+async function buildFetchOptions(req, context) {
+  const headers = buildOutboundHeaders(req, context);
+  await applyAuthorization(req, headers, context);
+
+  const fetchOptions = {
+    method: context.upstreamMethod,
+    headers
+  };
+
+  if (!['GET', 'HEAD'].includes(context.upstreamMethod)) {
+    const outboundBody = getOutboundBody(req, context);
+    if (outboundBody !== undefined) {
+      fetchOptions.body = outboundBody;
+    }
+  }
+
+  return fetchOptions;
+}
+
 async function forwardResponse(response, res) {
   const contentType = response.headers.get('content-type');
   if (contentType) {
@@ -407,13 +456,11 @@ async function forwardResponse(response, res) {
   res.status(response.status);
 
   if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    return res.json(data);
+    return res.json(await response.json());
   }
 
   if (contentType && (contentType.startsWith('text/') || contentType.includes('xml') || contentType.includes('javascript'))) {
-    const text = await response.text();
-    return res.send(text);
+    return res.send(await response.text());
   }
 
   const buffer = await response.arrayBuffer();

@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const JSON_FIELD_NAMES = ['tags', 'data', 'metadata', 'available_accounts'];
 
 function createError(statusCode, message) {
   const err = new Error(message);
@@ -6,10 +7,14 @@ function createError(statusCode, message) {
   return err;
 }
 
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
 function parseJsonFields(row) {
   if (!row) return row;
   const parsed = { ...row };
-  for (const key of ['tags', 'data', 'metadata', 'available_accounts']) {
+  for (const key of JSON_FIELD_NAMES) {
     if (parsed[key] && typeof parsed[key] === 'string') {
       try { parsed[key] = JSON.parse(parsed[key]); } catch {}
     }
@@ -29,8 +34,12 @@ function normalizeSlug(slug) {
     .replace(/^-+|-+$/g, '');
 }
 
+function getRequestAppPayload(req) {
+  return isPlainObject(req.body) ? req.body.app : null;
+}
+
 function getAppSlug(req) {
-  const bodyApp = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body.app : null;
+  const bodyApp = getRequestAppPayload(req);
   return normalizeSlug(
     req.headers['x-demo-app'] ||
     req.query?.app ||
@@ -40,7 +49,7 @@ function getAppSlug(req) {
 }
 
 function getAppConfigFromRequest(req) {
-  const bodyApp = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body.app : null;
+  const bodyApp = getRequestAppPayload(req);
   return {
     slug: getAppSlug(req),
     name: bodyApp?.name || req.body?.appName || req.query?.appName || null,
@@ -155,6 +164,7 @@ module.exports = {
   getAppStats,
   getConnectionForApp,
   getRequiredApp,
+  isPlainObject,
   requireSelectedDocusignAccount,
   normalizeSlug,
   parseJsonFields,

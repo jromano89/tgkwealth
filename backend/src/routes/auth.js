@@ -80,7 +80,7 @@ function sendPopupResult(req, res, frontendRedirect, payload) {
   </head>
   <body>
     <div class="card">
-      <p>Finishing the Docusign connection. This window should close automatically.</p>
+      <p>Finishing your Docusign connection. This window should close automatically.</p>
     </div>
     <script>
       const payload = ${serializedPayload};

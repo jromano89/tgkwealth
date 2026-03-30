@@ -1,16 +1,15 @@
-const TGK_SELECTED_CLIENT_STORAGE_KEY = 'tgk_selected_client_id';
+const TGK_SELECTED_CONTACT_STORAGE_KEY = 'tgk_selected_client_id';
 const TGK_INVESTOR_TAB_STORAGE_KEY = 'tgk_investor_tab';
 
 function investorApp() {
   return {
+    ...createEnvelopeModalHelpers(),
     tab: 'overview',
     contacts: [],
     selectedClientId: null,
     selectedClient: null,
     accounts: [],
     envelopes: [],
-    envelopeDocModal: null,
-    envelopeHistoryModal: null,
     sidebarCollapsed: false,
     loading: true,
 
@@ -22,7 +21,7 @@ function investorApp() {
         this.setTab(this.restoreTab());
         let requestedClientId = null;
         try {
-          requestedClientId = window.localStorage.getItem(TGK_SELECTED_CLIENT_STORAGE_KEY);
+          requestedClientId = window.localStorage.getItem(TGK_SELECTED_CONTACT_STORAGE_KEY);
         } catch (e) {}
         const initialClient = this.contacts.find(contact => contact.id === requestedClientId) || this.contacts[0];
         if (initialClient) {
@@ -77,7 +76,7 @@ function investorApp() {
     rememberSelectedClient(clientId) {
       if (!clientId) return;
       try {
-        window.localStorage.setItem(TGK_SELECTED_CLIENT_STORAGE_KEY, clientId);
+        window.localStorage.setItem(TGK_SELECTED_CONTACT_STORAGE_KEY, clientId);
       } catch (e) {}
     },
 
@@ -88,6 +87,14 @@ function investorApp() {
 
     get clientName() {
       return this.selectedClient ? `${this.selectedClient.first_name} ${this.selectedClient.last_name}` : '';
+    },
+
+    get portfolioDateLabel() {
+      return new Intl.DateTimeFormat(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }).format(new Date());
     },
 
     get totalPortfolioValue() {
@@ -107,31 +114,6 @@ function investorApp() {
         this.tasks = this.tasks.filter(t => t.id !== id);
       } catch (e) {
         console.error('Failed to dismiss task:', e);
-      }
-    },
-
-    viewEnvelopeDoc(env) {
-      const id = env.docusign_envelope_id || env.id;
-      if (!id) return;
-      const base = TGK_API.baseUrl || '';
-      const app = window.TGK_CONFIG?.appSlug || '';
-      const title = env.metadata?.documentName || env.template_name || 'Document';
-      this.envelopeDocModal = { title, url: `${base}/api/envelopes/${id}/documents/combined/download?app=${app}` };
-    },
-
-    async viewEnvelopeHistory(env) {
-      const id = env.docusign_envelope_id || env.id;
-      if (!id) return;
-      try {
-        const result = await TGK_API.get(`/api/envelopes/${id}/audit-events`);
-        const events = (result.auditEvents || []).map(e => {
-          const fields = {};
-          (e.eventFields || []).forEach(f => { fields[f.name] = f.value; });
-          return fields;
-        }).filter(f => f.Action);
-        this.envelopeHistoryModal = { envelopeId: id, events };
-      } catch (e) {
-        console.error('Failed to load history:', e);
       }
     },
 

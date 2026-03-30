@@ -190,14 +190,14 @@ function docusignSettings() {
         }
         if (accountId === this.session?.accountId) {
           this.showAccountPicker = false;
-          this.notice = `${this.session?.accountName || 'This Docusign account'} is already active.`;
+          this.notice = `${this.session?.accountName || 'This account'} is already active.`;
           return;
         }
         this.savingAccount = true;
         await TGK_API.selectAccount(accountId);
         await this.checkSession({ force: true });
         this.showAccountPicker = false;
-        this.notice = `Saved ${this.session?.accountName || 'the selected Docusign account'} as the active Docusign account.`;
+        this.notice = `Saved ${this.session?.accountName || 'the selected account'} as the active account.`;
       } catch (e) {
         this.error = e.message;
       } finally {
@@ -208,7 +208,7 @@ function docusignSettings() {
     async logout() {
       try {
         await TGK_API.logout();
-        this.notice = 'Docusign account disconnected.';
+        this.notice = 'Docusign disconnected.';
         await this.checkSession({ force: true });
       } catch (e) {
         this.error = e.message;
@@ -216,8 +216,12 @@ function docusignSettings() {
     },
 
     loadRequestedScopes() {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      this.requestedScopesText = stored || DEFAULT_SCOPES;
+      try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        this.requestedScopesText = stored || DEFAULT_SCOPES;
+      } catch (e) {
+        this.requestedScopesText = DEFAULT_SCOPES;
+      }
     },
 
     normalizedScopes() {
@@ -234,9 +238,11 @@ function docusignSettings() {
 
     saveRequestedScopes() {
       this.requestedScopesText = this.normalizedScopes();
-      window.localStorage.setItem(STORAGE_KEY, this.requestedScopesText);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, this.requestedScopesText);
+      } catch (e) {}
       this.showScopesModal = false;
-      this.notice = 'Scopes saved.';
+      this.notice = 'Saved scopes.';
     },
 
     resetRequestedScopes() {
@@ -246,7 +252,7 @@ function docusignSettings() {
     connectionNotice() {
       return this.needsAccountSelection()
         ? 'Docusign connected. Select an account to finish setup.'
-        : 'Docusign account connected.';
+        : 'Docusign connected.';
     },
 
     hasConnection() {

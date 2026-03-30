@@ -17,9 +17,13 @@ The seeded demo is `tgk-wealth` (FINS wealth management).
 ## Working in This Codebase
 
 - Backend routes are app-scoped by slug (via `X-Demo-App` header or `?app=` query param).
-- `backend/src/utils.js` has shared helpers — check there before writing new utilities.
+- `backend/src/repositories/app-data-store.js` owns the app-scoped SQLite queries for profiles, records, tasks, and tracked envelopes.
+- `backend/src/services/app-data-service.js` and `backend/src/services/app-bootstrap-service.js` own business rules; route files should stay thin.
+- `backend/src/utils.js` has shared app/Docusign helpers — check there before writing new utilities.
 - Frontend config flows through `runtime-config.js` -> portal `config.js` -> `window.TGK_CONFIG`.
 - `frontends/shared/js/api-client.js` is the frontend's HTTP layer — all backend calls go through `TGK_API`.
+- `frontends/shared/js/settings-panel.js` owns shared settings state and theme persistence.
+- `frontends/shared/js/shared-ui.js` owns shared settings layout and envelope modal UI.
 - Swagger docs are inline JSDoc in route files, served at `/api-docs`.
 
 ## Commands

@@ -1,35 +1,70 @@
 # TGK Demo Platform
 
-Reusable Docusign Intelligent Agreement Management (IAM) demo platform for Solution Consultants at Docusign.
+Reusable Docusign Intelligent Agreement Management demo platform for Solution Consultants at Docusign.
 
-## Design Decisions
+## Core Ideas
 
-- **Backend is generic and shared.** App-scoped by slug, not hardcoded to any vertical. One deployed instance serves multiple frontends. Currently live at `https://backend-tgk.up.railway.app/`.
-- **Frontends are static HTML.** Alpine.js + Tailwind, no build step. Deployable anywhere that serves files.
-- **CORS is fully open.** Intentional — any frontend origin needs to reach the backend. This is a demo platform, not a production service.
-- **SQLite, not Postgres.** Simplicity over scale. Demo data is small and ephemeral.
-- **No auth on the backend API.** Demo-only. App isolation is by slug, not by access control.
-- **Maestro extension is optional.** Only needed for realistic end-to-end Maestro Data IO workflows. 
+- The backend is shared and app-scoped by slug. One deployed service can support multiple static frontends.
+- Frontends are static HTML with Alpine.js and Tailwind. There is no build step.
+- The Maestro extension is optional and only needed for realistic writeback demos.
+- This is a demo platform, not a production service. Open CORS, SQLite, and simplified auth are intentional trade-offs.
 
-## Structure
+Current seeded demo: `tgk-wealth` (advisor + investor portals).
 
-- `frontends/`: static portals (one directory per vertical)
-- `backend/`: shared API — SQLite, Docusign auth, envelopes, webhooks, CORS proxy
-- `extensions/maestro-tgk/`: optional Maestro Data IO writeback service
+## Architecture
 
-Current demo: `tgk-wealth` (FINS wealth management — advisor + investor portals).
+- `backend/src/routes/`: HTTP entrypoints only. Route files should stay thin.
+- `backend/src/repositories/app-data-store.js`: app-scoped SQLite access for profiles, records, envelopes, and tasks.
+- `backend/src/services/app-data-service.js`: business rules for app data CRUD and tracked envelope updates.
+- `backend/src/services/app-bootstrap-service.js`: bootstrap/reset flow for seeded demo data.
+- `frontends/shared/js/api-client.js`: shared frontend HTTP client.
+- `frontends/shared/js/settings-panel.js`: shared settings state and theme persistence.
+- `frontends/shared/js/shared-ui.js`: shared settings layout and envelope modal UI.
+- `extensions/maestro-tgk/src/backend-client.js`: TGK backend client for the Maestro extension.
 
-## Building a New Frontend
+## Data Model
 
-To add a demo for another vertical:
+Current SQLite tables:
 
-1. Create a new directory under `frontends/` (e.g. `frontends/hls-claims/`)
-2. Pick an app slug (e.g. `hls-claims`)
-3. Point your frontend at the shared backend
-4. Seed demo data via `/api/apps/bootstrap`
-5. Use the existing API contract — no backend changes needed
+- `apps`
+- `docusign_connections`
+- `profiles`
+- `records`
+- `envelopes`
+- `tasks`
+- `webhook_events`
 
-The `tgk-wealth` frontend is a reference implementation.
+`profiles` and `records` are still the public demo API names because the current seed data, portals, and Maestro writeback contract already depend on them.
+
+For future vertical-agnostic growth, treat them conceptually as:
+
+- `profiles`: the primary entity surfaced in the UI. Today that is an investor, but it could also map to a claimant, employee, patient, partner, or case owner.
+- `records`: related business objects attached to the primary entity. Today that is an account, but it could also map to a policy, claim, application, workspace, or intake packet.
+
+Recommendation:
+
+- Keep `profiles` and `records` in the current API until there is a real need for a breaking change.
+- If the platform expands across more verticals, introduce a v2 compatibility layer with more neutral names such as `entities` and `resources` instead of renaming the live schema in place.
+
+## Repository Structure
+
+- `frontends/`: static demo portals
+- `frontends/shared/`: shared scripts, styles, and UI templates
+- `backend/`: shared demo API and SQLite store
+- `extensions/maestro-tgk/`: optional Maestro Data IO service
+- `scripts/`: local utilities for seeding and runtime config generation
+
+## Build a New Frontend
+
+To add another demo:
+
+1. Create a new directory under `frontends/`.
+2. Pick an app slug.
+3. Point the frontend at the shared backend.
+4. Seed demo data with `/api/apps/bootstrap`.
+5. Reuse the existing API contract before changing backend code.
+
+Use `frontends/tgk-wealth/` as the reference implementation.
 
 ## Local Run
 
@@ -44,9 +79,9 @@ cd ..
 
 Required backend envs:
 
-- `Docusign_INTEGRATION_KEY`
-- `Docusign_RSA_PRIVATE_KEY`
-- `Docusign_SECRET_KEY`
+- `DOCUSIGN_INTEGRATION_KEY`
+- `DOCUSIGN_RSA_PRIVATE_KEY`
+- `DOCUSIGN_SECRET_KEY`
 
 2. Start the backend.
 
@@ -60,16 +95,22 @@ npm run dev:backend
 npm run seed:tgk
 ```
 
-4. Serve `frontends/` statically.
+4. Serve `frontends/`.
 
 ```bash
-python3 -m http.server 5500 --directory frontends
+npm run start:frontend
 ```
 
 5. Start the Maestro service only when needed.
 
 ```bash
 npm run start:maestro-extension
+```
+
+6. Run the shared JavaScript syntax check when you change backend, frontend, or extension code.
+
+```bash
+npm run check
 ```
 
 Local URLs:
@@ -82,20 +123,19 @@ Local URLs:
 
 ## Runtime Notes
 
-- Frontends stay static — no server-side rendering
-- SQLite is the demo store
-- Docusign is connected per app, not per browser
-- Frontend config is generated into `frontends/<vertical>/runtime-config.js`
-- `npm run build:frontend-config` is only for deploy-time config, not local dev
-- `npm run start:frontend` is a convenience server for hosts that want a normal web service
+- Frontends stay static.
+- Docusign is connected per app, not per browser.
+- Runtime frontend config is generated into `frontends/<vertical>/runtime-config.js`.
+- `npm run build:frontend-config` is for deploy-time config generation.
+- SQLite is the demo store, and the backend creates the schema on startup.
 
 ## Deploy Notes
 
 Recommended shape:
 
-- one frontend host (static)
-- one backend service (currently Railway)
-- one Maestro service (optional)
+- one static frontend host
+- one backend service
+- one Maestro service when needed
 - one persistent volume for SQLite
 
 Useful envs:
@@ -108,13 +148,13 @@ Keep out of git:
 
 - `backend/.env`
 
-## API
+## API Summary
 
 - `/api/apps/*` — app bootstrap and state
 - `/api/auth/*` — Docusign OAuth/JWT
-- `/api/data/*` — profiles and records (app-scoped)
-- `/api/envelopes/*` — envelope tracking
+- `/api/data/*` — profiles, records, tracked envelopes, and tasks
+- `/api/envelopes/*` — live envelope actions and Docusign-backed document endpoints
 - `/api/webhooks/*` — Docusign Connect
 - `/api/proxy/*` — generic CORS pass-through
 
-Docs served at `/api-docs`.
+Docs are served at `/api-docs`.

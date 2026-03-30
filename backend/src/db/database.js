@@ -110,8 +110,12 @@ function createTables() {
 
     CREATE INDEX IF NOT EXISTS idx_profiles_app_kind ON profiles(app_id, kind);
     CREATE INDEX IF NOT EXISTS idx_records_app_kind ON records(app_id, kind);
+    CREATE INDEX IF NOT EXISTS idx_records_app_profile ON records(app_id, profile_id);
     CREATE INDEX IF NOT EXISTS idx_envelopes_app ON envelopes(app_id);
+    CREATE INDEX IF NOT EXISTS idx_envelopes_app_profile ON envelopes(app_id, profile_id);
+    CREATE INDEX IF NOT EXISTS idx_envelopes_app_record ON envelopes(app_id, record_id);
     CREATE INDEX IF NOT EXISTS idx_envelopes_docusign ON envelopes(docusign_envelope_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_app_profile ON tasks(app_id, profile_id);
   `);
 }
 
