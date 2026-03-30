@@ -207,56 +207,58 @@
       </div>
 
       <!-- Main Grid -->
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div class="bg-white rounded-xl shadow-sm p-5">
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div class="min-w-0 bg-white rounded-xl shadow-sm p-5">
           <h2 class="font-semibold text-base text-navy mb-4">Client Book</h2>
-          <table class="w-full">
-            <thead>
-              <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
-                <th class="text-left pb-3">Client</th>
-                <th class="text-left pb-3">AUM</th>
-                <th class="text-left pb-3">Net Worth</th>
-                <th class="text-left pb-3">Trend</th>
-                <th class="text-left pb-3">Risk Profile</th>
-                <th class="text-left pb-3">Status</th>
-                <th class="w-8 pb-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="c in filteredContacts" :key="c.id">
-                <tr @click="viewClient(c)" class="group border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors">
-                  <td class="py-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.first_name + ' ' + c.last_name)"></div>
-                      <div>
-                        <div class="font-medium text-sm text-navy" x-text="c.first_name + ' ' + c.last_name"></div>
-                        <div class="text-[11px] text-gray-400" x-text="c.metadata?.role || c.type"></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="text-sm font-medium" x-text="fmtMoney(c.metadata?.value)"></td>
-                  <td class="text-sm" x-text="fmtMoney(c.metadata?.netWorth)"></td>
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <svg width="60" height="20" viewBox="0 0 80 24">
-                        <polyline fill="none" :stroke="(c.metadata?.changePct || 0) >= 0 ? '#16a34a' : '#dc2626'" stroke-width="2" stroke-linecap="round" :points="sparklinePath((c.metadata?.changePct || 0) >= 0)" />
-                      </svg>
-                      <span class="text-xs font-medium" :class="(c.metadata?.changePct || 0) >= 0 ? 'text-green-600' : 'text-red-600'" x-text="fmtPct(c.metadata?.changePct)"></span>
-                    </div>
-                  </td>
-                  <td class="text-sm text-gray-600" x-text="c.metadata?.riskProfile || '—'"></td>
-                  <td>
-                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(c.metadata?.status)" x-text="c.metadata?.status || 'active'"></span>
-                  </td>
-                  <td class="text-center">
-                    <button @click.stop="deleteContact(c, $event)" class="w-5 h-5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center" title="Remove">
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                  </td>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[760px]">
+              <thead>
+                <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
+                  <th class="text-left pb-3">Client</th>
+                  <th class="text-left pb-3">AUM</th>
+                  <th class="text-left pb-3">Net Worth</th>
+                  <th class="text-left pb-3">Trend</th>
+                  <th class="text-left pb-3">Risk Profile</th>
+                  <th class="text-left pb-3">Status</th>
+                  <th class="w-8 pb-3"></th>
                 </tr>
-              </template>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                <template x-for="c in filteredContacts" :key="c.id">
+                  <tr @click="viewClient(c)" class="group border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors">
+                    <td class="py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.first_name + ' ' + c.last_name)"></div>
+                        <div>
+                          <div class="font-medium text-sm text-navy" x-text="c.first_name + ' ' + c.last_name"></div>
+                          <div class="text-[11px] text-gray-400" x-text="c.metadata?.role || c.type"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-sm font-medium" x-text="fmtMoney(c.metadata?.value)"></td>
+                    <td class="text-sm" x-text="fmtMoney(c.metadata?.netWorth)"></td>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <svg width="60" height="20" viewBox="0 0 80 24">
+                          <polyline fill="none" :stroke="(c.metadata?.changePct || 0) >= 0 ? '#16a34a' : '#dc2626'" stroke-width="2" stroke-linecap="round" :points="sparklinePath((c.metadata?.changePct || 0) >= 0)" />
+                        </svg>
+                        <span class="text-xs font-medium" :class="(c.metadata?.changePct || 0) >= 0 ? 'text-green-600' : 'text-red-600'" x-text="fmtPct(c.metadata?.changePct)"></span>
+                      </div>
+                    </td>
+                    <td class="text-sm text-gray-600" x-text="c.metadata?.riskProfile || '—'"></td>
+                    <td>
+                      <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(c.metadata?.status)" x-text="c.metadata?.status || 'active'"></span>
+                    </td>
+                    <td class="text-center">
+                      <button @click.stop="deleteContact(c, $event)" class="w-5 h-5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center" title="Remove">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
           <template x-if="filteredContacts.length === 0">
             <div class="rounded-2xl border border-dashed border-gray-300 bg-slate-50 px-6 py-10 text-center">
               <div class="text-sm font-semibold text-navy">No contacts yet</div>
@@ -265,7 +267,7 @@
           </template>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="bg-white rounded-xl shadow-sm p-5 lg:self-start">
           <div class="flex items-center justify-between gap-3 mb-4">
             <div>
               <h2 class="font-semibold text-base text-navy">Recent Activity</h2>
