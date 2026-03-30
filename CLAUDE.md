@@ -17,8 +17,8 @@ The reference demo is `tgk-wealth` (FINS wealth management).
 ## Working in This Codebase
 
 - Backend routes are app-scoped by slug (via `X-Demo-App` header or `?app=` query param).
-- `backend/src/database.js` owns SQLite schema setup and reset logic.
-- `backend/src/data-store.js` owns the app-scoped SQLite queries for users, contacts, tasks, and tracked envelopes.
+- `backend/src/database.js` owns SQLite schema setup and targeted legacy migrations.
+- `backend/src/data-store.js` owns the app-scoped SQLite queries for users, contacts, and tracked envelopes.
 - `backend/src/services/app-data-service.js` owns business rules; route files should stay thin.
 - `backend/src/utils.js` has shared app/Docusign helpers — check there before writing new utilities.
 - Each app gets a persisted default advisor user (`Gordon Gecko`) automatically. Contacts start empty unless created through `/api/data/*` or Maestro.

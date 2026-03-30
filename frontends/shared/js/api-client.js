@@ -50,6 +50,7 @@
         ...data,
         title: user.title || data.title || ''
       },
+      tasks: Array.isArray(data.tasks) ? data.tasks : [],
       created_at: user.created_at
     };
   }
@@ -428,7 +429,7 @@
         ...mapContactToView(contact),
         accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
         envelopes: (contact.envelopes || []).map(mapEnvelope),
-        tasks: contact.tasks || []
+        tasks: Array.isArray(contact.tasks) ? contact.tasks : (Array.isArray(contact.data?.tasks) ? contact.data.tasks : [])
       };
     },
     deleteContact(id) {

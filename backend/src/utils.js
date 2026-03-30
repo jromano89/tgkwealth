@@ -170,18 +170,19 @@ function clearAppConnection(db, appId) {
   db.prepare('DELETE FROM docusign_connections WHERE app_id = ?').run(appId);
 }
 
-function asyncRoute(handler) {
-  return async function handleRoute(req, res) {
-    try {
-      await handler(req, res);
-    } catch (error) {
-      res.status(error.statusCode || 500).json({ error: error.message });
-    }
+function sendError(res, error) {
+  res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+}
+
+function route(handler) {
+  return function handleRoute(req, res, next) {
+    Promise.resolve()
+      .then(() => handler(req, res, next))
+      .catch((error) => sendError(res, error));
   };
 }
 
 module.exports = {
-  asyncRoute,
   clearAppConnection,
   createError,
   getAppBySlug,
@@ -192,6 +193,8 @@ module.exports = {
   requireSelectedDocusignAccount,
   normalizeSlug,
   parseJsonFields,
+  route,
+  sendError,
   serializeJson,
   ensureDefaultUser,
   upsertApp,

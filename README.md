@@ -14,8 +14,8 @@ Current reference demo: `tgk-wealth` (advisor + investor portals).
 ## Architecture
 
 - `backend/src/routes/`: HTTP entrypoints only. Route files should stay thin.
-- `backend/src/database.js`: SQLite schema setup and reset logic.
-- `backend/src/data-store.js`: app-scoped SQLite access for users, contacts, envelopes, and tasks.
+- `backend/src/database.js`: SQLite schema setup plus targeted legacy migrations.
+- `backend/src/data-store.js`: app-scoped SQLite access for users, contacts, and envelopes.
 - `backend/src/services/app-data-service.js`: business rules for app data CRUD and tracked envelope updates.
 - `frontends/shared/js/api-client.js`: shared frontend HTTP client.
 - `frontends/shared/js/settings-panel.js`: shared settings state and theme persistence.
@@ -31,14 +31,12 @@ Current SQLite tables:
 - `contacts`
 - `docusign_connections`
 - `envelopes`
-- `tasks`
 
 Canonical model:
 
-- `users`: internal operators such as advisors. Each app gets one default user, `Gordon Gecko`, the first time it is used.
-- `contacts`: external people or organizations associated to a user. Frontend-specific account data lives inside `contacts.data.accounts`.
+- `users`: internal operators such as advisors. Each app gets one default user, `Gordon Gecko`, the first time it is used. Advisor-only tasks can live inside `users.data.tasks`.
+- `contacts`: external people or organizations associated to a user. Frontend-specific account data lives inside `contacts.data.accounts`, and lightweight contact tasks live inside `contacts.data.tasks`.
 - `envelopes`: tracked DocuSign envelopes linked to a contact.
-- `tasks`: lightweight contact tasks.
 
 The backend does not seed demo contacts anymore. New workspaces start with the advisor user only.
 
@@ -119,7 +117,7 @@ Local URLs:
 - The backend does not use cookie sessions.
 - Runtime frontend config is generated into `frontends/<vertical>/runtime-config.js`.
 - `npm run build:frontend-config` is for deploy-time config generation.
-- SQLite is the demo store, and the backend creates or resets the lean CRM schema on startup when the local table shape is stale.
+- SQLite is the demo store, and the backend applies the current lean CRM schema plus a small set of targeted legacy migrations on startup.
 
 ## Deploy Notes
 
@@ -143,7 +141,7 @@ Keep out of git:
 ## API Summary
 
 - `/api/auth/*` — Docusign OAuth/JWT
-- `/api/data/*` — users, contacts, tracked envelopes, and tasks
+- `/api/data/*` — users, contacts, tracked envelopes, plus convenience task create/delete helpers
 - `/api/envelopes/*` — Docusign-backed audit history and combined document downloads
 - `/api/webhooks/*` — Docusign Connect sink (discard-only)
 - `/api/proxy` — generic POST-based CORS pass-through

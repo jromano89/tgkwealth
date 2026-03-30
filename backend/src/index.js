@@ -4,12 +4,13 @@ const { getDb } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const localUrl = `http://localhost:${PORT}`;
+const LOCAL_URL = `http://localhost:${PORT}`;
 
-// Railway terminates TLS at the edge, so trust the first proxy hop for req.protocol/hostname.
-app.set('trust proxy', 1);
+function isDocusignConfigured() {
+  return Boolean(process.env.DOCUSIGN_INTEGRATION_KEY && process.env.DOCUSIGN_RSA_PRIVATE_KEY);
+}
 
-app.use((req, res, next) => {
+function setOpenCorsHeaders(req, res, next) {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Demo-App');
   res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -18,13 +19,17 @@ app.use((req, res, next) => {
     return res.sendStatus(204);
   }
 
-  next();
-});
+  return next();
+}
+
+// Railway terminates TLS at the edge, so trust the first proxy hop for req.protocol/hostname.
+app.set('trust proxy', 1);
+app.use(setOpenCorsHeaders);
 
 // Connect payloads can arrive outside the normal JSON parser, so mount the sink first.
 app.use('/api/webhooks', require('./routes/webhooks'));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 getDb();
 
 app.get('/', (req, res) => {
@@ -54,7 +59,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    docusignConfigured: !!(process.env.DOCUSIGN_INTEGRATION_KEY && process.env.DOCUSIGN_RSA_PRIVATE_KEY)
+    docusignConfigured: isDocusignConfigured()
   });
 });
 
@@ -64,6 +69,6 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`TGK Demo Backend running on ${localUrl}`);
-  console.log(`Docusign configured: ${!!(process.env.DOCUSIGN_INTEGRATION_KEY && process.env.DOCUSIGN_RSA_PRIVATE_KEY)}`);
+  console.log(`TGK Demo Backend running on ${LOCAL_URL}`);
+  console.log(`Docusign configured: ${isDocusignConfigured()}`);
 });

@@ -2,63 +2,61 @@ const express = require('express');
 const { getDb } = require('../database');
 const { getAccessToken } = require('../services/docusign-auth');
 const {
-  asyncRoute,
   createError,
   getConnectionForApp,
   getRequiredApp,
   isPlainObject,
-  requireSelectedDocusignAccount
+  requireSelectedDocusignAccount,
+  route
 } = require('../utils');
 
 const router = express.Router();
-const SUPPORTED_AUTH_MODES = new Set(['none', 'bearer', 'docusign']);
-const BLOCKED_PROXY_HEADERS = new Set([
-  'connection',
-  'content-length',
-  'cookie',
-  'host',
-  'origin',
-  'referer',
-  'transfer-encoding'
-]);
+const AUTH_MODES = new Set(['none', 'bearer', 'docusign']);
+const BLOCKED_HEADERS = new Set(['connection', 'content-length', 'cookie', 'host', 'origin', 'referer', 'transfer-encoding']);
 
-router.post('/', asyncRoute(async (req, res) => {
-  const proxyRequest = readProxyRequest(req);
-  const authMode = getAuthMode(proxyRequest);
-  const docusign = authMode === 'docusign' ? getDocusignSession(req) : null;
-  const method = getUpstreamMethod(proxyRequest);
-  const headers = await buildOutboundHeaders(req.headers.accept, authMode, proxyRequest, docusign);
+router.post('/', route(async (req, res) => {
+  const proxyRequest = normalizeProxyRequest(req.body);
+  const docusign = proxyRequest.authMode === 'docusign' ? getDocusignSession(req) : null;
+  const headers = await buildHeaders(req.headers.accept, proxyRequest, docusign);
   const response = await fetch(buildTargetUrl(proxyRequest, docusign), {
-    method,
+    method: proxyRequest.method,
     headers,
-    body: ['GET', 'HEAD'].includes(method) ? undefined : getOutboundBody(proxyRequest, headers)
+    body: ['GET', 'HEAD'].includes(proxyRequest.method) ? undefined : serializeBody(proxyRequest.body, headers)
   });
 
-  await forwardResponse(response, res);
+  await sendProxyResponse(response, res);
 }));
 
-function readProxyRequest(req) {
-  if (!isPlainObject(req.body)) {
+function normalizeProxyRequest(body) {
+  if (!isPlainObject(body)) {
     throw createError(400, 'Proxy requests must send a JSON object.');
   }
 
-  return req.body;
-}
-
-function getAuthMode(proxyRequest) {
-  const authMode = String(proxyRequest.authMode || 'none').toLowerCase();
-  if (!SUPPORTED_AUTH_MODES.has(authMode)) {
+  const authMode = String(body.authMode || 'none').toLowerCase();
+  if (!AUTH_MODES.has(authMode)) {
     throw createError(400, `Unsupported authMode: ${authMode}`);
   }
-  return authMode;
-}
 
-function getUpstreamMethod(proxyRequest) {
-  const method = String(proxyRequest.method || 'GET').toUpperCase();
+  const method = String(body.method || 'GET').toUpperCase();
   if (!/^[A-Z]+$/.test(method)) {
     throw createError(400, `Unsupported method: ${method}`);
   }
-  return method;
+
+  if (!body.url && !body.path) {
+    throw createError(400, 'Missing proxy target. Provide "url" or "path".');
+  }
+
+  return {
+    method,
+    authMode,
+    url: body.url,
+    path: body.path,
+    baseUrl: body.baseUrl || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi',
+    bearerToken: body.bearerToken,
+    headers: isPlainObject(body.headers) ? body.headers : {},
+    query: isPlainObject(body.query) ? body.query : null,
+    body: body.body
+  };
 }
 
 function getDocusignSession(req) {
@@ -71,79 +69,60 @@ function getDocusignSession(req) {
   };
 }
 
-function ensureTrailingSlash(url) {
-  return url.endsWith('/') ? url : `${url}/`;
+function replaceDocusignPlaceholders(value, docusign) {
+  return docusign && typeof value === 'string'
+    ? value.replace(/\{accountId\}/g, docusign.accountId || '')
+    : value;
 }
 
-function applyDocusignPlaceholders(value, docusign) {
-  if (!docusign || typeof value !== 'string') {
-    return value;
-  }
-
-  return value.replace(/\{accountId\}/g, docusign.accountId || '');
-}
-
-function appendQueryValue(searchParams, key, value) {
-  if (Array.isArray(value)) {
-    value.forEach((item) => searchParams.append(key, item));
+function appendQuery(url, query) {
+  if (!query) {
     return;
   }
 
-  searchParams.append(key, value);
-}
-
-function appendQueryParams(url, query) {
-  if (!isPlainObject(query)) {
-    return;
-  }
-
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined) {
-      appendQueryValue(url.searchParams, key, value);
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined) {
+      return;
     }
-  }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => url.searchParams.append(key, item));
+      return;
+    }
+
+    url.searchParams.append(key, value);
+  });
 }
 
 function buildTargetUrl(proxyRequest, docusign) {
-  const rawUrl = proxyRequest.url;
-  const rawPath = proxyRequest.path;
-
-  if (!rawUrl && !rawPath) {
-    throw createError(400, 'Missing proxy target. Provide "url" or "path".');
-  }
-
-  const url = rawUrl
-    ? new URL(applyDocusignPlaceholders(rawUrl, docusign))
+  const base = replaceDocusignPlaceholders(proxyRequest.baseUrl, docusign);
+  const target = proxyRequest.url
+    ? new URL(replaceDocusignPlaceholders(proxyRequest.url, docusign))
     : new URL(
-      applyDocusignPlaceholders(rawPath, docusign),
-      ensureTrailingSlash(applyDocusignPlaceholders(
-        proxyRequest.baseUrl || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi',
-        docusign
-      ))
+      replaceDocusignPlaceholders(proxyRequest.path, docusign),
+      base.endsWith('/') ? base : `${base}/`
     );
 
-  appendQueryParams(url, proxyRequest.query);
-  return url.toString();
+  appendQuery(target, proxyRequest.query);
+  return target.toString();
 }
 
 function setRequestedHeaders(headers, requestedHeaders) {
-  if (!isPlainObject(requestedHeaders)) {
-    return;
-  }
-
-  for (const [key, value] of Object.entries(requestedHeaders)) {
-    if (!key || value === undefined || BLOCKED_PROXY_HEADERS.has(key.toLowerCase())) {
-      continue;
+  Object.entries(requestedHeaders).forEach(([key, value]) => {
+    if (!key || value === undefined || BLOCKED_HEADERS.has(key.toLowerCase())) {
+      return;
     }
+
     headers[key] = value;
-  }
+  });
 }
 
-function hasContentType(headers) {
-  return Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+function hasHeader(headers, name) {
+  const expected = String(name || '').toLowerCase();
+  return Object.keys(headers).some((key) => key.toLowerCase() === expected);
 }
 
-async function buildOutboundHeaders(acceptHeader, authMode, proxyRequest, docusign) {
+async function buildHeaders(acceptHeader, proxyRequest, docusign) {
   const headers = {};
 
   if (acceptHeader) {
@@ -154,20 +133,20 @@ async function buildOutboundHeaders(acceptHeader, authMode, proxyRequest, docusi
 
   if (
     proxyRequest.body !== undefined
-    && !hasContentType(headers)
+    && !hasHeader(headers, 'content-type')
     && (isPlainObject(proxyRequest.body) || Array.isArray(proxyRequest.body))
   ) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (authMode === 'bearer') {
+  if (proxyRequest.authMode === 'bearer') {
     if (!proxyRequest.bearerToken) {
       throw createError(400, 'Missing bearerToken for authMode=bearer');
     }
     headers.Authorization = `Bearer ${proxyRequest.bearerToken}`;
   }
 
-  if (authMode === 'docusign') {
+  if (proxyRequest.authMode === 'docusign') {
     headers.Authorization = `Bearer ${await getAccessToken(docusign.userId, docusign.accountId)}`;
   }
 
@@ -178,6 +157,7 @@ function serializeBody(body, headers) {
   if (body === undefined || body === null) {
     return undefined;
   }
+
   if (typeof body === 'string' || body instanceof Buffer) {
     return body;
   }
@@ -188,18 +168,14 @@ function serializeBody(body, headers) {
   if (contentType.includes('application/x-www-form-urlencoded')) {
     return new URLSearchParams(body).toString();
   }
-  if (contentType.includes('text/')) {
+  if (contentType.startsWith('text/')) {
     return String(body);
   }
 
   return JSON.stringify(body);
 }
 
-function getOutboundBody(proxyRequest, headers) {
-  return serializeBody(proxyRequest.body, headers);
-}
-
-async function forwardResponse(response, res) {
+async function sendProxyResponse(response, res) {
   const contentType = response.headers.get('content-type');
   const cacheControl = response.headers.get('cache-control');
   const contentDisposition = response.headers.get('content-disposition');
@@ -219,12 +195,11 @@ async function forwardResponse(response, res) {
   if (contentType && contentType.includes('application/json')) {
     return res.json(await response.json());
   }
-
   if (contentType && (contentType.startsWith('text/') || contentType.includes('xml') || contentType.includes('javascript'))) {
     return res.send(await response.text());
   }
 
-  res.send(Buffer.from(await response.arrayBuffer()));
+  return res.send(Buffer.from(await response.arrayBuffer()));
 }
 
 module.exports = router;

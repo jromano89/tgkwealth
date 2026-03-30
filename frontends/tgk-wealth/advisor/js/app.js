@@ -3,8 +3,125 @@ const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
+const RECENT_ACTIVITY_TEMPLATES = [
+  { tone: 'emerald', action: 'Portfolio review queued' },
+  { tone: 'blue', action: 'Documents ready for signature' },
+  { tone: 'amber', action: 'Suitability refresh due soon' },
+  { tone: 'violet', action: 'Household snapshot updated' }
+];
 
-function formatNavigatorDate(dateString, options = {}) {
+const ADVISOR_DOCUMENT_CONTACT_FALLBACKS = [
+  { first_name: 'Amelia', last_name: 'Hart', metadata: { riskProfile: 'Balanced' } },
+  { first_name: 'Daniel', last_name: 'Kim', metadata: { riskProfile: 'Moderate Growth' } },
+  { first_name: 'Priya', last_name: 'Shah', metadata: { riskProfile: 'Growth' } },
+  { first_name: 'Marcus', last_name: 'Reed', metadata: { riskProfile: 'Moderate' } },
+  { first_name: 'Sofia', last_name: 'Alvarez', metadata: { riskProfile: 'Conservative' } }
+];
+
+const ADVISOR_DOCUMENT_INSIGHT_TEMPLATES = [
+  {
+    id: 'fee-schedule-renewal',
+    clientIndex: 0,
+    agreement: 'Advisory Fee Schedule',
+    category: 'Renewal',
+    priority: 'High',
+    tone: 'amber',
+    dueAt: '2026-04-18',
+    secondaryDateLabel: 'Notice deadline',
+    secondaryDate: '2026-04-07',
+    aiSignal: 'Auto-renewal + fee escalation',
+    summary: 'Pricing rolls forward automatically unless notice is sent before the annual renewal window closes.',
+    impact: 'The household could shift into a higher fee tier without an active review.',
+    extractedClause: 'The schedule renews for successive one-year terms unless written notice is delivered at least 30 days before renewal.',
+    nextStep: 'Confirm the intended fee tier and prepare notice if any pricing adjustment is needed.',
+    detailNotes: [
+      'Reconcile the current AUM band against the renewal schedule.',
+      'Coordinate any pricing notice with operations before the objection window closes.'
+    ]
+  },
+  {
+    id: 'lending-indemnity',
+    clientIndex: 1,
+    agreement: 'Securities-Backed Lending Addendum',
+    category: 'Clause risk',
+    priority: 'High',
+    tone: 'red',
+    dueAt: '2026-04-11',
+    secondaryDateLabel: 'Review with counsel',
+    secondaryDate: '2026-04-04',
+    aiSignal: 'Broad indemnity carve-out missing',
+    summary: 'The lender indemnity appears broader than the firm standard and does not clearly exclude lender negligence.',
+    impact: 'If a dispute arises, the client may absorb losses that would normally stay with the lender.',
+    extractedClause: 'Client agrees to indemnify lender for all losses arising out of the credit facility, without a negligence or willful misconduct carve-out.',
+    nextStep: 'Escalate to legal and confirm whether the current client package should be re-papered.',
+    detailNotes: [
+      'Compare against the latest house form before the facility is renewed.',
+      'Confirm whether any negotiated side letter narrows the indemnity scope.'
+    ]
+  },
+  {
+    id: 'private-fund-side-letter',
+    clientIndex: 2,
+    agreement: 'Private Fund Side Letter',
+    category: 'Expiration',
+    priority: 'Medium',
+    tone: 'blue',
+    dueAt: '2026-05-09',
+    secondaryDateLabel: 'Election window',
+    secondaryDate: '2026-04-29',
+    aiSignal: 'MFN election period closes soon',
+    summary: 'The client has a narrow window to elect enhanced rights under the fund side letter.',
+    impact: 'Missing the election date could leave the client on less favorable reporting and liquidity terms.',
+    extractedClause: 'Most-favored nation elections must be exercised within ten business days after delivery of the annual side letter package.',
+    nextStep: 'Review the available elections with the client and confirm whether any enhanced rights should be claimed.',
+    detailNotes: [
+      'Coordinate with fund counsel on the current election package.',
+      'Capture any election in the client service checklist once submitted.'
+    ]
+  },
+  {
+    id: 'trust-assignment-consent',
+    clientIndex: 3,
+    agreement: 'Trust Services Engagement Letter',
+    category: 'Consent',
+    priority: 'Medium',
+    tone: 'violet',
+    dueAt: '2026-04-24',
+    secondaryDateLabel: 'Operational handoff',
+    secondaryDate: '2026-04-16',
+    aiSignal: 'Assignment consent required',
+    summary: 'The engagement letter requires written client consent before any advisor-of-record or servicing entity change.',
+    impact: 'Operational changes could stall if the consent packet is not prepared early.',
+    extractedClause: 'Neither party may assign this engagement without prior written consent from the other party, which may not be unreasonably withheld.',
+    nextStep: 'Prepare a consent packet if the relationship is moving to a new servicing team this quarter.',
+    detailNotes: [
+      'Confirm whether any internal servicing move is already planned.',
+      'Include trust officer and client signatures in the same packet if reassignment proceeds.'
+    ]
+  },
+  {
+    id: 'hedging-termination-trigger',
+    clientIndex: 4,
+    agreement: 'Concentrated Position Hedging Agreement',
+    category: 'Clause risk',
+    priority: 'High',
+    tone: 'red',
+    dueAt: '2026-04-15',
+    secondaryDateLabel: 'Portfolio review',
+    secondaryDate: '2026-04-08',
+    aiSignal: 'Early termination trigger',
+    summary: 'The hedge can be unwound early if the collateral position drops past a short NAV threshold.',
+    impact: 'An early unwind could leave the client re-exposed to a concentrated single-name position.',
+    extractedClause: 'Counterparty may terminate the hedge upon ten days’ notice if collateral value declines below the minimum support threshold.',
+    nextStep: 'Review the current collateral buffer and decide whether the hedge should be resized or re-papered.',
+    detailNotes: [
+      'Validate the latest collateral mark before the next investment committee review.',
+      'Consider whether a secondary hedge would reduce concentration risk.'
+    ]
+  }
+];
+
+function formatDisplayDate(dateString, options = {}) {
   if (!dateString) return '';
   const parsed = new Date(dateString);
   if (Number.isNaN(parsed.getTime())) return '';
@@ -17,240 +134,56 @@ function formatNavigatorDate(dateString, options = {}) {
   }).format(parsed);
 }
 
-function formatNavigatorMoney(amount, currencyCode = 'USD') {
-  if (amount == null) return 'Not mapped';
+function daysUntil(dateString) {
+  if (!dateString) return null;
+  const target = new Date(dateString);
+  if (Number.isNaN(target.getTime())) return null;
 
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currencyCode,
-      maximumFractionDigits: 0
-    }).format(amount);
-  } catch (error) {
-    return `$${Math.round(amount).toLocaleString()}`;
-  }
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  return Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86400000);
 }
 
-function getNestedNavigatorValue(source, path) {
-  if (!source || !path) return undefined;
-
-  return String(path)
-    .split('.')
-    .reduce((current, key) => (current && current[key] !== undefined ? current[key] : undefined), source);
+function formatDeadlineLabel(dateString) {
+  const delta = daysUntil(dateString);
+  if (delta == null) return 'No deadline';
+  if (delta === 0) return 'Due today';
+  if (delta === 1) return 'Due tomorrow';
+  if (delta > 1) return `Due in ${delta} days`;
+  if (delta === -1) return '1 day overdue';
+  return `${Math.abs(delta)} days overdue`;
 }
 
-function pickNavigatorValue(source, candidates) {
-  for (const candidate of candidates) {
-    const value = getNestedNavigatorValue(source, candidate);
-    if (value !== undefined && value !== null && value !== '') {
-      return value;
-    }
-  }
-  return undefined;
+function resolveInsightContact(contacts, index) {
+  return contacts[index] || ADVISOR_DOCUMENT_CONTACT_FALLBACKS[index] || ADVISOR_DOCUMENT_CONTACT_FALLBACKS[0];
 }
 
-function humanizeNavigatorLabel(value) {
-  return String(value || '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizeNavigatorStatus(status) {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (!normalized) return 'active';
-  if (['active', 'signed', 'complete', 'completed', 'executed', 'in_force'].includes(normalized)) return 'active';
-  if (['review', 'under_review', 'draft', 'pending', 'pending_review', 'in_review'].includes(normalized)) return 'review';
-  if (['expiring', 'expired', 'terminated', 'voided'].includes(normalized)) return 'expiring';
-  return normalized.replace(/_/g, ' ');
-}
-
-function normalizeNavigatorParty(party, index) {
-  if (!party || typeof party !== 'object') {
-    return null;
-  }
-
-  const preferredName = pickNavigatorValue(party, [
-    'preferred_name',
-    'preferredName',
-    'display_name',
-    'displayName',
-    'name',
-    'organization_name',
-    'organizationName',
-    'legal_name',
-    'legalName'
-  ]);
-  const agreementName = pickNavigatorValue(party, [
-    'name_in_agreement',
-    'nameInAgreement',
-    'agreement_name',
-    'agreementName',
-    'name'
-  ]);
-
-  if (!preferredName && !agreementName) {
-    return null;
-  }
-
+function buildDocumentInsight(template, contacts, currentUser) {
+  const contact = resolveInsightContact(contacts, template.clientIndex);
   return {
-    id: pickNavigatorValue(party, ['id', 'party_id', 'partyId']) || `party-${index}`,
-    preferred_name: preferredName || agreementName,
-    name_in_agreement: agreementName || preferredName
+    ...template,
+    clientId: contact.id || null,
+    clientName: `${contact.first_name} ${contact.last_name}`,
+    clientRiskProfile: contact.metadata?.riskProfile || 'Balanced',
+    ownerName: currentUser?.name || 'Gordon Gecko',
+    dueLabel: formatDeadlineLabel(template.dueAt),
+    dueDateLabel: formatDisplayDate(template.dueAt, { month: 'short', day: 'numeric' }),
+    secondaryDateValue: formatDisplayDate(template.secondaryDate, { month: 'short', day: 'numeric' })
   };
 }
 
-function normalizeNavigatorParties(agreement) {
-  const rawParties =
-    pickNavigatorValue(agreement, ['parties', 'counterparties', 'participants', 'owners'])
-    || [];
-
-  if (!Array.isArray(rawParties)) {
-    return [];
-  }
-
-  return rawParties
-    .map((party, index) => normalizeNavigatorParty(party, index))
-    .filter(Boolean);
-}
-
-function buildNavigatorSummary(agreement, category, sourceName) {
-  const explicitSummary = pickNavigatorValue(agreement, ['summary', 'description', 'abstract']);
-  if (explicitSummary) {
-    return explicitSummary;
-  }
-
-  const normalizedCategory = category || 'Agreement';
-  const normalizedSource = sourceName || 'Navigator';
-  return `${normalizedCategory} indexed from ${normalizedSource}.`;
-}
-
-function normalizeNavigatorAgreement(agreement, index) {
-  if (!agreement || typeof agreement !== 'object') {
-    return null;
-  }
-
-  const sourceName = pickNavigatorValue(agreement, [
-    'source_name',
-    'sourceName',
-    'source.name',
-    'source'
-  ]) || 'Navigator';
-  const category = humanizeNavigatorLabel(pickNavigatorValue(agreement, [
-    'category',
-    'agreement_category',
-    'agreementCategory',
-    'document_type',
-    'documentType',
-    'type'
-  ]) || 'Agreement');
-  const primaryStatus = normalizeNavigatorStatus(pickNavigatorValue(agreement, ['status', 'agreement_status', 'agreementStatus']));
-  const reviewStatus = normalizeNavigatorStatus(pickNavigatorValue(agreement, ['review_status', 'reviewStatus']));
-  const provisions = {
-    effective_date: pickNavigatorValue(agreement, [
-      'provisions.effective_date',
-      'provisions.effectiveDate',
-      'effective_date',
-      'effectiveDate',
-      'start_date',
-      'startDate'
-    ]),
-    expiration_date: pickNavigatorValue(agreement, [
-      'provisions.expiration_date',
-      'provisions.expirationDate',
-      'expiration_date',
-      'expirationDate',
-      'end_date',
-      'endDate'
-    ]),
-    governing_law: pickNavigatorValue(agreement, [
-      'provisions.governing_law',
-      'provisions.governingLaw',
-      'governing_law',
-      'governingLaw'
-    ]),
-    renewal_type: pickNavigatorValue(agreement, [
-      'provisions.renewal_type',
-      'provisions.renewalType',
-      'renewal_type',
-      'renewalType'
-    ]),
-    termination_period_for_convenience: pickNavigatorValue(agreement, [
-      'provisions.termination_period_for_convenience',
-      'provisions.terminationPeriodForConvenience',
-      'termination_period_for_convenience',
-      'terminationPeriodForConvenience'
-    ]),
-    annual_agreement_value: pickNavigatorValue(agreement, [
-      'provisions.annual_agreement_value',
-      'provisions.annualAgreementValue',
-      'annual_agreement_value',
-      'annualAgreementValue',
-      'agreement_value.amount',
-      'agreementValue.amount',
-      'value.amount'
-    ]),
-    annual_agreement_value_currency_code: pickNavigatorValue(agreement, [
-      'provisions.annual_agreement_value_currency_code',
-      'provisions.annualAgreementValueCurrencyCode',
-      'annual_agreement_value_currency_code',
-      'annualAgreementValueCurrencyCode',
-      'agreement_value.currency_code',
-      'agreementValue.currencyCode',
-      'value.currency_code',
-      'value.currencyCode'
-    ]) || 'USD'
-  };
-  const parentAgreementId = pickNavigatorValue(agreement, [
-    'related_agreement_documents.parent_agreement_document_id',
-    'relatedAgreementDocuments.parentAgreementDocumentId',
-    'parent_agreement_document_id',
-    'parentAgreementDocumentId'
-  ]);
-  const title = pickNavigatorValue(agreement, [
-    'title',
-    'name',
-    'agreement_name',
-    'agreementName',
-    'file_name',
-    'fileName'
-  ]) || `Agreement ${index + 1}`;
-
-  return {
-    id: pickNavigatorValue(agreement, ['id', 'agreement_id', 'agreementId']) || `navigator-${index}`,
-    title,
-    file_name: pickNavigatorValue(agreement, ['file_name', 'fileName']),
-    type: humanizeNavigatorLabel(pickNavigatorValue(agreement, ['type', 'agreement_type', 'agreementType']) || 'agreement'),
-    category,
-    summary: buildNavigatorSummary(agreement, category, sourceName),
-    status: reviewStatus === 'review' ? reviewStatus : primaryStatus,
-    parties: normalizeNavigatorParties(agreement),
-    provisions,
-    related_agreement_documents: parentAgreementId
-      ? { parent_agreement_document_id: parentAgreementId }
-      : {},
-    source_name: sourceName,
-    source_id: pickNavigatorValue(agreement, ['source_id', 'sourceId', 'id']),
-    source_account_id: pickNavigatorValue(agreement, ['source_account_id', 'sourceAccountId', 'account_id', 'accountId']),
-    metadata: {
-      created_at: pickNavigatorValue(agreement, ['metadata.created_at', 'metadata.createdAt', 'created_at', 'createdAt']),
-      modified_at: pickNavigatorValue(agreement, ['metadata.modified_at', 'metadata.modifiedAt', 'updated_at', 'updatedAt', 'modified_at', 'modifiedAt'])
-    },
-    is_live: true,
-    raw: agreement
-  };
-}
-
-function getBrandingAppName() {
-  return String(window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || 'TGK Wealth').trim() || 'TGK Wealth';
+function buildDocumentInsights(contacts, currentUser) {
+  return ADVISOR_DOCUMENT_INSIGHT_TEMPLATES
+    .map((template) => buildDocumentInsight(template, contacts, currentUser))
+    .sort((left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime());
 }
 
 function advisorApp() {
   return {
+    ...createBrandingState(),
     ...createEnvelopeModalHelpers(),
     view: 'dashboard',
-    brandingAppName: getBrandingAppName(),
     currentUser: null,
     contacts: [],
     selectedContact: null,
@@ -269,33 +202,14 @@ function advisorApp() {
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
     loading: true,
-    navigatorLiveAgreements: [],
-    navigatorSearchQuery: '',
-    navigatorStatusFilter: 'all',
-    navigatorOpenAgreementId: null,
-    navigatorConnectionLoading: false,
-    navigatorConnected: false,
-    navigatorAccountName: '',
-    navigatorAccountId: '',
-    navigatorLiveLoading: false,
-    navigatorLiveError: null,
-    navigatorLastSyncAt: '',
-    _navigatorLoadPromise: null,
+    documentInsightOpenId: null,
     _maestroCreationPollTimer: null,
     _maestroRedirectTimer: null,
     _maestroTrackingStarted: false,
     _maestroKnownContactIds: new Set(),
 
-    syncBranding(detail = {}) {
-      this.brandingAppName = String(detail.appName || getBrandingAppName()).trim() || 'TGK Wealth';
-    },
-
-    get brandingInitial() {
-      return ((this.brandingAppName || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
-    },
-
     async init() {
-      window.addEventListener('tgk:branding-change', (event) => this.syncBranding(event.detail || {}));
+      this.initializeBrandingState();
       try {
         const users = await TGK_API.getUsers();
         this.currentUser = users[0] || null;
@@ -311,16 +225,11 @@ function advisorApp() {
     setView(nextView) {
       const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
       const resolvedView = allowedViews.has(nextView) ? nextView : 'dashboard';
-      const enteringDocuments = resolvedView === 'documents' && this.view !== 'documents';
 
       this.view = resolvedView;
 
       if (resolvedView !== 'documents') {
-        this.closeNavigatorAgreementModal();
-      }
-
-      if (enteringDocuments) {
-        this.loadNavigatorConnection();
+        this.closeDocumentInsight();
       }
     },
 
@@ -346,6 +255,123 @@ function advisorApp() {
 
     get complianceAlerts() {
       return this.contacts.filter(c => c.tags?.includes('review-needed')).length;
+    },
+
+    get documentInsights() {
+      return buildDocumentInsights(this.contacts, this.currentUser);
+    },
+
+    get documentSummaryCards() {
+      const insights = this.documentInsights;
+      const renewals = insights.filter((item) => ['Renewal', 'Expiration'].includes(item.category));
+      const clauseAlerts = insights.filter((item) => item.category === 'Clause risk');
+      const impactedClients = new Set(insights.map((item) => item.clientName));
+      const nextDeadline = insights[0];
+
+      return [
+        {
+          label: 'Upcoming renewals',
+          value: String(renewals.length),
+          detail: 'Renewal and expiration windows in the next cycle',
+          tone: 'amber'
+        },
+        {
+          label: 'Clause alerts',
+          value: String(clauseAlerts.length),
+          detail: 'Non-standard terms worth escalating',
+          tone: 'red'
+        },
+        {
+          label: 'Clients impacted',
+          value: String(impactedClients.size),
+          detail: 'Households with at least one agreement action',
+          tone: 'blue'
+        },
+        {
+          label: 'Next deadline',
+          value: nextDeadline ? nextDeadline.dueDateLabel : 'None',
+          detail: nextDeadline ? nextDeadline.aiSignal : 'No active review windows',
+          tone: 'emerald'
+        }
+      ];
+    },
+
+    get documentRenewalTimeline() {
+      return this.documentInsights.filter((item) => ['Renewal', 'Expiration'].includes(item.category)).slice(0, 4);
+    },
+
+    get documentClauseSignals() {
+      return this.documentInsights.filter((item) => item.aiSignal).slice(0, 3);
+    },
+
+    get openDocumentInsight() {
+      return this.documentInsights.find((item) => item.id === this.documentInsightOpenId) || null;
+    },
+
+    get recentActivities() {
+      return this.contacts.slice(0, 4).map((contact, index) => {
+        const template = RECENT_ACTIVITY_TEMPLATES[index % RECENT_ACTIVITY_TEMPLATES.length];
+        return {
+          id: `activity-${contact.id}`,
+          contact: `${contact.first_name} ${contact.last_name}`,
+          action: template.action,
+          tone: template.tone,
+          when: formatDisplayDate(contact.updated_at || contact.created_at, {
+            month: 'short',
+            day: 'numeric'
+          }) || 'Today'
+        };
+      });
+    },
+
+    activityDotColor(tone) {
+      const tones = {
+        emerald: 'bg-emerald-400',
+        blue: 'bg-sky-400',
+        amber: 'bg-amber-400',
+        violet: 'bg-violet-400'
+      };
+      return tones[tone] || 'bg-slate-400';
+    },
+
+    documentMetricBorderClasses(tone) {
+      const tones = {
+        amber: 'border-amber-500',
+        red: 'border-red-500',
+        blue: 'border-sky-500',
+        emerald: 'border-emerald-500'
+      };
+      return tones[tone] || 'border-slate-400';
+    },
+
+    documentPillClasses(tone) {
+      const tones = {
+        amber: 'border-amber-100 bg-amber-50 text-amber-700',
+        red: 'border-red-100 bg-red-50 text-red-700',
+        blue: 'border-sky-100 bg-sky-50 text-sky-700',
+        violet: 'border-violet-100 bg-violet-50 text-violet-700',
+        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700'
+      };
+      return tones[tone] || 'border-slate-200 bg-slate-100 text-slate-600';
+    },
+
+    documentDeadlineTextClasses(tone) {
+      const tones = {
+        amber: 'text-amber-700',
+        red: 'text-red-700',
+        blue: 'text-sky-700',
+        violet: 'text-violet-700',
+        emerald: 'text-emerald-700'
+      };
+      return tones[tone] || 'text-slate-600';
+    },
+
+    openDocumentInsightById(insightId) {
+      this.documentInsightOpenId = insightId;
+    },
+
+    closeDocumentInsight() {
+      this.documentInsightOpenId = null;
     },
 
     async viewClient(contact) {
@@ -418,230 +444,6 @@ function advisorApp() {
       this.selectedContact = null;
       this.selectedContactAccounts = [];
       this.selectedContactEnvelopes = [];
-    },
-
-    async loadNavigatorConnection() {
-      if (this._navigatorLoadPromise) {
-        return this._navigatorLoadPromise;
-      }
-
-      this._navigatorLoadPromise = (async () => {
-        this.navigatorConnectionLoading = true;
-        try {
-          const session = await TGK_API.getSession();
-          this.navigatorConnected = !!session?.connected;
-          this.navigatorAccountName = session?.accountName || '';
-          this.navigatorAccountId = session?.accountId || '';
-          if (this.navigatorConnected && this.navigatorAccountId) {
-            await this.loadNavigatorAgreements();
-          } else {
-            this.navigatorLiveAgreements = [];
-            this.navigatorLiveError = null;
-            this.navigatorLastSyncAt = '';
-            this.syncNavigatorAgreementModal();
-          }
-        } catch (error) {
-          this.navigatorConnected = false;
-          this.navigatorAccountName = '';
-          this.navigatorAccountId = '';
-          this.navigatorLiveAgreements = [];
-          this.navigatorLiveError = error.message || 'Unable to load the saved Docusign account.';
-          this.navigatorLastSyncAt = '';
-          this.syncNavigatorAgreementModal();
-        } finally {
-          this.navigatorConnectionLoading = false;
-          this._navigatorLoadPromise = null;
-        }
-      })();
-
-      return this._navigatorLoadPromise;
-    },
-
-    syncNavigatorAgreementModal() {
-      if (!this.navigatorLiveAgreements.some((agreement) => agreement.id === this.navigatorOpenAgreementId)) {
-        this.navigatorOpenAgreementId = null;
-      }
-    },
-
-    async loadNavigatorAgreements() {
-      if (!this.navigatorConnected || !this.navigatorAccountId) {
-        this.navigatorLiveAgreements = [];
-        this.navigatorLiveError = null;
-        this.navigatorLastSyncAt = '';
-        this.syncNavigatorAgreementModal();
-        return;
-      }
-
-      this.navigatorLiveLoading = true;
-      try {
-        const result = await TGK_API.listNavigatorAgreements({ limit: 50 });
-        this.navigatorLiveAgreements = Array.isArray(result?.data)
-          ? result.data
-            .map((agreement, index) => normalizeNavigatorAgreement(agreement, index))
-            .filter(Boolean)
-            .sort((left, right) => {
-              const leftTime = new Date(left?.metadata?.modified_at || left?.metadata?.created_at || 0).getTime();
-              const rightTime = new Date(right?.metadata?.modified_at || right?.metadata?.created_at || 0).getTime();
-              return rightTime - leftTime;
-            })
-          : [];
-        this.navigatorLiveError = null;
-        this.navigatorLastSyncAt = new Date().toISOString();
-      } catch (error) {
-        this.navigatorLiveAgreements = [];
-        this.navigatorLiveError = error.message || 'Unable to load Navigator agreements.';
-        this.navigatorLastSyncAt = '';
-      } finally {
-        this.navigatorLiveLoading = false;
-        this.syncNavigatorAgreementModal();
-      }
-    },
-
-    refreshNavigatorAgreements() {
-      return this.loadNavigatorConnection();
-    },
-
-    get navigatorHasAgreements() {
-      return this.navigatorLiveAgreements.length > 0;
-    },
-
-    navigatorLiveStatusMessage() {
-      if (this.navigatorConnectionLoading) {
-        return 'Checking the saved Docusign account.';
-      }
-
-      if (!this.navigatorConnected) {
-        return 'Connect and save a Docusign account to load live agreements.';
-      }
-
-      if (this.navigatorLiveLoading) {
-        return 'Loading live Navigator agreements.';
-      }
-
-      if (this.navigatorLiveError) {
-        return this.navigatorLiveError;
-      }
-
-      if (this.navigatorHasAgreements) {
-        const noun = this.navigatorLiveAgreements.length === 1 ? 'agreement' : 'agreements';
-        return `Showing ${this.navigatorLiveAgreements.length} live ${noun} from ${this.navigatorAccountName || 'the saved Docusign account'}.`;
-      }
-
-      return `No agreements were returned for ${this.navigatorAccountName || 'the saved Docusign account'}.`;
-    },
-
-    navigatorLiveStatusTone() {
-      if (this.navigatorLiveError) {
-        return 'border-red-200 bg-red-50 text-red-700';
-      }
-      if (this.navigatorHasAgreements) {
-        return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-      }
-      if (this.navigatorConnected && !this.navigatorLiveLoading) {
-        return 'border-amber-200 bg-amber-50 text-amber-700';
-      }
-      return 'border-gray-200 bg-slate-50 text-gray-600';
-    },
-
-    navigatorLastSyncLabel() {
-      if (!this.navigatorLastSyncAt) return '';
-
-      const date = new Date(this.navigatorLastSyncAt);
-      if (Number.isNaN(date.getTime())) return '';
-
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-      }).format(date);
-    },
-
-    setNavigatorStatusFilter(nextFilter) {
-      this.navigatorStatusFilter = nextFilter;
-    },
-
-    openNavigatorAgreement(agreementId) {
-      this.navigatorOpenAgreementId = agreementId;
-    },
-
-    closeNavigatorAgreementModal() {
-      this.navigatorOpenAgreementId = null;
-    },
-
-    get navigatorFilteredAgreements() {
-      const query = this.navigatorSearchQuery.trim().toLowerCase();
-
-      return this.navigatorLiveAgreements.filter((agreement) => {
-        if (this.navigatorStatusFilter !== 'all' && agreement.status !== this.navigatorStatusFilter) {
-          return false;
-        }
-
-        if (!query) {
-          return true;
-        }
-
-        const partyNames = (agreement.parties || [])
-          .map((party) => party.preferred_name || party.name_in_agreement || '')
-          .join(' ');
-        const searchIndex = [
-          agreement.title,
-          agreement.summary,
-          agreement.category,
-          agreement.type,
-          agreement.status,
-          agreement.source_name,
-          partyNames
-        ].join(' ').toLowerCase();
-
-        return searchIndex.includes(query);
-      });
-    },
-
-    get navigatorOpenAgreement() {
-      return this.navigatorLiveAgreements.find((agreement) => agreement.id === this.navigatorOpenAgreementId) || null;
-    },
-
-    navigatorAgreementStatusClasses(status) {
-      const tones = {
-        active: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        review: 'bg-amber-50 text-amber-700 border-amber-100',
-        expiring: 'bg-red-50 text-red-700 border-red-100'
-      };
-      return tones[status] || 'bg-slate-100 text-slate-600 border-slate-200';
-    },
-
-    navigatorAgreementDateLabel(agreement) {
-      return formatNavigatorDate(agreement?.metadata?.modified_at || agreement?.metadata?.created_at);
-    },
-
-    navigatorAgreementParties(agreement) {
-      const parties = (agreement?.parties || [])
-        .map((party) => party.preferred_name || party.name_in_agreement)
-        .filter(Boolean);
-      return parties.length > 0 ? parties.join(' • ') : 'Parties not mapped';
-    },
-
-    navigatorAgreementValue(agreement) {
-      return formatNavigatorMoney(
-        agreement?.provisions?.annual_agreement_value,
-        agreement?.provisions?.annual_agreement_value_currency_code || 'USD'
-      );
-    },
-
-    navigatorAgreementHierarchy(agreement) {
-      if (!agreement) return [];
-
-      const parentId = agreement.related_agreement_documents?.parent_agreement_document_id;
-      const rootId = parentId || agreement.id;
-      const rootAgreement = this.navigatorLiveAgreements.find((candidate) => candidate.id === rootId) || agreement;
-      const children = this.navigatorLiveAgreements.filter((candidate) => candidate.related_agreement_documents?.parent_agreement_document_id === rootAgreement.id);
-      return [rootAgreement, ...children];
-    },
-
-    navigatorHierarchyLabel(agreement) {
-      if (!agreement?.related_agreement_documents?.parent_agreement_document_id) {
-        return 'Primary agreement';
-      }
-      return 'Linked agreement';
     },
 
     resetOnboardingState() {

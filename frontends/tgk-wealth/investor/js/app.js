@@ -1,12 +1,8 @@
-function getBrandingAppName() {
-  return String(window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || 'TGK Wealth').trim() || 'TGK Wealth';
-}
-
 function investorApp() {
   return {
+    ...createBrandingState(),
     ...createEnvelopeModalHelpers(),
     tab: 'overview',
-    brandingAppName: getBrandingAppName(),
     advisors: [],
     assignedAdvisor: null,
     contacts: [],
@@ -19,16 +15,8 @@ function investorApp() {
 
     tasks: [],
 
-    syncBranding(detail = {}) {
-      this.brandingAppName = String(detail.appName || getBrandingAppName()).trim() || 'TGK Wealth';
-    },
-
-    get brandingInitial() {
-      return ((this.brandingAppName || 'TGK Wealth').match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
-    },
-
     async init() {
-      window.addEventListener('tgk:branding-change', (event) => this.syncBranding(event.detail || {}));
+      this.initializeBrandingState();
       try {
         this.advisors = await TGK_API.getUsers();
         this.assignedAdvisor = this.advisors[0] || null;

@@ -5,6 +5,18 @@
 
 const TGK_DEMO_SETTINGS_STORAGE_KEY = 'tgk_demo_settings';
 const TGK_BRANDING_EVENT = 'tgk:branding-change';
+const TGK_PORTAL_TONES = {
+  advisor: {
+    pageBackground: '#f4f5f7',
+    sidebarLightness: 12,
+    sidebarLightLightness: 20
+  },
+  investor: {
+    pageBackground: '#f5f7fb',
+    sidebarLightness: 18,
+    sidebarLightLightness: 26
+  }
+};
 const TGK_DEMO_DEFAULTS = {
   branding: {
     appName: 'TGK Wealth',
@@ -19,6 +31,15 @@ const TGK_DEMO_DEFAULTS = {
 
 function normalizeHexColor(value, fallback = TGK_DEMO_DEFAULTS.branding.brandColor) {
   return /^#[0-9a-f]{6}$/i.test(String(value || '').trim()) ? String(value).trim() : fallback;
+}
+
+function resolveBrandingAppName(value) {
+  return String(value || window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || TGK_DEMO_DEFAULTS.branding.appName).trim()
+    || TGK_DEMO_DEFAULTS.branding.appName;
+}
+
+function getBrandingInitial(value) {
+  return (resolveBrandingAppName(value).match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
 }
 
 function hexToHsl(hex) {
@@ -73,14 +94,26 @@ function deriveBrandLight(hex) {
   return hslToHex(h, Math.min(s + 10, 100), Math.min(l + 15, 85));
 }
 
-function deriveSidebarColor(hex) {
+function deriveSidebarColor(hex, portalTone) {
   const [h, s] = hexToHsl(hex);
-  return hslToHex(h, Math.max(s * 0.4, 15), 12);
+  return hslToHex(h, Math.max(s * 0.4, 15), portalTone.sidebarLightness);
 }
 
-function deriveSidebarLightColor(hex) {
+function deriveSidebarLightColor(hex, portalTone) {
   const [h, s] = hexToHsl(hex);
-  return hslToHex(h, Math.max(s * 0.35, 12), 20);
+  return hslToHex(h, Math.max(s * 0.35, 12), portalTone.sidebarLightLightness);
+}
+
+function getPortalTone(portalName = document.body?.dataset.portal || document.documentElement?.dataset.portal || 'advisor') {
+  return TGK_PORTAL_TONES[portalName] || TGK_PORTAL_TONES.advisor;
+}
+
+function applyThemeVariables(target, variables) {
+  if (!target) return;
+
+  Object.entries(variables).forEach(([name, value]) => {
+    target.style.setProperty(name, value);
+  });
 }
 
 function readStoredSettings() {
@@ -121,20 +154,22 @@ function buildDemoSettingsSnapshot(savedSettings) {
 }
 
 function applyThemeColor(brandColor) {
-  [document.documentElement, document.body].forEach((element) => {
-    if (!element) return;
+  const portalTone = getPortalTone();
+  const variables = {
+    '--color-brand': brandColor,
+    '--color-brand-light': deriveBrandLight(brandColor),
+    '--color-navy': deriveSidebarColor(brandColor, portalTone),
+    '--color-navy-light': deriveSidebarLightColor(brandColor, portalTone),
+    '--tgk-page-bg': portalTone.pageBackground
+  };
 
-    const style = element.style;
-    style.setProperty('--color-brand', brandColor);
-    style.setProperty('--color-brand-light', deriveBrandLight(brandColor));
-    style.setProperty('--color-navy', deriveSidebarColor(brandColor));
-    style.setProperty('--color-navy-light', deriveSidebarLightColor(brandColor));
-  });
+  applyThemeVariables(document.documentElement, variables);
+  applyThemeVariables(document.body, variables);
 }
 
 function applyBrandingPreview(nextBranding = {}) {
   const branding = {
-    appName: String(nextBranding.appName || TGK_DEMO_DEFAULTS.branding.appName).trim() || TGK_DEMO_DEFAULTS.branding.appName,
+    appName: resolveBrandingAppName(nextBranding.appName),
     brandColor: normalizeHexColor(nextBranding.brandColor)
   };
 
@@ -150,6 +185,31 @@ function applyBrandingPreview(nextBranding = {}) {
   applyThemeColor(branding.brandColor);
   window.dispatchEvent(new CustomEvent(TGK_BRANDING_EVENT, { detail: branding }));
   return branding;
+}
+
+function createBrandingState() {
+  return {
+    brandingAppName: resolveBrandingAppName(),
+    _brandingChangeHandler: null,
+
+    syncBranding(detail = {}) {
+      this.brandingAppName = resolveBrandingAppName(detail.appName);
+    },
+
+    get brandingInitial() {
+      return getBrandingInitial(this.brandingAppName);
+    },
+
+    initializeBrandingState() {
+      this.syncBranding();
+      if (this._brandingChangeHandler) {
+        return;
+      }
+
+      this._brandingChangeHandler = (event) => this.syncBranding(event.detail || {});
+      window.addEventListener(TGK_BRANDING_EVENT, this._brandingChangeHandler);
+    }
+  };
 }
 
 (function initializeDemoTheme() {

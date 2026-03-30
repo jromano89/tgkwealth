@@ -7,7 +7,17 @@ const {
   getUserInfoFromCode,
   readConsentState
 } = require('../services/docusign-auth');
-const { clearAppConnection, createError, getAppBySlug, getAppSlug, getConnectionForApp, upsertApp, upsertConnection } = require('../utils');
+const {
+  clearAppConnection,
+  createError,
+  getAppBySlug,
+  getAppSlug,
+  getConnectionForApp,
+  route,
+  upsertApp,
+  upsertConnection
+} = require('../utils');
+
 const router = express.Router();
 
 function normalizeAccounts(accounts) {
@@ -21,31 +31,32 @@ function normalizeAccounts(accounts) {
     .sort((left, right) => Number(right.isDefault) - Number(left.isDefault));
 }
 
-function resolveAbsoluteUrl(req, value) {
+function toAbsoluteUrl(req, value) {
   return new URL(value || '/', `${req.protocol}://${req.get('host')}`);
 }
 
 function buildFrontendRedirect(req, frontendRedirect, status, extras = {}) {
-  const url = resolveAbsoluteUrl(req, frontendRedirect);
+  const url = toAbsoluteUrl(req, frontendRedirect);
   url.searchParams.set('docusign', status);
 
-  for (const [key, value] of Object.entries(extras)) {
-    if (value === undefined || value === null || value === '') continue;
-    url.searchParams.set(key, String(value));
-  }
+  Object.entries(extras).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, String(value));
+    }
+  });
 
   return url.toString();
 }
 
 function sendPopupResult(req, res, frontendRedirect, payload) {
-  const redirectUrl = buildFrontendRedirect(req, frontendRedirect, payload.status, payload.message ? { message: payload.message } : {});
-  const targetOrigin = resolveAbsoluteUrl(req, frontendRedirect).origin;
-  const serializedPayload = JSON.stringify({
-    source: 'tgk-docusign-auth',
-    ...payload
-  });
-  const serializedOrigin = JSON.stringify(targetOrigin);
-  const serializedRedirect = JSON.stringify(redirectUrl);
+  const redirectUrl = buildFrontendRedirect(
+    req,
+    frontendRedirect,
+    payload.status,
+    payload.message ? { message: payload.message } : {}
+  );
+  const targetOrigin = toAbsoluteUrl(req, frontendRedirect).origin;
+  const serializedPayload = JSON.stringify({ source: 'tgk-docusign-auth', ...payload });
 
   res.type('html').send(`<!DOCTYPE html>
 <html>
@@ -53,29 +64,9 @@ function sendPopupResult(req, res, frontendRedirect, payload) {
     <meta charset="utf-8" />
     <title>Docusign Connection</title>
     <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #f8fafc;
-        color: #0f172a;
-      }
-      .card {
-        max-width: 360px;
-        padding: 24px;
-        border-radius: 18px;
-        background: #ffffff;
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
-        text-align: center;
-      }
-      p {
-        margin: 0;
-        font-size: 14px;
-        line-height: 1.5;
-        color: #475569;
-      }
+      body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#0f172a}
+      .card{max-width:360px;padding:24px;border-radius:18px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.12);text-align:center}
+      p{margin:0;font-size:14px;line-height:1.5;color:#475569}
     </style>
   </head>
   <body>
@@ -84,8 +75,8 @@ function sendPopupResult(req, res, frontendRedirect, payload) {
     </div>
     <script>
       const payload = ${serializedPayload};
-      const targetOrigin = ${serializedOrigin};
-      const redirectUrl = ${serializedRedirect};
+      const targetOrigin = ${JSON.stringify(targetOrigin)};
+      const redirectUrl = ${JSON.stringify(redirectUrl)};
 
       try {
         if (window.opener && !window.opener.closed) {
@@ -112,45 +103,55 @@ function getSessionPayload(db, appSlug) {
     return { connected: false };
   }
 
-  const ds = getConnectionForApp(db, app.id);
-  if (!ds) {
+  const connection = getConnectionForApp(db, app.id);
+  if (!connection) {
     return { connected: false };
   }
 
   return {
     connected: true,
-    userId: ds.docusign_user_id,
-    accountId: ds.docusign_account_id,
-    accountName: ds.account_name,
-    name: ds.user_name,
-    email: ds.email,
-    accounts: ds.available_accounts || [],
-    accountSelectionRequired: !ds.docusign_account_id && (ds.available_accounts || []).length > 0,
+    userId: connection.docusign_user_id,
+    accountId: connection.docusign_account_id,
+    accountName: connection.account_name,
+    name: connection.user_name,
+    email: connection.email,
+    accounts: connection.available_accounts || [],
+    accountSelectionRequired: !connection.docusign_account_id && (connection.available_accounts || []).length > 0,
     app: { slug: app.slug, name: app.name }
   };
 }
 
-router.get('/login', (req, res) => {
+function requireConnectedApp(db, req) {
+  const appSlug = getAppSlug(req);
+  const app = appSlug ? getAppBySlug(db, appSlug) : null;
+  const connection = app ? getConnectionForApp(db, app.id) : null;
+
+  if (!app || !connection) {
+    throw createError(404, 'App is not connected to Docusign yet.');
+  }
+
+  return { app, connection };
+}
+
+router.get('/login', route((req, res) => {
   const appSlug = getAppSlug(req);
   if (!appSlug) {
-    return res.status(400).json({ error: 'Missing app slug. Pass ?app=<slug> when starting Docusign consent.' });
+    throw createError(400, 'Missing app slug. Pass ?app=<slug> when starting Docusign consent.');
   }
 
   const frontendRedirect = req.query.redirect || req.headers.referer || '/';
-  const consentState = createConsentState({
+  const state = createConsentState({
     frontendRedirect,
     appSlug,
     appName: req.query.appName || null,
     display: req.query.display === 'popup' ? 'popup' : 'redirect'
   });
-
   const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/callback`;
-  const consentUrl = getConsentUrl(callbackUrl, consentState, req.query.scopes);
 
-  res.redirect(consentUrl);
-});
+  res.redirect(getConsentUrl(callbackUrl, state, req.query.scopes));
+}));
 
-router.get('/callback', async (req, res) => {
+router.get('/callback', route(async (req, res) => {
   let frontendRedirect = '/';
   let display = 'redirect';
 
@@ -163,26 +164,25 @@ router.get('/callback', async (req, res) => {
     if (error) {
       throw createError(400, errorDescription || error);
     }
-
     if (!code) {
       throw createError(400, 'Missing Docusign consent code');
+    }
+    if (!consent?.appSlug) {
+      throw createError(400, 'Docusign callback is missing app context');
     }
 
     const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/callback`;
     const { userInfo } = await getUserInfoFromCode(code, callbackUrl);
-    const appSlug = consent?.appSlug;
-    const appName = consent?.appName || appSlug;
     const accounts = normalizeAccounts(userInfo.accounts);
-
-    if (!appSlug) {
-      throw createError(400, 'Docusign callback is missing app context');
-    }
     if (accounts.length === 0) {
       throw createError(400, 'No Docusign accounts were returned for this user.');
     }
 
     const db = getDb();
-    const app = upsertApp(db, { slug: appSlug, name: appName });
+    const app = upsertApp(db, {
+      slug: consent.appSlug,
+      name: consent.appName || consent.appSlug
+    });
 
     upsertConnection(db, app, {
       userId: userInfo.sub,
@@ -197,36 +197,31 @@ router.get('/callback', async (req, res) => {
       return sendPopupResult(req, res, frontendRedirect, { status: 'connected' });
     }
 
-    res.redirect(buildFrontendRedirect(req, frontendRedirect, 'connected'));
-  } catch (err) {
-    console.error('Docusign consent callback error:', err);
+    return res.redirect(buildFrontendRedirect(req, frontendRedirect, 'connected'));
+  } catch (error) {
+    console.error('Docusign consent callback error:', error);
 
     if (display === 'popup') {
-      return sendPopupResult(req, res, frontendRedirect, { status: 'error', message: err.message });
+      return sendPopupResult(req, res, frontendRedirect, { status: 'error', message: error.message });
     }
 
-    res.redirect(buildFrontendRedirect(req, frontendRedirect, 'error', { message: err.message }));
+    return res.redirect(buildFrontendRedirect(req, frontendRedirect, 'error', { message: error.message }));
   }
-});
+}));
 
-router.post('/account', (req, res) => {
-  const { accountId } = req.body;
+router.post('/account', route((req, res) => {
+  const accountId = String(req.body?.accountId || '').trim();
   if (!accountId) {
-    return res.status(400).json({ error: 'Missing account ID' });
+    throw createError(400, 'Missing account ID');
   }
 
   const db = getDb();
-  const appSlug = getAppSlug(req);
-  let app = appSlug ? getAppBySlug(db, appSlug) : null;
-  let connection = app ? getConnectionForApp(db, app.id) : null;
-  if (!app || !connection) {
-    return res.status(404).json({ error: 'App is not connected to Docusign yet.' });
-  }
+  const { app, connection } = requireConnectedApp(db, req);
+  const accounts = connection.available_accounts || [];
+  const account = accounts.find((item) => item.accountId === accountId);
 
-  const availableAccounts = connection.available_accounts || [];
-  const account = availableAccounts.find((item) => item.accountId === accountId);
   if (!account) {
-    return res.status(400).json({ error: 'Invalid account ID' });
+    throw createError(400, 'Invalid account ID');
   }
 
   upsertConnection(db, app, {
@@ -235,25 +230,22 @@ router.post('/account', (req, res) => {
     accountName: account.accountName,
     userName: connection.user_name,
     email: connection.email,
-    availableAccounts
+    availableAccounts: accounts
   });
 
   res.json({ success: true, account });
-});
+}));
 
-router.get('/session', (req, res) => {
-  const db = getDb();
-  res.json(getSessionPayload(db, getAppSlug(req)));
-});
+router.get('/session', route((req, res) => {
+  res.json(getSessionPayload(getDb(), getAppSlug(req)));
+}));
 
-router.get('/prewarm', async (req, res) => {
-  const db = getDb();
-  const session = getSessionPayload(db, getAppSlug(req));
+router.get('/prewarm', route(async (req, res) => {
+  const session = getSessionPayload(getDb(), getAppSlug(req));
 
   if (!session.connected) {
     return res.json({ session, warmed: false, reason: 'not-connected' });
   }
-
   if (!session.accountId) {
     return res.json({ session, warmed: false, reason: 'account-selection-required' });
   }
@@ -261,29 +253,25 @@ router.get('/prewarm', async (req, res) => {
   try {
     await getAccessToken(session.userId, session.accountId);
     return res.json({ session, warmed: true });
-  } catch (err) {
-    console.warn('Docusign auth prewarm failed:', err.message);
+  } catch (error) {
+    console.warn('Docusign auth prewarm failed:', error.message);
     return res.json({ session, warmed: false, reason: 'token-warmup-failed' });
   }
-});
+}));
 
-router.post('/logout', (req, res) => {
-  try {
-    const db = getDb();
-    const appSlug = getAppSlug(req);
-    if (!appSlug) {
-      throw createError(400, 'Missing app slug');
-    }
-
-    const app = getAppBySlug(db, appSlug);
-    if (app) {
-      clearAppConnection(db, app.id);
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(err.statusCode || 500).json({ error: err.message });
+router.post('/logout', route((req, res) => {
+  const appSlug = getAppSlug(req);
+  if (!appSlug) {
+    throw createError(400, 'Missing app slug');
   }
-});
+
+  const db = getDb();
+  const app = getAppBySlug(db, appSlug);
+  if (app) {
+    clearAppConnection(db, app.id);
+  }
+
+  res.json({ success: true });
+}));
 
 module.exports = router;
