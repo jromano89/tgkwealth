@@ -18,6 +18,17 @@ setIfPresent(runtimeConfig.shared, 'docusignIamBaseUrl', process.env.TGK_FRONTEN
 setIfPresent(runtimeConfig.shared, 'appSlug', process.env.TGK_FRONTEND_APP_SLUG);
 setIfPresent(runtimeConfig.shared, 'appName', process.env.TGK_FRONTEND_APP_NAME);
 
+const sharedConfig = {};
+setIfPresent(
+  sharedConfig,
+  'idvWorkflowId',
+  process.env.TGK_FRONTEND_ACCOUNT_OPENING_WORKFLOW_ID || process.env.TGK_FRONTEND_IDV_WORKFLOW_ID
+);
+setIfPresent(sharedConfig, 'assetTransferWorkflowId', process.env.TGK_FRONTEND_ASSET_TRANSFER_WORKFLOW_ID);
+if (Object.keys(sharedConfig).length > 0) {
+  runtimeConfig.shared.config = sharedConfig;
+}
+
 const sharedAdvisor = {};
 setIfPresent(sharedAdvisor, 'name', process.env.TGK_FRONTEND_ADVISOR_NAME);
 setIfPresent(sharedAdvisor, 'title', process.env.TGK_FRONTEND_ADVISOR_TITLE);

@@ -11,17 +11,17 @@
   <meta property="og:description" content="Demonstration advisor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
-  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260331-1">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260331-2">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260330-6"></script>
   <script defer src="../../shared/js/api-client.js?v=20260330-1"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260330-11"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260331-12"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260330-1"></script>
-  <script defer src="js/app.js?v=20260331-2"></script>
+  <script defer src="js/app.js?v=20260331-3"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="tgk-portal-body" data-portal="advisor">
@@ -623,14 +623,22 @@
                         </div>
 
                         <template x-if="selectedAgreementSignal.documentHref">
-                          <a :href="selectedAgreementSignal.documentHref" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">
+                          <button
+                            type="button"
+                            @click="openAgreementDocument(selectedAgreementSignal)"
+                            :disabled="agreementDocumentOpeningId === selectedAgreementSignal.id"
+                            class="tgk-button tgk-button--secondary">
                             <svg class="tgk-icon tgk-icon--sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.5 6H18m0 0v4.5M18 6l-7.5 7.5M7.5 9H6A1.5 1.5 0 004.5 10.5V18A1.5 1.5 0 006 19.5h7.5A1.5 1.5 0 0015 18v-1.5" />
                             </svg>
-                            Open document
-                          </a>
+                            <span x-text="agreementDocumentOpeningId === selectedAgreementSignal.id ? 'Opening…' : 'Open document'"></span>
+                          </button>
                         </template>
                       </div>
+
+                      <template x-if="agreementDocumentError">
+                        <p class="text-sm text-red-700" x-text="agreementDocumentError"></p>
+                      </template>
                     </div>
 
                     <div class="tgk-agreement-detail-body">

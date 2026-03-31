@@ -362,14 +362,16 @@ function sharedSettingsTemplate() {
               <div class="tgk-settings-field-grid">
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow</label>
-                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
+                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
                 </div>
 
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow</label>
-                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
+                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
                 </div>
               </div>
+
+              <p class="tgk-help-text">Workflow IDs save locally in this browser when the field loses focus.</p>
             </div>
           </section>
         </div>

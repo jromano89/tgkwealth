@@ -5,6 +5,7 @@
 
 const TGK_DEMO_SETTINGS_STORAGE_KEY = 'tgk_demo_settings';
 const TGK_BRANDING_EVENT = 'tgk:branding-change';
+const TGK_RUNTIME_DEFAULTS = window.TGK_RUNTIME_CONFIG?.shared?.config || {};
 const TGK_PORTAL_TONES = {
   advisor: {
     pageBackground: '#f4f5f7',
@@ -24,8 +25,8 @@ const TGK_DEMO_DEFAULTS = {
   },
   config: {
     idVerification: false,
-    idvWorkflowId: '8a7bbe6b-badc-4413-818b-2e92868de402',
-    assetTransferWorkflowId: ''
+    idvWorkflowId: TGK_RUNTIME_DEFAULTS.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
+    assetTransferWorkflowId: TGK_RUNTIME_DEFAULTS.assetTransferWorkflowId || 'b59acbee-8052-403a-a752-c04287ad6ee1'
   }
 };
 
