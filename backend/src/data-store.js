@@ -187,6 +187,38 @@ function listContacts(db, appId, filters = {}) {
   return listScopedRows(db, 'contacts', appId, { filters: conditions, params, parseRow: parseContact });
 }
 
+function listEnvelopes(db, appId, filters = {}) {
+  const conditions = [];
+  const params = [];
+
+  if (filters.id) {
+    conditions.push('id = ?');
+    params.push(filters.id);
+  }
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.userId) {
+    conditions.push('user_id = ?');
+    params.push(filters.userId);
+  }
+  if (filters.contactId) {
+    conditions.push('contact_id = ?');
+    params.push(filters.contactId);
+  }
+  if (filters.docusignEnvelopeId) {
+    conditions.push('docusign_envelope_id = ?');
+    params.push(filters.docusignEnvelopeId);
+  }
+  if (filters.search) {
+    conditions.push('(document_name LIKE ? OR docusign_envelope_id LIKE ? OR id LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  return listScopedRows(db, 'envelopes', appId, { filters: conditions, params, parseRow: parseEnvelope });
+}
+
 function createContact(db, appId, contact) {
   db.prepare(`
     INSERT INTO contacts (
@@ -359,6 +391,7 @@ module.exports = {
   getScopedRow,
   getUser,
   listContacts,
+  listEnvelopes,
   listUsers,
   requireScopedRow,
   updateContact,

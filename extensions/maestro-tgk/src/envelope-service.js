@@ -1,4 +1,4 @@
-const { createEnvelope, getContact, listContacts, updateEnvelope } = require('./backend-client');
+const { createEnvelope, listEnvelopes, listUsers, updateEnvelope } = require('./backend-client');
 const envelopeTypeDefs = require('./envelope-type-definitions');
 const { evaluateOperation, filterAttributes, getLiteralComparisonValue, normalizeSearchRequest } = require('./query-utils');
 const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
@@ -9,6 +9,7 @@ function buildEnvelopePayload(rawInput) {
   return {
     docusignEnvelopeId: pickFirstDefined(input, ['DocusignEnvelopeId', 'docusignEnvelopeId', 'EnvelopeId', 'envelopeId']) || null,
     contactId: pickFirstDefined(input, ['ContactId', 'contactId']) || null,
+    userId: pickFirstDefined(input, ['UserId', 'userId', 'OwnerUserId', 'ownerUserId']) || null,
     status: pickFirstDefined(input, ['Status', 'status']) || 'sent',
     documentName: pickFirstDefined(input, ['DocumentName', 'documentName']) || null
   };
@@ -21,34 +22,54 @@ function mapEnvelopeToDataRecord(envelope) {
     DocumentName: envelope.document_name || '',
     Status: envelope.status || '',
     ContactId: envelope.contact_id || '',
+    UserId: envelope.user_id || '',
     CreatedAt: envelope.created_at || ''
   };
 }
 
-async function listEnvelopesFromContacts() {
-  const contacts = await listContacts();
-  const contactDetails = await Promise.all(contacts.map(async (contact) => {
-    return getContact(contact.id);
-  }));
+async function getDefaultUserId() {
+  const users = await listUsers();
+  if (!Array.isArray(users) || users.length === 0) {
+    return null;
+  }
 
-  return contactDetails.flatMap((contact) => Array.isArray(contact?.envelopes) ? contact.envelopes : []);
+  return users
+    .slice()
+    .sort((left, right) => String(left?.created_at || '').localeCompare(String(right?.created_at || '')))[0]?.id || null;
+}
+
+function buildEnvelopeSearchFilters(query) {
+  const operation = query?.queryFilter?.operation;
+  const filters = {
+    id: getLiteralComparisonValue(operation, 'Id'),
+    docusignEnvelopeId: getLiteralComparisonValue(operation, 'DocusignEnvelopeId'),
+    contactId: getLiteralComparisonValue(operation, 'ContactId'),
+    userId: getLiteralComparisonValue(operation, 'UserId'),
+    status: getLiteralComparisonValue(operation, 'Status')
+  };
+
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+}
+
+async function buildEnvelopeCreatePayload(rawInput, requestedId) {
+  const payload = buildEnvelopePayload(rawInput);
+  if (requestedId) {
+    payload.id = requestedId;
+  }
+
+  if (!payload.contactId && !payload.userId) {
+    payload.userId = await getDefaultUserId();
+  }
+
+  if (!payload.contactId && !payload.userId) {
+    throw createServiceError(400, 'BAD_REQUEST', 'Envelope create requires ContactId or UserId, and no default app user is available');
+  }
+
+  return payload;
 }
 
 async function listEnvelopesForQuery(query) {
-  const contactId = getLiteralComparisonValue(query?.queryFilter?.operation, 'ContactId');
-  if (!contactId) {
-    return listEnvelopesFromContacts();
-  }
-
-  try {
-    const contact = await getContact(contactId);
-    return Array.isArray(contact?.envelopes) ? contact.envelopes : [];
-  } catch (error) {
-    if (error.statusCode === 404) {
-      return [];
-    }
-    throw error;
-  }
+  return listEnvelopes(buildEnvelopeSearchFilters(query));
 }
 
 async function createRecord(body) {
@@ -61,10 +82,7 @@ async function createRecord(body) {
   }
 
   requireSupportedType(typeName, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  const payload = buildEnvelopePayload(data);
-  if (requestedId) {
-    payload.id = requestedId;
-  }
+  const payload = await buildEnvelopeCreatePayload(data, requestedId);
   const created = await createEnvelope(payload);
   return { recordId: created.id };
 }

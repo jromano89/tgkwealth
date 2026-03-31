@@ -18,6 +18,7 @@ const FIELD_DEFINITIONS = [
   { name: 'DocumentName', label: 'Document Name', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
   { name: 'ContactId', label: 'Contact ID', type: 'String', optional: true },
+  { name: 'UserId', label: 'User ID', type: 'String', optional: true },
   { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 

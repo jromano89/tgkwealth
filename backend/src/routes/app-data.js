@@ -33,6 +33,10 @@ router.get('/contacts', withApp((req, res, db, app) => {
   res.json(service.listContactsForApp(db, app.id, req.query));
 }));
 
+router.get('/envelopes', withApp((req, res, db, app) => {
+  res.json(service.listEnvelopesForApp(db, app.id, req.query));
+}));
+
 router.post('/contacts', withApp((req, res, db, app) => {
   created(res, service.createContactForApp(db, app.id, req.body));
 }));

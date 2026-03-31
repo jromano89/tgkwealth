@@ -110,6 +110,10 @@ function listContactsForApp(db, appId, filters) {
   return store.listContacts(db, appId, filters);
 }
 
+function listEnvelopesForApp(db, appId, filters) {
+  return store.listEnvelopes(db, appId, filters);
+}
+
 function createContactForApp(db, appId, input = {}) {
   const id = input.id || randomUUID();
   const ownerUserId = resolveOwnerUserId(db, appId, input.ownerUserId);
@@ -206,6 +210,7 @@ module.exports = {
   deleteContactForApp,
   getContactDetailsForApp,
   listContactsForApp,
+  listEnvelopesForApp,
   listUsersForApp,
   updateContactForApp,
   updateEnvelopeForApp,

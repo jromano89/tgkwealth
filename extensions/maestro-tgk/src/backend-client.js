@@ -88,6 +88,14 @@ function listContacts() {
   return request('/api/data/contacts');
 }
 
+function listUsers() {
+  return request('/api/data/users');
+}
+
+function listEnvelopes(query) {
+  return request('/api/data/envelopes', { query });
+}
+
 function getContact(id) {
   return request(`/api/data/contacts/${encodeURIComponent(id)}`);
 }
@@ -97,6 +105,8 @@ module.exports = {
   createEnvelope,
   getContact,
   listContacts,
+  listEnvelopes,
+  listUsers,
   updateContact,
   updateEnvelope
 };
