@@ -4,37 +4,18 @@ function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
 }
 
-function normalizeTaskRecord(task, defaults = {}) {
-  if (!task || typeof task !== 'object') {
-    return null;
-  }
-
-  return {
-    id: task.id,
-    user_id: task.user_id || task.userId || defaults.userId || null,
-    contact_id: task.contact_id || task.contactId || defaults.contactId || null,
-    title: task.title,
-    description: task.description || null,
-    status: task.status || 'pending',
-    created_at: task.created_at || task.createdAt || defaults.createdAt || new Date().toISOString()
-  };
-}
-
-function normalizeTasks(tasks, defaults = {}) {
-  if (!Array.isArray(tasks)) {
-    return [];
-  }
-
-  return tasks
-    .map((task) => normalizeTaskRecord(task, defaults))
-    .filter((task) => task && task.id && task.title)
-    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
-}
-
-function normalizeData(data, taskDefaults = {}) {
+function normalizeData(data) {
   const normalized = asObject(data);
-  normalized.tasks = normalizeTasks(normalized.tasks, taskDefaults);
+  delete normalized.tasks;
   return normalized;
+}
+
+function parseTasks(tasks) {
+  return Array.isArray(tasks) ? tasks : [];
+}
+
+function serializeTasks(tasks) {
+  return serializeJson(parseTasks(tasks));
 }
 
 function parseUser(row) {
@@ -45,7 +26,8 @@ function parseUser(row) {
   const parsed = parseJsonFields(row);
   return {
     ...parsed,
-    data: normalizeData(parsed.data)
+    data: normalizeData(parsed.data),
+    tasks: parseTasks(parsed.tasks)
   };
 }
 
@@ -57,7 +39,8 @@ function parseContact(row) {
   const parsed = parseJsonFields(row);
   return {
     ...parsed,
-    data: normalizeData(parsed.data)
+    data: normalizeData(parsed.data),
+    tasks: parseTasks(parsed.tasks)
   };
 }
 
@@ -83,15 +66,6 @@ function listScopedRows(db, table, appId, { filters = [], params = [], orderBy =
   const whereClause = filters.length > 0 ? ` AND ${filters.join(' AND ')}` : '';
   const query = `SELECT * FROM ${table} WHERE app_id = ?${whereClause} ORDER BY ${orderBy}`;
   return db.prepare(query).all(appId, ...params).map(parseRow);
-}
-
-function updateRecordData(db, table, appId, id, data, normalizeRecordData) {
-  db.prepare(`
-    UPDATE ${table} SET
-      data = ?,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND app_id = ?
-  `).run(serializeJson(normalizeRecordData(data)), id, appId);
 }
 
 function getPrimaryUser(db, appId) {
@@ -148,8 +122,8 @@ function listUsers(db, appId, filters = {}) {
 
 function createUser(db, appId, user) {
   db.prepare(`
-    INSERT INTO users (id, app_id, display_name, email, phone, title, data)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO users (id, app_id, display_name, email, phone, title, data, tasks)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     user.id,
     appId,
@@ -157,7 +131,8 @@ function createUser(db, appId, user) {
     user.email || null,
     user.phone || null,
     user.title || null,
-    serializeJson(normalizeData(user.data))
+    serializeJson(normalizeData(user.data)),
+    serializeTasks(user.tasks)
   );
 
   return getUser(db, appId, user.id);
@@ -171,6 +146,7 @@ function updateUser(db, appId, userId, user) {
       phone = COALESCE(?, phone),
       title = COALESCE(?, title),
       data = COALESCE(?, data),
+      tasks = COALESCE(?, tasks),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND app_id = ?
   `).run(
@@ -179,6 +155,7 @@ function updateUser(db, appId, userId, user) {
     user.phone,
     user.title,
     user.data !== undefined ? serializeJson(normalizeData(user.data)) : null,
+    user.tasks !== undefined ? serializeTasks(user.tasks) : null,
     userId,
     appId
   );
@@ -223,9 +200,10 @@ function createContact(db, appId, contact) {
       organization,
       status,
       data,
+      tasks,
       source
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     contact.id,
     appId,
@@ -237,6 +215,7 @@ function createContact(db, appId, contact) {
     contact.organization || null,
     contact.status || 'active',
     serializeJson(normalizeData(contact.data)),
+    serializeTasks(contact.tasks),
     contact.source || 'api'
   );
 
@@ -254,6 +233,7 @@ function updateContact(db, appId, contactId, contact) {
       organization = COALESCE(?, organization),
       status = COALESCE(?, status),
       data = COALESCE(?, data),
+      tasks = COALESCE(?, tasks),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND app_id = ?
   `).run(
@@ -265,6 +245,7 @@ function updateContact(db, appId, contactId, contact) {
     contact.organization,
     contact.status,
     contact.data !== undefined ? serializeJson(normalizeData(contact.data)) : null,
+    contact.tasks !== undefined ? serializeTasks(contact.tasks) : null,
     contactId,
     appId
   );
@@ -282,11 +263,7 @@ function getContactDetails(db, appId, contactId) {
   return {
     ...contact,
     owner,
-    envelopes,
-    tasks: normalizeTasks(contact.data.tasks, {
-      contactId: contact.id,
-      userId: contact.owner_user_id
-    })
+    envelopes
   };
 }
 
@@ -368,88 +345,11 @@ function updateEnvelope(db, appId, idOrEnvelopeId, envelope) {
   return getScopedRow(db, 'envelopes', appId, existing.id, parseEnvelope);
 }
 
-function createTask(db, appId, task) {
-  const record = normalizeTaskRecord(task, {
-    userId: task.userId,
-    contactId: task.contactId,
-    createdAt: task.createdAt
-  });
-
-  if (!record) {
-    return null;
-  }
-
-  if (task.contactId) {
-    const contact = requireScopedRow(db, 'contacts', appId, task.contactId, 'Contact', parseContact);
-    updateRecordData(db, 'contacts', appId, contact.id, {
-      ...contact.data,
-      tasks: [...contact.data.tasks, record]
-    }, normalizeData);
-    return record;
-  }
-
-  if (task.userId) {
-    const user = requireScopedRow(db, 'users', appId, task.userId, 'User', parseUser);
-    updateRecordData(db, 'users', appId, user.id, {
-      ...user.data,
-      tasks: [...user.data.tasks, record]
-    }, normalizeData);
-    return record;
-  }
-
-  return null;
-}
-
-function createTasks(db, appId, contactId, tasks) {
-  const contact = requireScopedRow(db, 'contacts', appId, contactId, 'Contact', parseContact);
-  updateRecordData(db, 'contacts', appId, contact.id, {
-    ...contact.data,
-    tasks: [...contact.data.tasks, ...normalizeTasks(tasks, { contactId, userId: contact.owner_user_id })]
-  }, normalizeData);
-}
-
-function findTaskContainer(db, appId, taskId) {
-  const contactRows = db.prepare('SELECT id, app_id, data FROM contacts WHERE app_id = ?').all(appId);
-  for (const row of contactRows) {
-    const contact = parseContact(row);
-    if (contact.data.tasks.some((task) => task.id === taskId)) {
-      return { table: 'contacts', id: contact.id, data: contact.data };
-    }
-  }
-
-  const userRows = db.prepare('SELECT id, app_id, data FROM users WHERE app_id = ?').all(appId);
-  for (const row of userRows) {
-    const user = parseUser(row);
-    if (user.data.tasks.some((task) => task.id === taskId)) {
-      return { table: 'users', id: user.id, data: user.data };
-    }
-  }
-
-  return null;
-}
-
-function deleteTask(db, appId, taskId) {
-  const container = findTaskContainer(db, appId, taskId);
-  if (!container) {
-    return false;
-  }
-
-  updateRecordData(db, container.table, appId, container.id, {
-    ...container.data,
-    tasks: container.data.tasks.filter((task) => task.id !== taskId)
-  }, normalizeData);
-
-  return true;
-}
-
 module.exports = {
   createContact,
   createEnvelope,
-  createTask,
-  createTasks,
   createUser,
   deleteContactCascade,
-  deleteTask,
   ensureContactBelongsToApp,
   ensureUserBelongsToApp,
   findEnvelope,

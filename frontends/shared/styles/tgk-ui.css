@@ -53,6 +53,20 @@
   100% { width: 0%; }
 }
 
+@keyframes tgk-hero-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.tgk-hero-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: tgk-hero-shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .tgk-settings-shell {
   width: 100%;
   display: flex;

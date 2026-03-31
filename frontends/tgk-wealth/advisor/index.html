@@ -11,13 +11,13 @@
   <meta property="og:description" content="Demonstration advisor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
-  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-5">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-6">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260330-6"></script>
   <script defer src="../../shared/js/api-client.js?v=20260330-1"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260330-10"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260330-11"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260330-1"></script>
@@ -89,7 +89,7 @@
     </div>
 
     <!-- User -->
-    <div class="p-3 border-t border-white/10 flex items-center gap-3">
+    <div class="p-3 border-t border-white/10 bg-white/5 flex items-center gap-3">
       <div class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold flex-shrink-0" x-text="currentUser?.metadata?.avatar || 'GG'"></div>
       <div x-show="!sidebarCollapsed" class="overflow-hidden">
         <div class="text-sm font-medium leading-tight" x-text="currentUser?.name || 'Gordon Gecko'"></div>
@@ -109,7 +109,7 @@
         <div class="flex items-center gap-3">
           <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input x-model="searchQuery" type="text" placeholder="Search clients" class="pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm bg-white w-56 focus:outline-none focus:ring-2 focus:ring-brand/30">
+            <input x-model="searchQuery" type="text" placeholder="Search clients" class="pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 w-56 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:bg-white transition-colors">
           </div>
           <div x-data="newsPanel()">
             <button @click="toggleOpen()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
@@ -184,32 +184,31 @@
 
       <!-- Stat Cards -->
       <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl p-4 border-l-4 border-brand shadow-sm">
+        <div class="bg-white rounded-xl p-4 border-l-4 border-brand shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Total AUM</div>
           <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(totalAum)"></div>
           <div class="text-xs text-gray-400 mt-1" x-text="contacts.length + ' client relationships'"></div>
         </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
+        <div class="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Aggregate Net Worth</div>
           <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(totalNetWorth)"></div>
           <div class="text-xs text-gray-400 mt-1">+2.9% this quarter</div>
         </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm">
+        <div class="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Pending Reviews</div>
           <div class="font-serif text-2xl font-semibold text-navy" x-text="pendingReviews"></div>
           <div class="text-xs text-gray-400 mt-1">Annual & suitability</div>
         </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
+        <div class="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Compliance Alerts</div>
           <div class="font-serif text-2xl font-semibold text-navy" x-text="complianceAlerts"></div>
           <div class="text-xs text-gray-400 mt-1">KYC refresh needed</div>
         </div>
       </div>
 
-      <!-- Main Grid -->
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div class="min-w-0 bg-white rounded-xl shadow-sm p-5">
-          <h2 class="font-semibold text-base text-navy mb-4">Client Book</h2>
+      <!-- Client Book -->
+      <div class="bg-white rounded-xl shadow-sm p-5">
+        <h2 class="font-semibold text-base text-navy mb-4">Client Book</h2>
           <div class="overflow-x-auto">
             <table class="w-full min-w-[760px]">
               <thead>
@@ -225,7 +224,7 @@
               </thead>
               <tbody>
                 <template x-for="c in filteredContacts" :key="c.id">
-                  <tr @click="viewClient(c)" class="group border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors">
+                  <tr @click="viewClient(c)" class="group border-b border-gray-50 even:bg-gray-50/50 hover:bg-blue-50/50 cursor-pointer transition-colors">
                     <td class="py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.first_name + ' ' + c.last_name)"></div>
@@ -259,49 +258,12 @@
               </tbody>
             </table>
           </div>
-          <template x-if="filteredContacts.length === 0">
-            <div class="rounded-2xl border border-dashed border-gray-300 bg-slate-50 px-6 py-10 text-center">
-              <div class="text-sm font-semibold text-navy">No contacts yet</div>
-              <p class="mt-2 text-sm text-gray-500">Create a contact from Maestro or the API to start building the client book.</p>
-            </div>
-          </template>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm p-5 lg:self-start">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <h2 class="font-semibold text-base text-navy">Recent Activity</h2>
-              <p class="text-xs text-gray-400 mt-1">Recent client signals and workflow touchpoints.</p>
-            </div>
-            <span class="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-              Live view
-            </span>
+        <template x-if="filteredContacts.length === 0">
+          <div class="rounded-2xl border border-dashed border-gray-300 bg-slate-50 px-6 py-10 text-center">
+            <div class="text-sm font-semibold text-navy">No contacts yet</div>
+            <p class="mt-2 text-sm text-gray-500">Create a contact from Maestro or the API to start building the client book.</p>
           </div>
-
-          <div class="space-y-4">
-            <template x-for="(activity, index) in recentActivities" :key="activity.id">
-              <div class="flex gap-3">
-                <div class="flex flex-col items-center pt-1">
-                  <span class="h-2.5 w-2.5 rounded-full" :class="activityDotColor(activity.tone)"></span>
-                  <span class="mt-2 h-full w-px bg-gray-100" x-show="index < recentActivities.length - 1"></span>
-                </div>
-                <div class="min-w-0 pb-1">
-                  <div class="text-sm font-medium leading-5 text-navy" x-text="activity.contact"></div>
-                  <div class="text-xs leading-5 text-gray-500" x-text="activity.action"></div>
-                  <div class="mt-1 text-[11px] text-gray-400" x-text="activity.when"></div>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <template x-if="recentActivities.length === 0">
-            <div class="rounded-2xl border border-dashed border-gray-300 bg-slate-50 px-5 py-8 text-center">
-              <div class="text-sm font-semibold text-navy">No recent activity yet</div>
-              <p class="mt-2 text-sm text-gray-500">Client workflow updates will appear here as contacts are added.</p>
-            </div>
-          </template>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -322,9 +284,20 @@
               <div class="text-sm text-gray-500 mt-1" x-text="selectedContact.metadata?.role || selectedContact.type"></div>
               <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
               <div class="mt-4 space-y-2 text-left text-sm">
-                <div class="flex items-center gap-2 text-gray-500"><span>📞</span> <span x-text="selectedContact.phone || '—'"></span></div>
-                <div class="flex items-center gap-2 text-gray-500"><span>✉</span> <span x-text="selectedContact.email"></span></div>
-                <template x-if="selectedContact.company"><div class="flex items-center gap-2 text-gray-500"><span>🏢</span> <span x-text="selectedContact.company"></span></div></template>
+                <div class="flex items-center gap-2 text-gray-500">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                  <span x-text="selectedContact.phone || '—'"></span>
+                </div>
+                <div class="flex items-center gap-2 text-gray-500">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                  <span x-text="selectedContact.email"></span>
+                </div>
+                <template x-if="selectedContact.company">
+                  <div class="flex items-center gap-2 text-gray-500">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                    <span x-text="selectedContact.company"></span>
+                  </div>
+                </template>
               </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-5">
@@ -345,7 +318,7 @@
               <h3 class="font-semibold text-base text-navy mb-4">Accounts</h3>
               <div class="grid grid-cols-2 gap-4">
                 <template x-for="acct in selectedContactAccounts" :key="acct.id">
-                  <div class="border rounded-lg p-4 hover:border-brand/30 transition-colors">
+                  <div class="border border-gray-100 rounded-lg p-4 hover:border-brand/30 transition-colors">
                     <div class="flex justify-between items-start mb-2">
                       <div>
                         <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>

@@ -94,8 +94,15 @@ function investorApp() {
 
     async dismissTask(id) {
       try {
-        await TGK_API.deleteTask(id);
-        this.tasks = this.tasks.filter(t => t.id !== id);
+        const nextTasks = this.tasks.filter((task) => task.id !== id);
+        await TGK_API.updateContactRaw(this.selectedClientId, { tasks: nextTasks });
+        this.tasks = nextTasks;
+        if (this.selectedClient) {
+          this.selectedClient = {
+            ...this.selectedClient,
+            tasks: nextTasks
+          };
+        }
       } catch (e) {
         console.error('Failed to dismiss task:', e);
       }

@@ -11,13 +11,13 @@
   <meta property="og:description" content="Demonstration investor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
-  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-5">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-6">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260330-6"></script>
   <script defer src="../../shared/js/api-client.js?v=20260330-1"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260330-10"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260330-11"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260330-1"></script>
@@ -97,7 +97,7 @@
     </div>
 
     <!-- User -->
-    <div class="p-3 border-t border-white/10 flex items-center gap-3">
+    <div class="p-3 border-t border-white/10 bg-white/5 flex items-center gap-3">
       <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${selectedClient?.metadata?.avatar || '#3b5bdb'}`" x-text="initials(clientName)"></div>
       <div x-show="!sidebarCollapsed" class="overflow-hidden">
         <div class="text-sm font-medium leading-tight" x-text="clientName"></div>
@@ -188,16 +188,23 @@
 
       <!-- Tab Nav -->
       <div x-show="tab !== 'settings'" class="flex gap-6 border-b border-gray-200 mb-6">
-        <template x-for="t in [{id:'overview',icon:'◫',label:'Overview'},{id:'documents',icon:'▤',label:'Documents'},{id:'tasks',icon:'☑',label:'Tasks'}]" :key="t.id">
-          <button @click="setTab(t.id)" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-            :class="tab === t.id ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
-            <span x-text="t.icon"></span>
-            <span x-text="t.label"></span>
-            <template x-if="t.id === 'tasks' && tasks.length > 0">
-              <span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span>
-            </template>
-          </button>
-        </template>
+        <button @click="setTab('overview')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+          :class="tab === 'overview' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Overview
+        </button>
+        <button @click="setTab('documents')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+          :class="tab === 'documents' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Documents
+        </button>
+        <button @click="setTab('tasks')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+          :class="tab === 'tasks' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span class="flex items-center gap-1.5">Tasks
+            <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
+          </span>
+        </button>
       </div>
 
       <div x-show="tab !== 'settings' && !loading && !selectedClient" class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
@@ -209,7 +216,7 @@
       <!-- OVERVIEW TAB -->
       <div x-show="tab === 'overview' && selectedClient">
         <!-- Hero Card -->
-        <div class="bg-gradient-to-r from-navy to-navy-light rounded-xl p-8 text-white mb-6 relative overflow-hidden">
+        <div class="bg-gradient-to-r from-navy to-navy-light rounded-xl p-8 text-white mb-6 relative overflow-hidden tgk-hero-shimmer">
           <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/5"></div>
           <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-300 mb-2">Total Portfolio Value</div>
           <div class="font-serif text-[44px] font-semibold leading-tight" x-text="fmtMoney(totalPortfolioValue)"></div>
@@ -232,7 +239,7 @@
         <!-- Account Cards -->
         <div class="grid grid-cols-2 gap-4 mb-6">
           <template x-for="acct in accounts" :key="acct.id">
-            <div class="bg-white rounded-xl shadow-sm p-5">
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-transparent hover:border-brand/20 hover:shadow-md transition-all duration-200">
               <div class="flex justify-between items-start mb-2">
                 <div>
                   <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
@@ -260,7 +267,7 @@
         </div>
 
         <!-- Advisor Contact -->
-        <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-brand">
           <h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3">Your Advisor</h3>
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white font-bold" x-text="assignedAdvisor?.metadata?.avatar || TGK_CONFIG.advisor?.avatar || '?'"></div>

@@ -50,7 +50,7 @@
         ...data,
         title: user.title || data.title || ''
       },
-      tasks: Array.isArray(data.tasks) ? data.tasks : [],
+      tasks: Array.isArray(user?.tasks) ? user.tasks : (Array.isArray(data.tasks) ? data.tasks : []),
       created_at: user.created_at
     };
   }
@@ -412,11 +412,11 @@
     getContactRaw(id) {
       return this.get(getItemPath('/api/data/contacts', id));
     },
+    updateContactRaw(id, body) {
+      return this.put(getItemPath('/api/data/contacts', id), body);
+    },
     deleteContactRaw(id) {
       return this.del(getItemPath('/api/data/contacts', id));
-    },
-    deleteTask(id) {
-      return this.del(getItemPath('/api/data/tasks', id));
     },
 
     async getContacts(params) {
@@ -429,7 +429,16 @@
         ...mapContactToView(contact),
         accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
         envelopes: (contact.envelopes || []).map(mapEnvelope),
-        tasks: Array.isArray(contact.tasks) ? contact.tasks : (Array.isArray(contact.data?.tasks) ? contact.data.tasks : [])
+        tasks: Array.isArray(contact.tasks) ? contact.tasks : []
+      };
+    },
+    async updateContact(id, body) {
+      const contact = await this.updateContactRaw(id, body);
+      return {
+        ...mapContactToView(contact),
+        accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
+        envelopes: (contact.envelopes || []).map(mapEnvelope),
+        tasks: Array.isArray(contact.tasks) ? contact.tasks : []
       };
     },
     deleteContact(id) {

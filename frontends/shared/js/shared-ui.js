@@ -2,21 +2,27 @@
  * Shared UI helpers and mount points for TGK frontends.
  */
 
-// Format numeric values to a compact currency display.
-function fmtMoney(cents) {
-  if (cents == null) return '$0';
-  const dollars = cents / 100;
+// Format numeric values to a compact dollar display.
+function fmtMoney(amount) {
+  const dollars = Number(amount);
+  if (!Number.isFinite(dollars)) return '$0';
   if (Math.abs(dollars) >= 1e9) return '$' + (dollars / 1e9).toFixed(2) + 'B';
   if (Math.abs(dollars) >= 1e6) return '$' + (dollars / 1e6).toFixed(2) + 'M';
   if (Math.abs(dollars) >= 1e3) return '$' + (dollars / 1e3).toFixed(0) + 'K';
   return '$' + dollars.toFixed(2);
 }
 
+function normalizePercentValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.abs(numeric) < 1 ? numeric * 100 : numeric;
+}
+
 // Format percentage
 function fmtPct(n) {
-  if (n == null) return '0%';
-  const sign = n >= 0 ? '+' : '';
-  return sign + n.toFixed(1) + '%';
+  const normalized = normalizePercentValue(n);
+  const sign = normalized >= 0 ? '+' : '';
+  return sign + normalized.toFixed(1) + '%';
 }
 
 function envelopeTimestampLabel(envelope) {
@@ -355,12 +361,12 @@ function sharedSettingsTemplate() {
 
               <div class="tgk-settings-field-grid">
                 <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow ID</label>
+                  <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow</label>
                   <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
                 </div>
 
                 <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow ID</label>
+                  <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow</label>
                   <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono" placeholder="workflow-id">
                 </div>
               </div>

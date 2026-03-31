@@ -1,5 +1,5 @@
 const { randomUUID } = require('crypto');
-const JSON_FIELD_NAMES = ['data', 'available_accounts'];
+const JSON_FIELD_NAMES = ['data', 'tasks', 'available_accounts'];
 const DEFAULT_USER = {
   displayName: 'Gordon Gecko',
   email: 'g.gecko@tgkwealth.com',

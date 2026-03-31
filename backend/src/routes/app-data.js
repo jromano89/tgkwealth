@@ -57,12 +57,4 @@ router.put('/envelopes/:id', withApp((req, res, db, app) => {
   res.json(service.updateEnvelopeForApp(db, app.id, req.params.id, req.body));
 }));
 
-router.post('/tasks', withApp((req, res, db, app) => {
-  created(res, service.createTaskForApp(db, app.id, req.body));
-}));
-
-router.delete('/tasks/:id', withApp((req, res, db, app) => {
-  res.json(service.deleteTaskForApp(db, app.id, req.params.id));
-}));
-
 module.exports = router;

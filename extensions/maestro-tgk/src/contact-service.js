@@ -8,6 +8,12 @@ const DEFAULT_ROLE = 'Prospective Client';
 const DEFAULT_NEW_CONTACT_TASKS = [
   { title: 'Begin Asset Transfer', description: 'Move assets into the new brokerage relationship.' }
 ];
+const RISK_ACCOUNT_ALLOCATIONS = {
+  Balanced: { allocEquity: 56, allocFixed: 24, allocAlt: 12, allocCash: 8 },
+  'Moderate Growth': { allocEquity: 64, allocFixed: 18, allocAlt: 12, allocCash: 6 },
+  Growth: { allocEquity: 74, allocFixed: 8, allocAlt: 12, allocCash: 6 },
+  'Conservative Income': { allocEquity: 32, allocFixed: 46, allocAlt: 8, allocCash: 14 }
+};
 
 function normalizeNumber(value, fallback = 0) {
   if (value === undefined || value === null || value === '') {
@@ -52,6 +58,46 @@ function deterministicPick(items, seed) {
   return items[hashString(seed) % items.length];
 }
 
+function deterministicRatio(seed, salt = '') {
+  return (hashString(`${seed}:${salt}`) % 1000) / 999;
+}
+
+function deterministicRange(seed, salt, min, max, step = 1) {
+  const ratio = deterministicRatio(seed, salt);
+  const raw = min + ((max - min) * ratio);
+  return Math.round(raw / step) * step;
+}
+
+function defaultPortfolioValue(seed, status) {
+  if (status === 'pending') {
+    return deterministicRange(seed, 'portfolio-pending', 1250000, 4200000, 50000);
+  }
+  return deterministicRange(seed, 'portfolio-active', 2800000, 12800000, 50000);
+}
+
+function defaultNetWorth(value, seed, status) {
+  const multiple = status === 'pending'
+    ? deterministicRange(seed, 'net-worth-pending', 2.1, 3.4, 0.1)
+    : deterministicRange(seed, 'net-worth-active', 2.8, 5.2, 0.1);
+  return Math.round((value * multiple) / 50000) * 50000;
+}
+
+function summarizeAccounts(accounts, seed) {
+  const normalizedAccounts = (Array.isArray(accounts) ? accounts : []).filter((account) => account && typeof account === 'object');
+  const totalValue = normalizedAccounts.reduce((sum, account) => sum + normalizeNumber(account.value, 0), 0);
+  const weightedYtdReturn = totalValue > 0
+    ? normalizedAccounts.reduce((sum, account) => sum + (normalizeNumber(account.value, 0) * normalizeNumber(account.ytdReturn, 0)), 0) / totalValue
+    : deterministicRange(seed, 'fallback-ytd', 0.028, 0.082, 0.001);
+  const drift = deterministicRange(seed, 'change-drift', -0.004, 0.004, 0.001);
+  const monthlyChange = Math.max(-0.045, Math.min(0.045, weightedYtdReturn / 3.5 + drift));
+
+  return {
+    totalValue,
+    weightedYtdReturn: Number(weightedYtdReturn.toFixed(3)),
+    monthlyChange: Number(monthlyChange.toFixed(3))
+  };
+}
+
 function buildDisplayName(firstName, lastName, fullName, existingDisplayName) {
   if (fullName) {
     return String(fullName).trim();
@@ -75,19 +121,27 @@ function collectExtensionFields(input, consumedKeys) {
   return extensionFields;
 }
 
-function buildDefaultAccount(refSeed) {
+function buildDefaultAccount(refSeed, options = {}) {
+  const status = options.status || 'pending';
+  const riskProfile = options.riskProfile || deterministicPick(RISK_PROFILES, refSeed);
+  const allocation = RISK_ACCOUNT_ALLOCATIONS[riskProfile] || RISK_ACCOUNT_ALLOCATIONS.Balanced;
+  const value = normalizeNumber(options.value, defaultPortfolioValue(refSeed, status));
+  const ytdReturn = status === 'pending'
+    ? deterministicRange(refSeed, 'ytd-pending', 0.012, 0.036, 0.001)
+    : deterministicRange(refSeed, 'ytd-active', 0.038, 0.118, 0.001);
+
   return {
     kind: 'account',
-    status: 'pending',
+    status,
     name: 'Individual Brokerage',
     accountType: 'Taxable',
     typeCode: 'type-a',
-    value: 0,
-    ytdReturn: 0,
-    allocEquity: 0,
-    allocFixed: 0,
-    allocAlt: 0,
-    allocCash: 100
+    value,
+    ytdReturn: Number(ytdReturn.toFixed(3)),
+    allocEquity: allocation.allocEquity,
+    allocFixed: allocation.allocFixed,
+    allocAlt: allocation.allocAlt,
+    allocCash: allocation.allocCash
   };
 }
 
@@ -265,14 +319,19 @@ function buildContactPayload(rawInput, existingContact) {
   const displayName = buildDisplayName(firstName, lastName, fullName, existingContact?.display_name);
   const status = normalizeStatus(pickFirstDefined(mergedInput, ['Status', 'status']), existingContact?.status || 'pending');
   const sourceSeed = pickFirstDefined(mergedInput, ['Ref', 'ref', 'Email', 'email']) || displayName || existingContact?.id || Date.now();
+  const riskProfile = pickFirstDefined(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed);
 
   const value = normalizeNumber(
     pickFirstDefined(mergedInput, ['Aum', 'aum', 'Value', 'value']),
-    normalizeNumber(existingData.value, 0)
+    existingContact
+      ? normalizeNumber(existingData.value, defaultPortfolioValue(sourceSeed, status))
+      : defaultPortfolioValue(sourceSeed, status)
   );
   const netWorth = normalizeNumber(
     pickFirstDefined(mergedInput, ['NetWorth', 'netWorth']),
-    existingContact ? normalizeNumber(existingData.netWorth, value) : value
+    existingContact
+      ? normalizeNumber(existingData.netWorth, defaultNetWorth(value, sourceSeed, status))
+      : defaultNetWorth(value, sourceSeed, status)
   );
 
   const extensionFields = collectExtensionFields(input, consumedKeys);
@@ -280,6 +339,11 @@ function buildContactPayload(rawInput, existingContact) {
     ? existingData.extensionFields
     : {};
   const existingAccounts = Array.isArray(existingData.accounts) ? existingData.accounts : [];
+  const accounts = existingAccounts.length > 0
+    ? existingAccounts
+    : [buildDefaultAccount(sourceSeed, { value, riskProfile, status })];
+  const accountSummary = summarizeAccounts(accounts, sourceSeed);
+  const resolvedValue = value > 0 ? value : accountSummary.totalValue;
 
   const normalizedData = {
     ...existingData,
@@ -287,16 +351,18 @@ function buildContactPayload(rawInput, existingContact) {
     firstName,
     lastName,
     contactType: 'investor',
-    value,
+    value: resolvedValue,
     netWorth,
-    changePct: existingContact ? normalizeNumber(existingData.changePct, 0) : 0,
-    riskProfile: pickFirstDefined(mergedInput, ['RiskProfile', 'riskProfile']) || existingData.riskProfile || deterministicPick(RISK_PROFILES, sourceSeed),
+    changePct: existingContact && existingData.changePct !== undefined && existingData.changePct !== null
+      ? normalizeNumber(existingData.changePct, accountSummary.monthlyChange)
+      : accountSummary.monthlyChange,
+    riskProfile,
     role: pickFirstDefined(mergedInput, ['Role', 'role']) || existingData.role || DEFAULT_ROLE,
     assignedTo: pickFirstDefined(mergedInput, ['AssignedTo', 'assignedTo']) || existingData.assignedTo || 'Gordon Gecko',
     avatar: existingData.avatar || deterministicPick(COLOR_PALETTE, sourceSeed),
     lifecycleStage: pickFirstDefined(mergedInput, ['LifecycleStage', 'lifecycleStage']) || existingData.lifecycleStage || (status === 'pending' ? 'pending_signature' : status),
     externalId: pickFirstDefined(mergedInput, ['ExternalId', 'externalId']) || existingData.externalId || null,
-    accounts: existingAccounts.length > 0 ? existingAccounts : [buildDefaultAccount(sourceSeed)],
+    accounts,
     extensionFields: {
       ...existingExtensionFields,
       ...extensionFields

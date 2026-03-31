@@ -50,16 +50,28 @@ function resolveAssociations(db, appId, input = {}) {
   };
 }
 
-function buildTaskRecords(tasks, defaults = {}) {
-  return (Array.isArray(tasks) ? tasks : []).map((task) => ({
-    id: task.id || randomUUID(),
-    user_id: task.userId || task.user_id || defaults.userId || null,
-    contact_id: task.contactId || task.contact_id || defaults.contactId || null,
-    title: requireText(task.title, 'task title is required'),
-    description: task.description || null,
-    status: task.status || 'pending',
-    created_at: task.created_at || task.createdAt || new Date().toISOString()
-  }));
+function normalizeTasksInput(tasks, defaults = {}) {
+  if (tasks === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(tasks)) {
+    throw createError(400, 'tasks must be an array');
+  }
+
+  return tasks.map((task) => {
+    const normalizedTask = asObject(task);
+
+    return {
+      id: normalizedTask.id || randomUUID(),
+      user_id: normalizedTask.userId || normalizedTask.user_id || defaults.userId || null,
+      contact_id: normalizedTask.contactId || normalizedTask.contact_id || defaults.contactId || null,
+      title: requireText(normalizedTask.title, 'task title is required'),
+      description: normalizedTask.description || null,
+      status: normalizedTask.status || 'pending',
+      created_at: normalizedTask.created_at || normalizedTask.createdAt || new Date().toISOString()
+    };
+  });
 }
 
 function listUsersForApp(db, appId, filters) {
@@ -67,13 +79,15 @@ function listUsersForApp(db, appId, filters) {
 }
 
 function createUserForApp(db, appId, input = {}) {
+  const id = input.id || randomUUID();
   return store.createUser(db, appId, {
-    id: input.id || randomUUID(),
+    id,
     displayName: requireText(input.displayName, 'displayName is required'),
     email: input.email || null,
     phone: input.phone || null,
     title: input.title || null,
-    data: asObject(input.data)
+    data: asObject(input.data),
+    tasks: normalizeTasksInput(input.tasks, { userId: id })
   });
 }
 
@@ -87,7 +101,8 @@ function updateUserForApp(db, appId, userId, input = {}) {
     email: input.email,
     phone: input.phone,
     title: input.title,
-    data: mergeData(existing.data, input.data)
+    data: mergeData(existing.data, input.data),
+    tasks: normalizeTasksInput(input.tasks, { userId })
   });
 }
 
@@ -96,9 +111,10 @@ function listContactsForApp(db, appId, filters) {
 }
 
 function createContactForApp(db, appId, input = {}) {
+  const id = input.id || randomUUID();
   const ownerUserId = resolveOwnerUserId(db, appId, input.ownerUserId);
-  const contact = store.createContact(db, appId, {
-    id: input.id || randomUUID(),
+  return store.createContact(db, appId, {
+    id,
     ownerUserId,
     ref: input.ref || null,
     displayName: requireText(input.displayName, 'displayName is required'),
@@ -107,17 +123,12 @@ function createContactForApp(db, appId, input = {}) {
     organization: input.organization || null,
     status: input.status || 'active',
     source: input.source || 'api',
-    data: asObject(input.data)
-  });
-
-  if (Array.isArray(input.tasks) && input.tasks.length > 0) {
-    store.createTasks(db, appId, contact.id, buildTaskRecords(input.tasks, {
-      contactId: contact.id,
+    data: asObject(input.data),
+    tasks: normalizeTasksInput(input.tasks, {
+      contactId: id,
       userId: ownerUserId
-    }));
-  }
-
-  return contact;
+    })
+  });
 }
 
 function getContactDetailsForApp(db, appId, contactId) {
@@ -129,15 +140,24 @@ function updateContactForApp(db, appId, contactId, input = {}) {
   if (!existing) {
     throw createError(404, 'Contact not found');
   }
+
+  const ownerUserId = input.ownerUserId !== undefined
+    ? resolveOwnerUserId(db, appId, input.ownerUserId)
+    : existing.owner_user_id;
+
   return store.updateContact(db, appId, contactId, {
-    ownerUserId: input.ownerUserId !== undefined ? resolveOwnerUserId(db, appId, input.ownerUserId) : undefined,
+    ownerUserId: input.ownerUserId !== undefined ? ownerUserId : undefined,
     ref: input.ref,
     displayName: input.displayName,
     email: input.email,
     phone: input.phone,
     organization: input.organization,
     status: input.status,
-    data: mergeData(existing.data, input.data)
+    data: mergeData(existing.data, input.data),
+    tasks: normalizeTasksInput(input.tasks, {
+      contactId,
+      userId: ownerUserId
+    })
   });
 }
 
@@ -179,38 +199,11 @@ function updateEnvelopeForApp(db, appId, envelopeId, input = {}) {
   });
 }
 
-function createTaskForApp(db, appId, input = {}) {
-  const { contactId, userId } = resolveAssociations(db, appId, input);
-  if (!contactId && !userId) {
-    throw createError(400, 'contactId or userId is required');
-  }
-
-  return store.createTask(db, appId, {
-    id: input.id || randomUUID(),
-    contactId,
-    userId,
-    title: requireText(input.title, 'title is required'),
-    description: input.description || null,
-    status: input.status || 'pending',
-    createdAt: input.createdAt || input.created_at || new Date().toISOString()
-  });
-}
-
-function deleteTaskForApp(db, appId, taskId) {
-  if (!store.deleteTask(db, appId, taskId)) {
-    throw createError(404, 'Task not found');
-  }
-
-  return { deleted: true };
-}
-
 module.exports = {
   createContactForApp,
   createEnvelopeForApp,
-  createTaskForApp,
   createUserForApp,
   deleteContactForApp,
-  deleteTaskForApp,
   getContactDetailsForApp,
   listContactsForApp,
   listUsersForApp,

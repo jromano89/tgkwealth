@@ -3,12 +3,6 @@ const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
-const RECENT_ACTIVITY_TEMPLATES = [
-  { tone: 'emerald', action: 'Portfolio review queued' },
-  { tone: 'blue', action: 'Documents ready for signature' },
-  { tone: 'amber', action: 'Suitability refresh due soon' },
-  { tone: 'violet', action: 'Household snapshot updated' }
-];
 
 const ADVISOR_DOCUMENT_CONTACT_FALLBACKS = [
   { first_name: 'Amelia', last_name: 'Hart', metadata: { riskProfile: 'Balanced' } },
@@ -112,7 +106,7 @@ const ADVISOR_DOCUMENT_INSIGHT_TEMPLATES = [
     aiSignal: 'Early termination trigger',
     summary: 'The hedge can be unwound early if the collateral position drops past a short NAV threshold.',
     impact: 'An early unwind could leave the client re-exposed to a concentrated single-name position.',
-    extractedClause: 'Counterparty may terminate the hedge upon ten days’ notice if collateral value declines below the minimum support threshold.',
+    extractedClause: 'Counterparty may terminate the hedge upon ten days\u2019 notice if collateral value declines below the minimum support threshold.',
     nextStep: 'Review the current collateral buffer and decide whether the hedge should be resized or re-papered.',
     detailNotes: [
       'Validate the latest collateral mark before the next investment committee review.',
@@ -225,9 +219,7 @@ function advisorApp() {
     setView(nextView) {
       const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
       const resolvedView = allowedViews.has(nextView) ? nextView : 'dashboard';
-
       this.view = resolvedView;
-
       if (resolvedView !== 'documents') {
         this.closeDocumentInsight();
       }
@@ -308,32 +300,6 @@ function advisorApp() {
       return this.documentInsights.find((item) => item.id === this.documentInsightOpenId) || null;
     },
 
-    get recentActivities() {
-      return this.contacts.slice(0, 4).map((contact, index) => {
-        const template = RECENT_ACTIVITY_TEMPLATES[index % RECENT_ACTIVITY_TEMPLATES.length];
-        return {
-          id: `activity-${contact.id}`,
-          contact: `${contact.first_name} ${contact.last_name}`,
-          action: template.action,
-          tone: template.tone,
-          when: formatDisplayDate(contact.updated_at || contact.created_at, {
-            month: 'short',
-            day: 'numeric'
-          }) || 'Today'
-        };
-      });
-    },
-
-    activityDotColor(tone) {
-      const tones = {
-        emerald: 'bg-emerald-400',
-        blue: 'bg-sky-400',
-        amber: 'bg-amber-400',
-        violet: 'bg-violet-400'
-      };
-      return tones[tone] || 'bg-slate-400';
-    },
-
     documentMetricBorderClasses(tone) {
       const tones = {
         amber: 'border-amber-500',
@@ -391,7 +357,6 @@ function advisorApp() {
 
     startClientDetailRefresh(contactId) {
       this.stopClientDetailRefresh();
-      // Only poll if the client is pending — no need to poll active clients
       if (this.selectedContact?.metadata?.status !== 'pending') return;
       const app = this;
       this._clientDetailRefreshTimer = window.setInterval(async function () {
@@ -408,7 +373,6 @@ function advisorApp() {
           if (idx !== -1) {
             app.contacts[idx] = { ...app.contacts[idx], ...detail, accounts: undefined, envelopes: undefined };
           }
-          // Stop polling once the client transitions to active
           if (detail.metadata?.status === 'active') {
             app.stopClientDetailRefresh();
           }
@@ -509,25 +473,18 @@ function advisorApp() {
       if (this._maestroTrackingStarted || this.maestroCompleted || this.maestroError) {
         return;
       }
-
       this._maestroTrackingStarted = true;
       await this.snapshotMaestroContacts();
-
       if (!this.showOnboarding || this.maestroCompleted) {
         return;
       }
-
       this.startMaestroCreationPolling();
     },
 
     findNewMaestroContact(extensionContacts) {
       const knownIds = this._maestroKnownContactIds || new Set();
       const newContacts = (extensionContacts || []).filter((contact) => !knownIds.has(contact.id));
-
-      if (newContacts.length === 0) {
-        return null;
-      }
-
+      if (newContacts.length === 0) return null;
       return newContacts.reduce(function (a, b) {
         return new Date(b.created_at) > new Date(a.created_at) ? b : a;
       });
@@ -535,17 +492,12 @@ function advisorApp() {
 
     startMaestroCreationPolling() {
       this.stopMaestroCreationPolling();
-
       const app = this;
       const poll = async function () {
-        if (!app.showOnboarding || app.maestroCompleted) {
-          return;
-        }
-
+        if (!app.showOnboarding || app.maestroCompleted) return;
         try {
           const extensionContacts = await app.fetchMaestroContacts();
           const target = app.findNewMaestroContact(extensionContacts);
-
           if (target) {
             await app.completeOnboardingWithContact(target);
             return;
@@ -553,10 +505,8 @@ function advisorApp() {
         } catch (e) {
           console.warn('Could not poll for Maestro-created contacts:', e);
         }
-
         app._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
       };
-
       this._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
     },
 
@@ -568,22 +518,17 @@ function advisorApp() {
     },
 
     async completeOnboardingWithContact(target) {
-      if (!target || this.maestroCompleted) {
-        return;
-      }
-
+      if (!target || this.maestroCompleted) return;
       this.stopMaestroCreationPolling();
       this.clearOnboardingRedirectTimer();
       if (this._maestroKnownContactIds) {
         this._maestroKnownContactIds.add(target.id);
       }
       const resolvedTarget = await this.refreshContactsAfterOnboarding(target.id) || target;
-
       const app = this;
       this._maestroRedirectTimer = window.setTimeout(function () {
         app.maestroCompleted = true;
         app.maestroNewContact = resolvedTarget;
-
         app._maestroRedirectTimer = window.setTimeout(function () {
           app.resetOnboardingState();
           app.viewClient(resolvedTarget);

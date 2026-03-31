@@ -1,6 +1,13 @@
 require('dotenv/config');
 const express = require('express');
 const { getDb } = require('./database');
+const {
+  API_TITLE,
+  API_VERSION,
+  buildDocsHtml,
+  buildLlmsTxt,
+  buildOpenApiDocument
+} = require('./openapi');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,7 +41,7 @@ getDb();
 
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
-<html><head><title>TGK Demo Backend</title>
+<html><head><title>${API_TITLE}</title>
 <style>*{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
 body{background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .c{text-align:center;max-width:480px;padding:2rem}
@@ -44,11 +51,30 @@ a{display:inline-block;background:#3b5bdb;color:#fff;text-decoration:none;paddin
 a:hover{background:#5c7cfa}
 .tag{font-size:.75rem;color:#6b7280;margin-top:1.5rem}</style></head>
 <body><div class="c">
-<h1>TGK Demo Backend</h1>
-<p>Shared demo backend for Docusign auth, envelopes, a discard-only webhook sink, and app-scoped demo data.</p>
+<h1>${API_TITLE}</h1>
+<p>CORS-enabled backend foundation for auth, proxying, webhook intake, and app-scoped demo data.</p>
 <a href="/api/health">Health Check</a>
-<div class="tag">v1.0.0</div>
+<a href="/api/docs">API Docs</a>
+<a href="/api/openapi.json">OpenAPI JSON</a>
+<a href="/.well-known/llms.txt">LLMs.txt</a>
+<div class="tag">v${API_VERSION}</div>
 </div></body></html>`);
+});
+
+app.get('/api/docs', (req, res) => {
+  res.type('html').send(buildDocsHtml(req));
+});
+
+app.get('/api/openapi.json', (req, res) => {
+  res.json(buildOpenApiDocument(req));
+});
+
+app.get('/.well-known/openapi.json', (req, res) => {
+  res.json(buildOpenApiDocument(req));
+});
+
+app.get('/.well-known/llms.txt', (req, res) => {
+  res.type('text/plain').send(buildLlmsTxt(req));
 });
 
 app.use('/api/auth', require('./routes/auth'));
