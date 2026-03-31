@@ -11,7 +11,7 @@
   <meta property="og:description" content="Demonstration advisor portal for product showcase and testing.">
   <link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg">
   <link rel="stylesheet" href="../../shared/styles/tgk-tailwind.css?v=20260325-5">
-  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260330-6">
+  <link rel="stylesheet" href="../../shared/styles/tgk-ui.css?v=20260331-1">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
@@ -21,7 +21,7 @@
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260330-1"></script>
-  <script defer src="js/app.js?v=20260330-7"></script>
+  <script defer src="js/app.js?v=20260331-2"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="tgk-portal-body" data-portal="advisor">
@@ -44,7 +44,7 @@
 <div class="flex h-[calc(100vh-28px)]" x-data="advisorApp()">
 
   <!-- Sidebar -->
-  <aside class="bg-navy text-white flex flex-col transition-all duration-200" :class="sidebarCollapsed ? 'w-[68px]' : 'w-[220px]'">
+  <aside class="bg-navy text-white flex flex-col flex-shrink-0 transition-all duration-200" :class="sidebarCollapsed ? 'w-[68px]' : 'w-[220px]'">
     <!-- Logo -->
     <div class="p-4 flex items-center gap-3 cursor-pointer" @click="sidebarCollapsed = !sidebarCollapsed">
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-text="brandingInitial"></div>
@@ -66,7 +66,7 @@
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
         :class="view === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <span x-show="!sidebarCollapsed">Documents</span>
+        <span x-show="!sidebarCollapsed">Agreement Signals</span>
       </button>
       <button @click="setView('settings')"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
@@ -99,7 +99,7 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 overflow-auto">
+  <main class="tgk-main" :class="{ 'tgk-main--clipped': view === 'documents' }">
 
     <!-- DASHBOARD VIEW -->
     <div x-show="view === 'dashboard'" class="p-6">
@@ -395,183 +395,325 @@
       </div>
     </template>
 
-    <!-- DOCUMENTS VIEW -->
-    <div x-show="view === 'documents'" class="p-6">
-      <div class="mx-auto max-w-6xl space-y-6">
-        <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-2">Agreement intelligence</div>
-            <h2 class="text-lg font-semibold text-navy">Client document watchlist</h2>
-            <p class="text-sm text-gray-500 mt-1">A tighter operating view for renewals, clause exposure, and client follow-up.</p>
+    <!-- AGREEMENT SIGNALS VIEW -->
+    <div x-show="view === 'documents'" class="tgk-agreement-view">
+      <div class="tgk-agreement-shell">
+        <div class="tgk-agreement-header">
+          <div class="tgk-agreement-heading">
+            <h2 class="tgk-page-title">Agreement Signals</h2>
+            <p class="tgk-page-copy">Agreements worth attention right now.</p>
+          </div>
+
+          <div class="tgk-agreement-toolbar">
+            <button
+              @click="loadAgreementSignals({ force: true })"
+              :disabled="agreementSignalsLoading"
+              class="tgk-button tgk-button--secondary">
+              <svg class="tgk-icon tgk-icon--sm" :class="{ 'tgk-spin': agreementSignalsLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span x-text="agreementSignalsLoading ? 'Refreshing…' : 'Refresh'"></span>
+            </button>
           </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <template x-for="card in documentSummaryCards" :key="card.label">
-            <div class="bg-white rounded-xl p-4 border-l-4 shadow-sm" :class="documentMetricBorderClasses(card.tone)">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1" x-text="card.label"></div>
-              <div class="font-serif text-2xl font-semibold text-navy" x-text="card.value"></div>
-              <div class="text-xs text-gray-400 mt-1" x-text="card.detail"></div>
-            </div>
-          </template>
-        </div>
-
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-end justify-between gap-4 mb-4">
-              <div>
-                <h3 class="text-base font-semibold text-navy">Priority review queue</h3>
-                <p class="text-sm text-gray-500 mt-1">The agreements most likely to need advisor action this week.</p>
-              </div>
-              <div class="text-[11px] font-medium text-gray-400" x-text="documentInsights.length + ' items'"></div>
-            </div>
-
-            <div class="space-y-3">
-              <template x-for="item in documentInsights" :key="item.id">
-                <button type="button" @click="openDocumentInsightById(item.id)" class="w-full rounded-2xl border border-gray-100 bg-white px-4 py-4 text-left transition-all hover:border-gray-200 hover:shadow-sm">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold" :class="documentPillClasses(item.tone)" x-text="item.category"></span>
-                        <span class="inline-flex rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-500" x-text="item.priority + ' priority'"></span>
-                      </div>
-                      <div class="mt-3 text-sm font-semibold text-navy" x-text="item.agreement"></div>
-                      <p class="mt-2 text-sm leading-6 text-gray-500" x-text="item.summary"></p>
-                      <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
-                        <span x-text="item.clientName"></span>
-                        <span class="h-1 w-1 rounded-full bg-gray-300"></span>
-                        <span x-text="item.clientRiskProfile"></span>
-                        <span class="h-1 w-1 rounded-full bg-gray-300"></span>
-                        <span x-text="item.aiSignal"></span>
-                      </div>
-                    </div>
-                    <div class="flex-shrink-0 text-right">
-                      <div class="text-[11px] font-semibold whitespace-nowrap" :class="documentDeadlineTextClasses(item.tone)" x-text="item.dueLabel"></div>
-                      <div class="mt-1 text-[11px] text-gray-400 whitespace-nowrap" x-text="item.dueDateLabel"></div>
-                    </div>
+        <template x-if="agreementSignalsLoading && !agreementSignalsLoaded">
+          <div class="tgk-agreement-content">
+            <div class="tgk-agreement-loading-kpis">
+              <template x-for="n in 4" :key="'signal-skel-card-' + n">
+                <div class="tgk-surface-panel tgk-surface-panel--md">
+                  <div class="tgk-loading-panel__stack">
+                    <div class="tgk-skeleton-line tgk-skeleton-line--short"></div>
+                    <div class="tgk-skeleton-line tgk-skeleton-line--value"></div>
+                    <div class="tgk-skeleton-line tgk-skeleton-line--medium"></div>
                   </div>
-                </button>
+                </div>
               </template>
             </div>
-          </div>
-
-          <div class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div class="mb-4">
-                <h3 class="text-base font-semibold text-navy">Upcoming renewals</h3>
-                <p class="text-sm text-gray-500 mt-1">Windows that are close enough to warrant proactive outreach.</p>
-              </div>
-              <div class="space-y-3">
-                <template x-for="item in documentRenewalTimeline" :key="item.id">
-                  <button type="button" @click="openDocumentInsightById(item.id)" class="flex w-full items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 text-left transition-colors hover:border-gray-200 hover:bg-slate-50">
-                    <div class="min-w-0">
-                      <div class="text-sm font-medium text-navy" x-text="item.clientName"></div>
-                      <div class="mt-1 text-xs text-gray-500" x-text="item.agreement"></div>
-                    </div>
-                    <div class="flex-shrink-0 text-right">
-                      <div class="text-xs font-semibold text-navy" x-text="item.dueDateLabel"></div>
-                      <div class="mt-1 text-[11px] text-gray-400" x-text="item.secondaryDateLabel"></div>
-                    </div>
-                  </button>
-                </template>
-              </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div class="mb-4">
-                <h3 class="text-base font-semibold text-navy">AI clause signals</h3>
-                <p class="text-sm text-gray-500 mt-1">Terms that could change economics, liability, or transferability.</p>
-              </div>
-              <div class="space-y-3">
-                <template x-for="item in documentClauseSignals" :key="item.id">
-                  <button type="button" @click="openDocumentInsightById(item.id)" class="w-full rounded-xl border border-gray-100 bg-slate-50 px-4 py-4 text-left transition-colors hover:border-gray-200 hover:bg-white">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <div class="text-sm font-semibold text-navy" x-text="item.aiSignal"></div>
-                        <div class="mt-1 text-xs text-gray-500" x-text="item.clientName + ' · ' + item.agreement"></div>
+            <div class="tgk-agreement-main">
+              <div class="tgk-surface-panel tgk-surface-panel--lg tgk-agreement-queue">
+                <div class="tgk-skeleton-line tgk-skeleton-line--heading"></div>
+                <div class="tgk-loading-panel__stack tgk-loading-panel__stack--spaced">
+                  <template x-for="n in 5" :key="'signal-skel-row-' + n">
+                    <div class="tgk-loading-panel__row">
+                      <div class="tgk-loading-panel__stack">
+                        <div class="tgk-skeleton-line tgk-skeleton-line--short"></div>
+                        <div class="tgk-skeleton-line tgk-skeleton-line--long"></div>
+                        <div class="tgk-skeleton-line tgk-skeleton-line--full"></div>
+                        <div class="tgk-skeleton-line tgk-skeleton-line--medium"></div>
                       </div>
-                      <span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold" :class="documentPillClasses(item.tone)" x-text="item.priority"></span>
                     </div>
-                    <p class="mt-3 text-sm leading-6 text-gray-500" x-text="item.impact"></p>
-                  </button>
-                </template>
+                  </template>
+                </div>
+              </div>
+              <div class="tgk-surface-panel tgk-surface-panel--lg">
+                <div class="tgk-skeleton-line tgk-skeleton-line--heading"></div>
+                <div class="tgk-loading-panel__grid">
+                  <template x-for="n in 4" :key="'signal-skel-detail-' + n">
+                    <div class="tgk-loading-panel__cell">
+                      <div class="tgk-loading-panel__stack">
+                        <div class="tgk-skeleton-line tgk-skeleton-line--short"></div>
+                        <div class="tgk-skeleton-line tgk-skeleton-line--medium"></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </template>
 
-      <template x-if="openDocumentInsight">
-        <div class="tgk-modal-shell" @keydown.escape.window="closeDocumentInsight()">
-          <div class="tgk-modal-backdrop" @click="closeDocumentInsight()"></div>
-          <div class="tgk-modal-card" @click.stop>
-            <div class="tgk-modal-header">
-              <div class="min-w-0 pr-4">
-                <div class="tgk-modal-eyebrow">Agreement watch item</div>
-                <h3 class="tgk-modal-title" x-text="openDocumentInsight.agreement"></h3>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold" :class="documentPillClasses(openDocumentInsight.tone)" x-text="openDocumentInsight.category"></span>
-                  <span class="inline-flex rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-600" x-text="openDocumentInsight.priority + ' priority'"></span>
-                </div>
-                <p class="mt-3 text-sm leading-6 text-gray-500" x-text="openDocumentInsight.summary"></p>
+        <template x-if="!agreementSignalsLoading && agreementSignalsError && !agreementSignalsLoaded">
+          <div class="tgk-surface-panel tgk-surface-panel--lg tgk-status-panel">
+            <div class="tgk-pill tgk-tone-pill--amber tgk-pill--eyebrow">
+              <span class="tgk-pill__dot"></span>
+              Agreement feed unavailable
+            </div>
+            <h3 class="tgk-status-panel__title" x-text="agreementConnectionRequired ? 'Connect DocuSign to load agreement signals' : 'Unable to load agreement signals'"></h3>
+            <p class="tgk-status-panel__copy" x-text="agreementSignalsError"></p>
+
+            <div class="tgk-status-grid">
+              <div class="tgk-status-tile">
+                <div class="tgk-fact-label">Milestones</div>
+                <div class="tgk-status-tile__copy">Upcoming notice dates and expirations are ranked into the queue automatically.</div>
               </div>
-              <button @click="closeDocumentInsight()" class="tgk-modal-close" aria-label="Close agreement insight">&times;</button>
+              <div class="tgk-status-tile">
+                <div class="tgk-fact-label">Economics</div>
+                <div class="tgk-status-tile__copy">Extracted values, payment terms, and price caps surface directly in the detail panel.</div>
+              </div>
+              <div class="tgk-status-tile">
+                <div class="tgk-fact-label">Documents</div>
+                <div class="tgk-status-tile__copy">Agreements can deep-link straight to the source document when a document URL is available.</div>
+              </div>
             </div>
 
-            <div class="tgk-modal-body tgk-modal-body--history">
-              <div class="space-y-6">
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div class="rounded-2xl border border-gray-100 bg-white p-4">
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Client</div>
-                    <div class="mt-2 text-sm font-semibold text-navy" x-text="openDocumentInsight.clientName"></div>
+            <div class="tgk-inline-actions tgk-status-panel__actions">
+              <button @click="setView('settings')" class="tgk-button tgk-button--primary">Open Settings</button>
+              <button @click="loadAgreementSignals({ force: true })" class="tgk-button tgk-button--secondary">Try Again</button>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="agreementSignalsLoaded && allAgreementSignals.length === 0">
+          <div class="tgk-surface-panel tgk-empty-panel">
+            <div class="tgk-empty-panel__icon">
+              <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 class="tgk-empty-panel__title">No agreements returned</h3>
+            <p class="tgk-empty-panel__copy">The connection is live, but no agreements came back for this account.</p>
+          </div>
+        </template>
+
+        <template x-if="agreementSignalsLoaded && allAgreementSignals.length > 0">
+          <div class="tgk-agreement-content">
+            <div class="tgk-kpi-grid">
+              <template x-for="card in agreementSummaryCards" :key="card.label">
+                <div class="tgk-kpi" :class="agreementMetricBorderClasses(card.tone)">
+                  <div class="tgk-kpi__label" x-text="card.label"></div>
+                  <div class="tgk-kpi__value" x-text="card.value"></div>
+                  <div class="tgk-kpi__detail" x-text="card.detail"></div>
+                </div>
+              </template>
+            </div>
+
+            <div class="tgk-agreement-main">
+              <section class="tgk-surface-panel tgk-surface-panel--lg tgk-agreement-queue">
+                <div class="tgk-panel-header">
+                  <div class="tgk-panel-heading">
+                    <h3 class="tgk-panel-title">Priority queue</h3>
+                    <p class="tgk-panel-copy">Search and filter the agreements that matter most.</p>
                   </div>
-                  <div class="rounded-2xl border border-gray-100 bg-white p-4">
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Primary deadline</div>
-                    <div class="mt-2 text-sm font-semibold text-navy" x-text="openDocumentInsight.dueDateLabel"></div>
-                  </div>
-                  <div class="rounded-2xl border border-gray-100 bg-white p-4">
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400" x-text="openDocumentInsight.secondaryDateLabel"></div>
-                    <div class="mt-2 text-sm font-semibold text-navy" x-text="openDocumentInsight.secondaryDateValue"></div>
-                  </div>
-                  <div class="rounded-2xl border border-gray-100 bg-white p-4">
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">AI signal</div>
-                    <div class="mt-2 text-sm font-semibold text-navy" x-text="openDocumentInsight.aiSignal"></div>
+                  <div class="tgk-panel-meta">
+                    <div x-text="agreementVisibleLabel"></div>
                   </div>
                 </div>
 
-                <div class="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                  <div class="space-y-4">
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5">
-                      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Why it matters</div>
-                      <p class="mt-3 text-sm leading-7 text-gray-600" x-text="openDocumentInsight.impact"></p>
-                    </div>
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5">
-                      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Extracted clause</div>
-                      <p class="mt-3 text-sm leading-7 text-gray-600" x-text="openDocumentInsight.extractedClause"></p>
-                    </div>
+                <div class="tgk-agreement-tools">
+                  <div class="tgk-agreement-search">
+                    <input
+                      x-model.debounce.150ms="agreementSearchQuery"
+                      type="text"
+                      class="tgk-form-input"
+                      placeholder="Search agreement, party, or type">
                   </div>
-
-                  <div class="space-y-4">
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5">
-                      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Recommended next step</div>
-                      <p class="mt-3 text-sm leading-7 text-gray-600" x-text="openDocumentInsight.nextStep"></p>
-                      <div class="mt-4 text-[11px] text-gray-400">Owner <span class="text-gray-500" x-text="openDocumentInsight.ownerName"></span></div>
+                  <div class="tgk-agreement-filter-row">
+                    <div class="tgk-filter-bar">
+                      <template x-for="filter in agreementFilterOptions" :key="filter.id">
+                        <button
+                          type="button"
+                          class="tgk-filter-chip"
+                          :class="{ 'tgk-filter-chip--active': agreementFilter === filter.id }"
+                          @click="setAgreementFilter(filter.id)">
+                          <span x-text="filter.label"></span>
+                          <span class="tgk-filter-chip__count" x-text="filter.count"></span>
+                        </button>
+                      </template>
                     </div>
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5">
-                      <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">Review notes</div>
-                      <div class="mt-3 space-y-2">
-                        <template x-for="note in openDocumentInsight.detailNotes" :key="note">
-                          <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-gray-600" x-text="note"></div>
+                    <template x-if="agreementHasActiveFilters">
+                      <button type="button" class="tgk-text-button" @click="clearAgreementFilters()">Clear</button>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="tgk-agreement-queue-list">
+                  <template x-if="agreementSignals.length === 0">
+                    <div class="tgk-queue-empty">
+                      <div class="tgk-queue-empty__title">No agreements match the current search.</div>
+                      <div class="tgk-queue-empty__copy">Try a different term or clear the filters.</div>
+                    </div>
+                  </template>
+
+                  <template x-for="signal in agreementSignals" :key="signal.id">
+                    <button
+                      type="button"
+                      @click="selectAgreementSignal(signal.id)"
+                      class="tgk-agreement-item"
+                      :class="{ 'tgk-agreement-item--active': selectedAgreementSignal?.id === signal.id }">
+                      <div class="u-row-start u-gap-4">
+                        <div class="u-col u-grow u-min-0">
+                          <div class="tgk-agreement-item__chips">
+                            <span class="tgk-badge" :class="agreementPillClasses(signal.tone)" x-text="signal.signalLabel"></span>
+                            <span class="tgk-badge tgk-badge--neutral" x-text="signal.typeLabel"></span>
+                          </div>
+
+                          <div class="tgk-agreement-item__main">
+                            <div class="u-col u-min-0">
+                              <div class="tgk-agreement-item__title" x-text="signal.title"></div>
+                              <div class="tgk-agreement-item__party" x-text="signal.partyLabel"></div>
+                            </div>
+                            <div class="tgk-agreement-item__date">
+                              <strong :class="agreementTextClasses(signal.tone)" x-text="signal.nextActionRelativeLabel"></strong>
+                              <span x-text="signal.nextActionDateLabel"></span>
+                            </div>
+                          </div>
+
+                          <p class="tgk-agreement-item__summary" x-text="signal.summaryShort"></p>
+
+                          <div class="tgk-chip-row">
+                            <span class="tgk-chip">
+                              <span class="tgk-chip__label">Value</span>
+                              <span x-text="signal.valueLabel"></span>
+                            </span>
+                            <template x-for="tag in signal.tags" :key="signal.id + '-' + tag">
+                              <span class="tgk-chip" x-text="tag"></span>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </template>
+                </div>
+              </section>
+
+              <div class="tgk-agreement-side">
+                <template x-if="selectedAgreementSignal">
+                  <section class="tgk-surface-panel tgk-agreement-detail">
+                    <div class="tgk-agreement-detail-hero" :class="agreementSurfaceClasses(selectedAgreementSignal.tone)">
+                      <div class="tgk-agreement-detail-hero__top">
+                        <div class="u-col u-min-0">
+                          <div class="tgk-agreement-item__chips">
+                            <span class="tgk-badge" :class="agreementPillClasses(selectedAgreementSignal.tone)" x-text="selectedAgreementSignal.signalLabel"></span>
+                            <span class="tgk-badge tgk-badge--neutral" x-text="selectedAgreementSignal.typeLabel"></span>
+                            <span class="tgk-badge tgk-badge--neutral" x-text="selectedAgreementSignal.statusLabel"></span>
+                          </div>
+                          <h3 class="tgk-agreement-detail-hero__title" x-text="selectedAgreementSignal.title"></h3>
+                          <p class="tgk-agreement-detail-hero__summary" x-text="selectedAgreementSignal.summary"></p>
+                        </div>
+
+                        <template x-if="selectedAgreementSignal.documentHref">
+                          <a :href="selectedAgreementSignal.documentHref" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">
+                            <svg class="tgk-icon tgk-icon--sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.5 6H18m0 0v4.5M18 6l-7.5 7.5M7.5 9H6A1.5 1.5 0 004.5 10.5V18A1.5 1.5 0 006 19.5h7.5A1.5 1.5 0 0015 18v-1.5" />
+                            </svg>
+                            Open document
+                          </a>
                         </template>
                       </div>
                     </div>
-                  </div>
-                </div>
+
+                    <div class="tgk-agreement-detail-body">
+                      <div class="tgk-fact-grid">
+                        <div class="tgk-fact-card">
+                          <div class="tgk-fact-label">Primary party</div>
+                          <div class="tgk-fact-value" x-text="selectedAgreementSignal.partyLabel"></div>
+                        </div>
+                        <div class="tgk-fact-card">
+                          <div class="tgk-fact-label">Next milestone</div>
+                          <div class="tgk-fact-value" x-text="selectedAgreementSignal.nextActionLabel"></div>
+                          <div class="tgk-fact-meta" x-text="selectedAgreementSignal.nextActionDateLabel + ' · ' + selectedAgreementSignal.nextActionRelativeLabel"></div>
+                        </div>
+                        <div class="tgk-fact-card">
+                          <div class="tgk-fact-label">Extracted value</div>
+                          <div class="tgk-fact-value" x-text="selectedAgreementSignal.valueLabel"></div>
+                        </div>
+                        <div class="tgk-fact-card">
+                          <div class="tgk-fact-label">Record context</div>
+                          <div class="tgk-fact-value" x-text="selectedAgreementSignal.sourceLabel"></div>
+                          <div class="tgk-fact-meta" x-text="'Review: ' + selectedAgreementSignal.reviewStatusLabel"></div>
+                        </div>
+                      </div>
+
+                      <div class="tgk-data-grid">
+                        <div class="tgk-data-card">
+                          <div class="tgk-data-card__title">Lifecycle</div>
+                          <div class="tgk-data-list">
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Effective</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.effectiveDateLabel || 'Not extracted'"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Expiration</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.expirationDateLabel || 'Not extracted'"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Renewal notice</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.renewalNoticeDateLabel || 'Not extracted'"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Renewal type</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.renewalTypeLabel"></span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="tgk-data-card">
+                          <div class="tgk-data-card__title">Economics</div>
+                          <div class="tgk-data-list">
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Total value</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.totalValueLabel"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Annual value</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.annualValueLabel"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Payment terms</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.paymentTermsLabel"></span>
+                            </div>
+                            <div class="tgk-data-row">
+                              <span class="tgk-data-label">Price cap</span>
+                              <span class="tgk-data-value" x-text="selectedAgreementSignal.priceCapLabel"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </template>
+                <template x-if="!selectedAgreementSignal && agreementSignalsLoaded && agreementSignals.length === 0">
+                  <section class="tgk-surface-panel tgk-empty-panel tgk-empty-panel--compact">
+                    <div class="tgk-empty-panel__title">No agreement selected</div>
+                    <p class="tgk-empty-panel__copy">Adjust the queue filters to bring agreements back into view.</p>
+                  </section>
+                </template>
               </div>
             </div>
           </div>
-        </div>
-      </template>
+        </template>
+      </div>
     </div>
 
     <!-- SETTINGS VIEW -->

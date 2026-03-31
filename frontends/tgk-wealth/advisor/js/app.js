@@ -4,117 +4,6 @@ const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
 
-const ADVISOR_DOCUMENT_CONTACT_FALLBACKS = [
-  { first_name: 'Amelia', last_name: 'Hart', metadata: { riskProfile: 'Balanced' } },
-  { first_name: 'Daniel', last_name: 'Kim', metadata: { riskProfile: 'Moderate Growth' } },
-  { first_name: 'Priya', last_name: 'Shah', metadata: { riskProfile: 'Growth' } },
-  { first_name: 'Marcus', last_name: 'Reed', metadata: { riskProfile: 'Moderate' } },
-  { first_name: 'Sofia', last_name: 'Alvarez', metadata: { riskProfile: 'Conservative' } }
-];
-
-const ADVISOR_DOCUMENT_INSIGHT_TEMPLATES = [
-  {
-    id: 'fee-schedule-renewal',
-    clientIndex: 0,
-    agreement: 'Advisory Fee Schedule',
-    category: 'Renewal',
-    priority: 'High',
-    tone: 'amber',
-    dueAt: '2026-04-18',
-    secondaryDateLabel: 'Notice deadline',
-    secondaryDate: '2026-04-07',
-    aiSignal: 'Auto-renewal + fee escalation',
-    summary: 'Pricing rolls forward automatically unless notice is sent before the annual renewal window closes.',
-    impact: 'The household could shift into a higher fee tier without an active review.',
-    extractedClause: 'The schedule renews for successive one-year terms unless written notice is delivered at least 30 days before renewal.',
-    nextStep: 'Confirm the intended fee tier and prepare notice if any pricing adjustment is needed.',
-    detailNotes: [
-      'Reconcile the current AUM band against the renewal schedule.',
-      'Coordinate any pricing notice with operations before the objection window closes.'
-    ]
-  },
-  {
-    id: 'lending-indemnity',
-    clientIndex: 1,
-    agreement: 'Securities-Backed Lending Addendum',
-    category: 'Clause risk',
-    priority: 'High',
-    tone: 'red',
-    dueAt: '2026-04-11',
-    secondaryDateLabel: 'Review with counsel',
-    secondaryDate: '2026-04-04',
-    aiSignal: 'Broad indemnity carve-out missing',
-    summary: 'The lender indemnity appears broader than the firm standard and does not clearly exclude lender negligence.',
-    impact: 'If a dispute arises, the client may absorb losses that would normally stay with the lender.',
-    extractedClause: 'Client agrees to indemnify lender for all losses arising out of the credit facility, without a negligence or willful misconduct carve-out.',
-    nextStep: 'Escalate to legal and confirm whether the current client package should be re-papered.',
-    detailNotes: [
-      'Compare against the latest house form before the facility is renewed.',
-      'Confirm whether any negotiated side letter narrows the indemnity scope.'
-    ]
-  },
-  {
-    id: 'private-fund-side-letter',
-    clientIndex: 2,
-    agreement: 'Private Fund Side Letter',
-    category: 'Expiration',
-    priority: 'Medium',
-    tone: 'blue',
-    dueAt: '2026-05-09',
-    secondaryDateLabel: 'Election window',
-    secondaryDate: '2026-04-29',
-    aiSignal: 'MFN election period closes soon',
-    summary: 'The client has a narrow window to elect enhanced rights under the fund side letter.',
-    impact: 'Missing the election date could leave the client on less favorable reporting and liquidity terms.',
-    extractedClause: 'Most-favored nation elections must be exercised within ten business days after delivery of the annual side letter package.',
-    nextStep: 'Review the available elections with the client and confirm whether any enhanced rights should be claimed.',
-    detailNotes: [
-      'Coordinate with fund counsel on the current election package.',
-      'Capture any election in the client service checklist once submitted.'
-    ]
-  },
-  {
-    id: 'trust-assignment-consent',
-    clientIndex: 3,
-    agreement: 'Trust Services Engagement Letter',
-    category: 'Consent',
-    priority: 'Medium',
-    tone: 'violet',
-    dueAt: '2026-04-24',
-    secondaryDateLabel: 'Operational handoff',
-    secondaryDate: '2026-04-16',
-    aiSignal: 'Assignment consent required',
-    summary: 'The engagement letter requires written client consent before any advisor-of-record or servicing entity change.',
-    impact: 'Operational changes could stall if the consent packet is not prepared early.',
-    extractedClause: 'Neither party may assign this engagement without prior written consent from the other party, which may not be unreasonably withheld.',
-    nextStep: 'Prepare a consent packet if the relationship is moving to a new servicing team this quarter.',
-    detailNotes: [
-      'Confirm whether any internal servicing move is already planned.',
-      'Include trust officer and client signatures in the same packet if reassignment proceeds.'
-    ]
-  },
-  {
-    id: 'hedging-termination-trigger',
-    clientIndex: 4,
-    agreement: 'Concentrated Position Hedging Agreement',
-    category: 'Clause risk',
-    priority: 'High',
-    tone: 'red',
-    dueAt: '2026-04-15',
-    secondaryDateLabel: 'Portfolio review',
-    secondaryDate: '2026-04-08',
-    aiSignal: 'Early termination trigger',
-    summary: 'The hedge can be unwound early if the collateral position drops past a short NAV threshold.',
-    impact: 'An early unwind could leave the client re-exposed to a concentrated single-name position.',
-    extractedClause: 'Counterparty may terminate the hedge upon ten days\u2019 notice if collateral value declines below the minimum support threshold.',
-    nextStep: 'Review the current collateral buffer and decide whether the hedge should be resized or re-papered.',
-    detailNotes: [
-      'Validate the latest collateral mark before the next investment committee review.',
-      'Consider whether a secondary hedge would reduce concentration risk.'
-    ]
-  }
-];
-
 function formatDisplayDate(dateString, options = {}) {
   if (!dateString) return '';
   const parsed = new Date(dateString);
@@ -149,28 +38,341 @@ function formatDeadlineLabel(dateString) {
   return `${Math.abs(delta)} days overdue`;
 }
 
-function resolveInsightContact(contacts, index) {
-  return contacts[index] || ADVISOR_DOCUMENT_CONTACT_FALLBACKS[index] || ADVISOR_DOCUMENT_CONTACT_FALLBACKS[0];
+function cleanText(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
-function buildDocumentInsight(template, contacts, currentUser) {
-  const contact = resolveInsightContact(contacts, template.clientIndex);
+function truncateText(text, limit = 140) {
+  const normalized = cleanText(text);
+  if (!normalized) return '';
+  if (normalized.length <= limit) return normalized;
+  return normalized.slice(0, limit - 1).trimEnd() + '…';
+}
+
+function normalizeSearchText(value) {
+  return cleanText(value).toLowerCase();
+}
+
+function formatEnumLabel(value) {
+  const normalized = cleanText(value);
+  if (!normalized) return '';
+
+  return normalized
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\bAnd\b/g, 'and')
+    .replace(/\bOf\b/g, 'of');
+}
+
+function formatCompactCurrency(amount, currencyCode = 'USD') {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric)) return '';
+
+  const currency = cleanText(currencyCode).toUpperCase() || 'USD';
+  const absValue = Math.abs(numeric);
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      notation: absValue >= 1000 ? 'compact' : 'standard',
+      maximumFractionDigits: absValue >= 1000 ? 1 : 0
+    }).format(numeric);
+  } catch (error) {
+    return `${currency} ${numeric.toLocaleString()}`;
+  }
+}
+
+function formatDurationLabel(duration) {
+  const normalized = cleanText(duration);
+  if (!normalized) return '';
+
+  const match = normalized.match(/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?$/i);
+  if (!match) return normalized;
+
+  const [, years, months, weeks, days] = match;
+  const parts = [];
+  if (years) parts.push(`${years}y`);
+  if (months) parts.push(`${months}m`);
+  if (weeks) parts.push(`${weeks}w`);
+  if (days) parts.push(`${days}d`);
+  return parts.join(' ') || normalized;
+}
+
+function getAgreementPartyNames(agreement) {
+  const parties = Array.isArray(agreement?.parties) ? agreement.parties : [];
+  const names = [];
+  const seen = new Set();
+
+  parties.forEach((party) => {
+    const name = cleanText(party?.name_in_agreement) || cleanText(party?.preferred_name);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) return;
+    seen.add(key);
+    names.push(name);
+  });
+
+  return names;
+}
+
+function selectAgreementMilestone(provisions) {
+  const candidates = [
+    { label: 'Notice window', date: provisions?.renewal_notice_date },
+    { label: 'Expiration', date: provisions?.expiration_date },
+    { label: 'Effective date', date: provisions?.effective_date }
+  ]
+    .map((item) => ({
+      ...item,
+      delta: daysUntil(item.date)
+    }))
+    .filter((item) => item.delta != null);
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((left, right) => {
+    const leftRank = left.delta < 0 ? 0 : 1;
+    const rightRank = right.delta < 0 ? 0 : 1;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return Math.abs(left.delta) - Math.abs(right.delta);
+  });
+
+  return candidates[0];
+}
+
+function countCustomAgreementFields(agreement) {
+  return [
+    agreement?.custom_provisions,
+    agreement?.additional_user_defined_data,
+    agreement?.additional_custom_clm_data,
+    agreement?.additional_custom_esign_data
+  ].reduce((sum, value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return sum;
+    return sum + Object.keys(value).length;
+  }, 0);
+}
+
+function buildAgreementSummary(rawAgreement, options) {
+  const suppliedSummary = cleanText(rawAgreement?.summary);
+  if (suppliedSummary) return suppliedSummary;
+
+  const {
+    typeLabel,
+    sourceLabel,
+    milestone,
+    reviewPending,
+    valueLabel
+  } = options;
+
+  if (milestone?.label === 'Notice window') {
+    return valueLabel
+      ? `${typeLabel} has a renewal notice date on ${formatDisplayDate(milestone.date)} and ${valueLabel} in extracted value.`
+      : `${typeLabel} has a renewal notice date on ${formatDisplayDate(milestone.date)}.`;
+  }
+
+  if (milestone?.label === 'Expiration') {
+    return valueLabel
+      ? `${typeLabel} expires on ${formatDisplayDate(milestone.date)} with ${valueLabel} in extracted value.`
+      : `${typeLabel} expires on ${formatDisplayDate(milestone.date)}.`;
+  }
+
+  if (reviewPending) {
+    return valueLabel
+      ? `${typeLabel} has ${valueLabel} in extracted value, but the review workflow is not complete yet.`
+      : `${typeLabel} has extracted agreement data, but the review workflow is not complete yet.`;
+  }
+
+  if (valueLabel) {
+    return `${typeLabel} includes extracted economic terms, including ${valueLabel} in agreement value.`;
+  }
+
+  return sourceLabel ? `${typeLabel} is on file from ${sourceLabel}.` : `${typeLabel} is on file.`;
+}
+
+function buildAgreementSignal(rawAgreement, index) {
+  const provisions = rawAgreement?.provisions || {};
+  const partyNames = getAgreementPartyNames(rawAgreement);
+  const primaryParty = partyNames[0] || 'Unknown party';
+  const partyLabel = partyNames.length > 1 ? `${primaryParty} +${partyNames.length - 1}` : primaryParty;
+  const title = cleanText(rawAgreement?.title)
+    || cleanText(rawAgreement?.file_name)
+    || formatEnumLabel(rawAgreement?.type)
+    || `Agreement ${index + 1}`;
+  const typeLabel = formatEnumLabel(rawAgreement?.type) || 'Agreement';
+  const categoryLabel = formatEnumLabel(rawAgreement?.category) || 'Agreement';
+  const sourceLabel = cleanText(rawAgreement?.source_name) || 'Imported agreement';
+  const statusLabel = formatEnumLabel(rawAgreement?.status) || 'Unknown';
+  const reviewStatusLabel = formatEnumLabel(rawAgreement?.review_status) || 'Not reviewed';
+  const reviewPending = !!cleanText(rawAgreement?.review_status) && !/complete/i.test(rawAgreement.review_status);
+  const milestone = selectAgreementMilestone(provisions);
+  const noticeDays = daysUntil(provisions?.renewal_notice_date);
+  const expirationDays = daysUntil(provisions?.expiration_date);
+  const totalAgreementValue = Number(provisions?.total_agreement_value);
+  const annualAgreementValue = Number(provisions?.annual_agreement_value);
+  const hasTotalValue = Number.isFinite(totalAgreementValue);
+  const hasAnnualValue = Number.isFinite(annualAgreementValue);
+  const extractedValue = hasTotalValue ? totalAgreementValue : (hasAnnualValue ? annualAgreementValue : null);
+  const extractedValueCurrency = cleanText(provisions?.total_agreement_value_currency_code)
+    || cleanText(provisions?.annual_agreement_value_currency_code)
+    || 'USD';
+  const valueLabel = extractedValue == null ? '' : formatCompactCurrency(extractedValue, extractedValueCurrency);
+  const priceCapValue = Number(provisions?.price_cap_percent_increase);
+  const liabilityCapFixedAmount = Number(provisions?.liability_cap_fixed_amount);
+  const liabilityCapMultiplier = Number(provisions?.liability_cap_multiplier);
+  const hasTransferLimits = /CONSENT|CONDITION|RESTRICTION/.test(
+    `${cleanText(provisions?.assignment_type)} ${cleanText(provisions?.assignment_change_of_control)}`.toUpperCase()
+  );
+  const hasPricingSignal = Number.isFinite(priceCapValue) && priceCapValue > 0;
+  const hasLiabilitySignal = Number.isFinite(liabilityCapFixedAmount) || Number.isFinite(liabilityCapMultiplier);
+  const highValue = extractedValue != null && extractedValue >= 1000000;
+  const linkedRecordCount = Array.isArray(rawAgreement?.linked_data) ? rawAgreement.linked_data.length : 0;
+  const customFieldCount = countCustomAgreementFields(rawAgreement);
+
+  let signalLabel = 'On file';
+  let tone = 'blue';
+  let score = 12;
+
+  if (noticeDays != null && noticeDays <= 30) {
+    signalLabel = 'Notice window';
+    tone = 'red';
+    score += 140 - Math.max(noticeDays, -30);
+  } else if (noticeDays != null && noticeDays <= 90) {
+    signalLabel = 'Renewal watch';
+    tone = 'amber';
+    score += 105 - Math.max(noticeDays, 0);
+  } else if (expirationDays != null && expirationDays <= 30) {
+    signalLabel = 'Expires soon';
+    tone = 'red';
+    score += 120 - Math.max(expirationDays, -30);
+  } else if (expirationDays != null && expirationDays <= 120) {
+    signalLabel = 'Expiry watch';
+    tone = 'amber';
+    score += 80 - Math.max(expirationDays, 0);
+  } else if (reviewPending) {
+    signalLabel = 'Needs review';
+    tone = 'sky';
+    score += 70;
+  } else if (hasTransferLimits) {
+    signalLabel = 'Transfer limits';
+    tone = 'violet';
+    score += 55;
+  } else if (highValue) {
+    signalLabel = 'High value';
+    tone = 'emerald';
+    score += 50;
+  } else if (hasPricingSignal) {
+    signalLabel = 'Pricing term';
+    tone = 'blue';
+    score += 38;
+  } else if (hasLiabilitySignal) {
+    signalLabel = 'Liability cap';
+    tone = 'blue';
+    score += 34;
+  }
+
+  if (reviewPending) score += 28;
+  if (hasTransferLimits) score += 14;
+  if (highValue) score += 20;
+  if (hasPricingSignal) score += 8;
+  if (hasLiabilitySignal) score += 6;
+
+  const tags = [
+    formatEnumLabel(provisions?.renewal_type),
+    Number.isFinite(priceCapValue) && priceCapValue > 0 ? `${priceCapValue}% price cap` : '',
+    formatEnumLabel(provisions?.assignment_type),
+    formatEnumLabel(provisions?.nda_type),
+    formatEnumLabel(provisions?.jurisdiction)
+  ].filter(Boolean).slice(0, 3);
+  const fileName = cleanText(rawAgreement?.file_name);
+  const searchText = normalizeSearchText([
+    title,
+    partyLabel,
+    typeLabel,
+    statusLabel,
+    fileName,
+    signalLabel,
+    ...tags
+  ].filter(Boolean).join(' '));
+
+  const summary = buildAgreementSummary(rawAgreement, {
+    typeLabel,
+    sourceLabel,
+    milestone,
+    reviewPending,
+    valueLabel
+  });
+
   return {
-    ...template,
-    clientId: contact.id || null,
-    clientName: `${contact.first_name} ${contact.last_name}`,
-    clientRiskProfile: contact.metadata?.riskProfile || 'Balanced',
-    ownerName: currentUser?.name || 'Gordon Gecko',
-    dueLabel: formatDeadlineLabel(template.dueAt),
-    dueDateLabel: formatDisplayDate(template.dueAt, { month: 'short', day: 'numeric' }),
-    secondaryDateValue: formatDisplayDate(template.secondaryDate, { month: 'short', day: 'numeric' })
+    id: rawAgreement?.id || `agreement-${index}`,
+    title,
+    typeLabel,
+    categoryLabel,
+    statusLabel,
+    reviewStatusLabel,
+    reviewPending,
+    partyNames,
+    primaryParty,
+    partyLabel,
+    signalLabel,
+    tone,
+    score,
+    summary,
+    summaryShort: truncateText(summary, 150),
+    tags,
+    searchText,
+    sourceLabel,
+    sourceId: cleanText(rawAgreement?.source_id),
+    documentHref: rawAgreement?._links?.document?.href || '',
+    fileName,
+    languagesLabel: Array.isArray(rawAgreement?.languages) && rawAgreement.languages.length > 0
+      ? rawAgreement.languages.join(', ')
+      : 'Not specified',
+    linkedRecordCount,
+    customFieldCount,
+    extractedValue,
+    extractedValueCurrency,
+    valueLabel: valueLabel || 'Not extracted',
+    annualValueLabel: hasAnnualValue ? formatCompactCurrency(annualAgreementValue, extractedValueCurrency) : 'Not extracted',
+    totalValueLabel: hasTotalValue ? formatCompactCurrency(totalAgreementValue, extractedValueCurrency) : 'Not extracted',
+    effectiveDate: provisions?.effective_date || '',
+    effectiveDateLabel: formatDisplayDate(provisions?.effective_date),
+    executionDate: provisions?.execution_date || '',
+    executionDateLabel: formatDisplayDate(provisions?.execution_date),
+    expirationDate: provisions?.expiration_date || '',
+    expirationDateLabel: formatDisplayDate(provisions?.expiration_date),
+    renewalNoticeDate: provisions?.renewal_notice_date || '',
+    renewalNoticeDateLabel: formatDisplayDate(provisions?.renewal_notice_date),
+    renewalTypeLabel: formatEnumLabel(provisions?.renewal_type) || 'Not extracted',
+    renewalNoticePeriodLabel: formatDurationLabel(provisions?.renewal_notice_period) || 'Not extracted',
+    autoRenewalTermLabel: formatDurationLabel(provisions?.auto_renewal_term_length) || 'Not extracted',
+    termLengthLabel: formatDurationLabel(provisions?.term_length) || 'Not extracted',
+    assignmentLabel: formatEnumLabel(provisions?.assignment_type) || 'Not extracted',
+    changeOfControlLabel: formatEnumLabel(provisions?.assignment_change_of_control) || 'Not extracted',
+    terminationRightsLabel: formatEnumLabel(provisions?.assignment_termination_rights) || 'Not extracted',
+    governingLawLabel: formatEnumLabel(provisions?.governing_law) || 'Not extracted',
+    jurisdictionLabel: formatEnumLabel(provisions?.jurisdiction) || 'Not extracted',
+    ndaTypeLabel: formatEnumLabel(provisions?.nda_type) || 'Not extracted',
+    paymentTermsLabel: formatEnumLabel(provisions?.payment_terms_due_date) || 'Not extracted',
+    lateFeeLabel: provisions?.can_charge_late_payment_fees
+      ? `${Number.isFinite(Number(provisions?.late_payment_fee_percent)) ? provisions.late_payment_fee_percent : 0}% late fee`
+      : 'No late fee extracted',
+    priceCapLabel: Number.isFinite(priceCapValue) ? `${priceCapValue}% price cap` : 'Not extracted',
+    liabilityCapLabel: Number.isFinite(liabilityCapFixedAmount)
+      ? formatCompactCurrency(liabilityCapFixedAmount, provisions?.liability_cap_currency_code || extractedValueCurrency)
+      : (Number.isFinite(liabilityCapMultiplier) ? `${liabilityCapMultiplier}x multiplier` : 'Not extracted'),
+    liabilityDurationLabel: formatDurationLabel(provisions?.liability_cap_duration) || 'Not extracted',
+    terminationForCauseLabel: formatDurationLabel(provisions?.termination_period_for_cause) || 'Not extracted',
+    terminationForConvenienceLabel: formatDurationLabel(provisions?.termination_period_for_convenience) || 'Not extracted',
+    nextActionLabel: milestone?.label || (reviewPending ? 'Review pending' : 'No upcoming milestone'),
+    nextActionDate: milestone?.date || '',
+    nextActionDateLabel: milestone?.date
+      ? formatDisplayDate(milestone.date, { month: 'short', day: 'numeric' })
+      : 'No date',
+    nextActionRelativeLabel: milestone?.date
+      ? formatDeadlineLabel(milestone.date)
+      : (reviewPending ? 'Review pending' : 'On file'),
+    nextActionDelta: milestone?.delta ?? null
   };
-}
-
-function buildDocumentInsights(contacts, currentUser) {
-  return ADVISOR_DOCUMENT_INSIGHT_TEMPLATES
-    .map((template) => buildDocumentInsight(template, contacts, currentUser))
-    .sort((left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime());
 }
 
 function advisorApp() {
@@ -196,7 +398,15 @@ function advisorApp() {
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
     loading: true,
-    documentInsightOpenId: null,
+    agreementSignalsLoading: false,
+    agreementSignalsLoaded: false,
+    agreementSignalsError: '',
+    navigatorAgreementsResponse: null,
+    navigatorAgreementsRaw: [],
+    agreementSignalItems: [],
+    selectedAgreementSignalId: null,
+    agreementSearchQuery: '',
+    agreementFilter: 'all',
     _maestroCreationPollTimer: null,
     _maestroRedirectTimer: null,
     _maestroTrackingStarted: false,
@@ -220,8 +430,8 @@ function advisorApp() {
       const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
       const resolvedView = allowedViews.has(nextView) ? nextView : 'dashboard';
       this.view = resolvedView;
-      if (resolvedView !== 'documents') {
-        this.closeDocumentInsight();
+      if (resolvedView === 'documents') {
+        this.loadAgreementSignals();
       }
     },
 
@@ -249,95 +459,244 @@ function advisorApp() {
       return this.contacts.filter(c => c.tags?.includes('review-needed')).length;
     },
 
-    get documentInsights() {
-      return buildDocumentInsights(this.contacts, this.currentUser);
+    get allAgreementSignals() {
+      return this.agreementSignalItems;
     },
 
-    get documentSummaryCards() {
-      const insights = this.documentInsights;
-      const renewals = insights.filter((item) => ['Renewal', 'Expiration'].includes(item.category));
-      const clauseAlerts = insights.filter((item) => item.category === 'Clause risk');
-      const impactedClients = new Set(insights.map((item) => item.clientName));
-      const nextDeadline = insights[0];
+    get agreementSignals() {
+      const query = normalizeSearchText(this.agreementSearchQuery);
+
+      return this.allAgreementSignals.filter((item) => {
+        if (!this.matchesAgreementFilter(item, this.agreementFilter)) return false;
+        if (!query) return true;
+        return item.searchText.includes(query);
+      });
+    },
+
+    get agreementSummaryCards() {
+      const signals = this.allAgreementSignals;
+      const actionNow = signals.filter((item) => this.isActionAgreement(item)).length;
+      const renewalWatch = signals.filter((item) => this.isRenewalAgreement(item)).length;
+      const highValue = signals.filter((item) => this.isHighValueAgreement(item)).length;
+      const extractedValues = signals.filter((item) => item.extractedValue != null);
+      const trackedValue = extractedValues.reduce((sum, item) => sum + item.extractedValue, 0);
+      const trackedValueCurrency = extractedValues[0]?.extractedValueCurrency || 'USD';
 
       return [
         {
-          label: 'Upcoming renewals',
-          value: String(renewals.length),
-          detail: 'Renewal and expiration windows in the next cycle',
-          tone: 'amber'
+          label: 'Action now',
+          value: String(actionNow),
+          detail: 'Notice or expiration inside 45 days',
+          tone: actionNow > 0 ? 'red' : 'blue'
         },
         {
-          label: 'Clause alerts',
-          value: String(clauseAlerts.length),
-          detail: 'Non-standard terms worth escalating',
-          tone: 'red'
+          label: 'Renewal watch',
+          value: String(renewalWatch),
+          detail: 'Agreements with extracted renewal terms',
+          tone: renewalWatch > 0 ? 'amber' : 'blue'
         },
         {
-          label: 'Clients impacted',
-          value: String(impactedClients.size),
-          detail: 'Households with at least one agreement action',
-          tone: 'blue'
+          label: 'High value',
+          value: String(highValue),
+          detail: 'At or above $1M in extracted value',
+          tone: highValue > 0 ? 'emerald' : 'blue'
         },
         {
-          label: 'Next deadline',
-          value: nextDeadline ? nextDeadline.dueDateLabel : 'None',
-          detail: nextDeadline ? nextDeadline.aiSignal : 'No active review windows',
+          label: 'Tracked value',
+          value: trackedValue > 0 ? formatCompactCurrency(trackedValue, trackedValueCurrency) : '—',
+          detail: `${extractedValues.length} agreements with extracted economics`,
           tone: 'emerald'
         }
       ];
     },
 
-    get documentRenewalTimeline() {
-      return this.documentInsights.filter((item) => ['Renewal', 'Expiration'].includes(item.category)).slice(0, 4);
+    get selectedAgreementSignal() {
+      return this.allAgreementSignals.find((item) => item.id === this.selectedAgreementSignalId)
+        || this.agreementSignals[0]
+        || this.allAgreementSignals[0]
+        || null;
     },
 
-    get documentClauseSignals() {
-      return this.documentInsights.filter((item) => item.aiSignal).slice(0, 3);
+    get agreementFilterOptions() {
+      const signals = this.allAgreementSignals;
+      return [
+        { id: 'all', label: 'All', count: signals.length },
+        { id: 'action', label: 'Action now', count: signals.filter((item) => this.isActionAgreement(item)).length },
+        { id: 'renewal', label: 'Renewals', count: signals.filter((item) => this.isRenewalAgreement(item)).length },
+        { id: 'expiring', label: 'Expiring', count: signals.filter((item) => this.isExpiringAgreement(item)).length },
+        { id: 'high-value', label: 'High value', count: signals.filter((item) => this.isHighValueAgreement(item)).length }
+      ];
     },
 
-    get openDocumentInsight() {
-      return this.documentInsights.find((item) => item.id === this.documentInsightOpenId) || null;
+    get agreementVisibleLabel() {
+      const total = this.allAgreementSignals.length;
+      const visible = this.agreementSignals.length;
+      if (this.agreementHasActiveFilters) return `${visible} of ${total} shown`;
+      return `${visible} agreements`;
     },
 
-    documentMetricBorderClasses(tone) {
+    get agreementHasActiveFilters() {
+      return this.agreementFilter !== 'all' || cleanText(this.agreementSearchQuery).length > 0;
+    },
+
+    isActionAgreement(item) {
+      return item.nextActionDelta != null && item.nextActionDelta <= 45;
+    },
+
+    isRenewalAgreement(item) {
+      return !!item.renewalNoticeDate || item.renewalTypeLabel !== 'Not extracted';
+    },
+
+    isExpiringAgreement(item) {
+      return !!item.expirationDate;
+    },
+
+    isHighValueAgreement(item) {
+      return item.extractedValue != null && item.extractedValue >= 1000000;
+    },
+
+    matchesAgreementFilter(item, filterId) {
+      switch (filterId) {
+        case 'action':
+          return this.isActionAgreement(item);
+        case 'renewal':
+          return this.isRenewalAgreement(item);
+        case 'expiring':
+          return this.isExpiringAgreement(item);
+        case 'high-value':
+          return this.isHighValueAgreement(item);
+        default:
+          return true;
+      }
+    },
+
+    get agreementConnectionRequired() {
+      return /connect|account/i.test(this.agreementSignalsError || '');
+    },
+
+    agreementMetricBorderClasses(tone) {
       const tones = {
-        amber: 'border-amber-500',
-        red: 'border-red-500',
-        blue: 'border-sky-500',
-        emerald: 'border-emerald-500'
+        amber: 'tgk-tone-border--amber',
+        red: 'tgk-tone-border--red',
+        blue: 'tgk-tone-border--blue',
+        sky: 'tgk-tone-border--sky',
+        violet: 'tgk-tone-border--violet',
+        emerald: 'tgk-tone-border--emerald'
       };
-      return tones[tone] || 'border-slate-400';
+      return tones[tone] || 'tgk-tone-border--neutral';
     },
 
-    documentPillClasses(tone) {
+    agreementPillClasses(tone) {
       const tones = {
-        amber: 'border-amber-100 bg-amber-50 text-amber-700',
-        red: 'border-red-100 bg-red-50 text-red-700',
-        blue: 'border-sky-100 bg-sky-50 text-sky-700',
-        violet: 'border-violet-100 bg-violet-50 text-violet-700',
-        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700'
+        amber: 'tgk-tone-pill--amber',
+        red: 'tgk-tone-pill--red',
+        blue: 'tgk-tone-pill--blue',
+        sky: 'tgk-tone-pill--sky',
+        violet: 'tgk-tone-pill--violet',
+        emerald: 'tgk-tone-pill--emerald'
       };
-      return tones[tone] || 'border-slate-200 bg-slate-100 text-slate-600';
+      return tones[tone] || 'tgk-tone-pill--neutral';
     },
 
-    documentDeadlineTextClasses(tone) {
+    agreementTextClasses(tone) {
       const tones = {
-        amber: 'text-amber-700',
-        red: 'text-red-700',
-        blue: 'text-sky-700',
-        violet: 'text-violet-700',
-        emerald: 'text-emerald-700'
+        amber: 'tgk-tone-text--amber',
+        red: 'tgk-tone-text--red',
+        blue: 'tgk-tone-text--blue',
+        sky: 'tgk-tone-text--sky',
+        violet: 'tgk-tone-text--violet',
+        emerald: 'tgk-tone-text--emerald'
       };
-      return tones[tone] || 'text-slate-600';
+      return tones[tone] || 'tgk-tone-text--neutral';
     },
 
-    openDocumentInsightById(insightId) {
-      this.documentInsightOpenId = insightId;
+    agreementSurfaceClasses(tone) {
+      const tones = {
+        amber: 'tgk-tone-surface--amber',
+        red: 'tgk-tone-surface--red',
+        blue: 'tgk-tone-surface--blue',
+        sky: 'tgk-tone-surface--sky',
+        violet: 'tgk-tone-surface--violet',
+        emerald: 'tgk-tone-surface--emerald'
+      };
+      return tones[tone] || 'tgk-tone-surface--neutral';
     },
 
-    closeDocumentInsight() {
-      this.documentInsightOpenId = null;
+    async loadAgreementSignals(options = {}) {
+      const force = !!options.force;
+      if (this.agreementSignalsLoading) return;
+      if (this.agreementSignalsLoaded && !force) return;
+
+      this.agreementSignalsLoading = true;
+      this.agreementSignalsError = '';
+
+      const previousResponse = this.navigatorAgreementsResponse;
+      const previousRaw = this.navigatorAgreementsRaw;
+      const previousItems = this.agreementSignalItems;
+
+      try {
+        const response = await TGK_API.listNavigatorAgreements();
+        this.navigatorAgreementsResponse = response || null;
+        this.navigatorAgreementsRaw = Array.isArray(response?.data) ? response.data : [];
+        this.rebuildAgreementSignalItems();
+        this.agreementSignalsLoaded = true;
+
+        this.syncAgreementSelection();
+      } catch (e) {
+        this.navigatorAgreementsResponse = previousResponse;
+        this.navigatorAgreementsRaw = previousRaw;
+        this.agreementSignalItems = previousItems;
+        this.agreementSignalsLoaded = (previousRaw || []).length > 0;
+        this.agreementSignalsError = e.message || 'Unable to load agreement signals.';
+        if (!this.agreementSignalsLoaded) {
+          this.selectedAgreementSignalId = null;
+        }
+      } finally {
+        this.agreementSignalsLoading = false;
+      }
+    },
+
+    rebuildAgreementSignalItems() {
+      this.agreementSignalItems = (this.navigatorAgreementsRaw || [])
+        .map((agreement, index) => buildAgreementSignal(agreement, index))
+        .sort((left, right) => {
+          const leftHasMilestone = left.nextActionDelta != null;
+          const rightHasMilestone = right.nextActionDelta != null;
+
+          if (leftHasMilestone && rightHasMilestone && left.nextActionDelta !== right.nextActionDelta) {
+            return left.nextActionDelta - right.nextActionDelta;
+          }
+
+          if (leftHasMilestone !== rightHasMilestone) {
+            return leftHasMilestone ? -1 : 1;
+          }
+
+          if (left.score !== right.score) {
+            return right.score - left.score;
+          }
+
+          return left.title.localeCompare(right.title);
+        });
+    },
+
+    syncAgreementSelection() {
+      const existingSelection = this.agreementSignals.find((item) => item.id === this.selectedAgreementSignalId);
+      this.selectedAgreementSignalId = existingSelection?.id || this.agreementSignals[0]?.id || null;
+    },
+
+    selectAgreementSignal(signalId) {
+      this.selectedAgreementSignalId = signalId;
+    },
+
+    setAgreementFilter(filterId) {
+      this.agreementFilter = filterId;
+      this.syncAgreementSelection();
+    },
+
+    clearAgreementFilters() {
+      this.agreementSearchQuery = '';
+      this.agreementFilter = 'all';
+      this.syncAgreementSelection();
     },
 
     async viewClient(contact) {
