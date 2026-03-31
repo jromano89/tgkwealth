@@ -63,9 +63,16 @@ function getDocusignSession(req) {
   const db = getDb();
   const app = getRequiredApp(db, req);
   const connection = requireSelectedDocusignAccount(getConnectionForApp(db, app.id));
+  const scopes = String(app.docusign_scopes || '').trim();
+
+  if (!scopes) {
+    throw createError(409, 'Docusign scopes are not configured for this app. Open Settings and save the requested scopes.');
+  }
+
   return {
     userId: connection.docusign_user_id,
-    accountId: connection.docusign_account_id
+    accountId: connection.docusign_account_id,
+    scopes
   };
 }
 
@@ -147,7 +154,7 @@ async function buildHeaders(acceptHeader, proxyRequest, docusign) {
   }
 
   if (proxyRequest.authMode === 'docusign') {
-    headers.Authorization = `Bearer ${await getAccessToken(docusign.userId, docusign.accountId)}`;
+    headers.Authorization = `Bearer ${await getAccessToken(docusign.userId, docusign.accountId, docusign.scopes)}`;
   }
 
   return headers;

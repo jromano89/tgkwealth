@@ -56,7 +56,7 @@ function getAppBySlug(db, slug) {
   return db.prepare('SELECT * FROM apps WHERE slug = ?').get(normalizeSlug(slug));
 }
 
-function upsertApp(db, { slug, name }) {
+function upsertApp(db, { slug, name, docusignScopes }) {
   const normalizedSlug = normalizeSlug(slug);
   if (!normalizedSlug) {
     throw createError(400, 'Missing app slug');
@@ -64,13 +64,22 @@ function upsertApp(db, { slug, name }) {
 
   const existing = getAppBySlug(db, normalizedSlug);
   const id = existing?.id || randomUUID();
+  const normalizedDocusignScopes = typeof docusignScopes === 'string' && docusignScopes.trim()
+    ? docusignScopes.trim()
+    : undefined;
   db.prepare(`
-    INSERT INTO apps (id, slug, name)
-    VALUES (?, ?, ?)
+    INSERT INTO apps (id, slug, name, docusign_scopes)
+    VALUES (?, ?, ?, ?)
     ON CONFLICT(slug) DO UPDATE SET
       name = COALESCE(excluded.name, apps.name),
+      docusign_scopes = COALESCE(excluded.docusign_scopes, apps.docusign_scopes),
       updated_at = CURRENT_TIMESTAMP
-  `).run(id, normalizedSlug, name || existing?.name || normalizedSlug);
+  `).run(
+    id,
+    normalizedSlug,
+    name || existing?.name || normalizedSlug,
+    normalizedDocusignScopes !== undefined ? normalizedDocusignScopes : (existing?.docusign_scopes || null)
+  );
 
   return getAppBySlug(db, normalizedSlug);
 }

@@ -1,7 +1,5 @@
 const crypto = require('crypto');
 
-const REQUIRED_SCOPES = ['signature', 'impersonation', 'aow_manage', 'adm_store_unified_repo_read'];
-const REQUIRED_SCOPE_STRING = REQUIRED_SCOPES.join(' ');
 const CONSENT_STATE_MAX_AGE_MS = 60 * 60 * 1000;
 const tokenCache = new Map();
 
@@ -38,7 +36,7 @@ function normalizeScopes(scopes) {
     ? scopes
     : String(scopes || '').split(/\s+/);
 
-  return [...new Set([...REQUIRED_SCOPES, ...requested].map((scope) => String(scope || '').trim()).filter(Boolean))];
+  return [...new Set(requested.map((scope) => String(scope || '').trim()).filter(Boolean))];
 }
 
 function normalizeScopeString(scopes) {
@@ -60,8 +58,13 @@ function signJwt(value, privateKey) {
   return base64url(signer.sign(privateKey));
 }
 
-async function getAccessToken(userId, accountId) {
-  const cacheKey = `${userId}_${accountId}_${REQUIRED_SCOPE_STRING}`;
+async function getAccessToken(userId, accountId, scopes) {
+  const scopeString = normalizeScopeString(scopes);
+  if (!scopeString) {
+    throw new Error('Missing Docusign scopes. Save the requested scopes in Settings before retrying.');
+  }
+
+  const cacheKey = `${userId}_${accountId}_${scopeString}`;
   const cached = tokenCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + 60000) {
     return cached.token;
@@ -74,7 +77,7 @@ async function getAccessToken(userId, accountId) {
     aud: getOauthBase(),
     iat: now,
     exp: now + 3600,
-    scope: REQUIRED_SCOPE_STRING
+    scope: scopeString
   };
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const payload = base64url(JSON.stringify(assertionPayload));
@@ -146,9 +149,14 @@ function readConsentState(value) {
 }
 
 function getConsentUrl(redirectUri, state, scopes) {
+  const scopeString = normalizeScopeString(scopes);
+  if (!scopeString) {
+    throw new Error('Missing Docusign scopes');
+  }
+
   const params = new URLSearchParams({
     response_type: 'code',
-    scope: normalizeScopeString(scopes),
+    scope: scopeString,
     client_id: getIntegrationKey(),
     redirect_uri: redirectUri,
     state,
@@ -201,5 +209,6 @@ module.exports = {
   getAccessToken,
   getConsentUrl,
   getUserInfoFromCode,
+  normalizeScopeString,
   readConsentState
 };

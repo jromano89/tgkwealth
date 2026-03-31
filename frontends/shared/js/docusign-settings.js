@@ -2,9 +2,12 @@
  * Docusign Settings Panel Component
  * Drop-in Alpine.js component for the Docusign JWT consent flow.
  */
+function getDefaultDocusignScopes() {
+  return 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read models_read';
+}
+
 function docusignSettings() {
-  const STORAGE_KEY = `tgk_docusign_scopes_${window.TGK_CONFIG?.appSlug || 'default'}`;
-  const DEFAULT_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read models_read';
+  const DEFAULT_SCOPES = getDefaultDocusignScopes();
 
   function normalizeScopes(scopes) {
     const values = String(scopes || '')
@@ -12,7 +15,7 @@ function docusignSettings() {
       .map((scope) => scope.trim())
       .filter(Boolean);
 
-    return [...new Set(['signature', 'impersonation', 'aow_manage', 'adm_store_unified_repo_read', ...values])].join(' ') || DEFAULT_SCOPES;
+    return [...new Set(values)].join(' ');
   }
 
   return {
@@ -25,13 +28,13 @@ function docusignSettings() {
     selectedAccountId: '',
     showAccountPicker: false,
     savingAccount: false,
+    savingScopes: false,
     authInProgress: false,
     popupWindow: null,
     popupPoller: null,
     authMessageHandler: null,
 
     async init() {
-      this.loadRequestedScopes();
       const callbackStatus = this.consumeCallbackStatus();
       this.authMessageHandler = (event) => this.handleAuthMessage(event);
       window.addEventListener('message', this.authMessageHandler);
@@ -52,14 +55,21 @@ function docusignSettings() {
       try {
         this.session = await TGK_API.getSession(options);
         this.error = null;
+        this.syncRequestedScopes();
         this.syncAccountSelectionState();
       } catch (e) {
         this.session = null;
         this.error = e.message;
         this.selectedAccountId = '';
         this.showAccountPicker = false;
+        this.syncRequestedScopes();
       }
       this.loading = false;
+    },
+
+    syncRequestedScopes() {
+      const savedScopes = normalizeScopes(this.session?.requestedScopes);
+      this.requestedScopesText = savedScopes || DEFAULT_SCOPES;
     },
 
     syncAccountSelectionState() {
@@ -215,38 +225,35 @@ function docusignSettings() {
       }
     },
 
-    loadRequestedScopes() {
-      try {
-        const stored = window.localStorage.getItem(STORAGE_KEY);
-        this.requestedScopesText = stored || DEFAULT_SCOPES;
-      } catch (e) {
-        this.requestedScopesText = DEFAULT_SCOPES;
-      }
-    },
-
     normalizedScopes() {
-      return normalizeScopes(this.requestedScopesText);
+      return normalizeScopes(this.requestedScopesText) || DEFAULT_SCOPES;
     },
 
     openScopesModal() {
+      this.syncRequestedScopes();
       this.showScopesModal = true;
     },
 
     closeScopesModal() {
+      this.syncRequestedScopes();
       this.showScopesModal = false;
     },
 
-    saveRequestedScopes() {
+    async saveRequestedScopes() {
       this.requestedScopesText = this.normalizedScopes();
-      try {
-        window.localStorage.setItem(STORAGE_KEY, this.requestedScopesText);
-      } catch (e) {}
-      this.showScopesModal = false;
-      this.notice = 'Saved scopes.';
-    },
+      this.error = null;
 
-    resetRequestedScopes() {
-      this.requestedScopesText = DEFAULT_SCOPES;
+      try {
+        this.savingScopes = true;
+        await TGK_API.saveDocusignScopes(this.requestedScopesText);
+        await this.checkSession({ force: true });
+        this.showScopesModal = false;
+        this.notice = 'Saved scopes. Backend DocuSign tokens now use this scope set.';
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.savingScopes = false;
+      }
     },
 
     connectionNotice() {

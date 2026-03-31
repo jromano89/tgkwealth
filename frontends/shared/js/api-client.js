@@ -320,6 +320,12 @@
       return result;
     },
 
+    async saveDocusignScopes(scopes) {
+      const result = await this.post('/api/auth/scopes', { scopes });
+      this.clearSessionCache();
+      return result;
+    },
+
     getBackendOrigin() {
       return new URL(this.baseUrl, window.location.href).origin;
     },

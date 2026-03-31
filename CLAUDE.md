@@ -10,7 +10,7 @@ The reference demo is `tgk-wealth` (FINS wealth management).
 
 - This is a **demo platform**, not a production service. Intentional trade-offs include open cross-origin access, no auth on the API, SQLite over Postgres, and hardcoded OAuth credentials in the Maestro extension.
 - The backend is currently deployed at `https://backend-tgk.up.railway.app/`.
-- Frontends are static HTML (Alpine.js + Tailwind, no build step). Deployable on any free static host.
+- Frontends are static HTML with Alpine.js plus project-owned utility and component CSS. No build step required.
 - The Maestro extension is optional and TGK-specific. Only needed for end-to-end Maestro Data IO demos.
 - SCs who previously built full-stack apps from scratch on Replit can reuse the backend of this project and deploy lighter weight frontends with any AI tooling.
 

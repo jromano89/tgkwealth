@@ -5,7 +5,7 @@ Reusable Docusign Intelligent Agreement Management demo platform for Solution Co
 ## Core Ideas
 
 - The backend is shared and app-scoped by slug. One deployed service can support multiple static frontends.
-- Frontends are static HTML with Alpine.js and Tailwind. There is no build step.
+- Frontends are static HTML with Alpine.js plus project-owned utility and component CSS. There is no build step.
 - The Maestro extension is optional and only needed for realistic writeback demos.
 - This is a demo platform, not a production service. Open cross-origin access, SQLite, and simplified auth are intentional trade-offs.
 

@@ -84,43 +84,6 @@ function formatCompactCurrency(amount, currencyCode = 'USD') {
   }
 }
 
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, (char) => {
-    const entities = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      '\'': '&#39;'
-    };
-    return entities[char] || char;
-  });
-}
-
-function renderAgreementDocumentWindow(targetWindow, title, message) {
-  if (!targetWindow || targetWindow.closed) return;
-
-  const safeTitle = escapeHtml(title || 'Agreement document');
-  const safeMessage = escapeHtml(message || '');
-
-  targetWindow.document.title = title || 'Agreement document';
-  targetWindow.document.body.innerHTML = `
-    <main style="font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f8fafc; color: #0f172a;">
-      <section style="max-width: 420px; padding: 24px 28px; border-radius: 18px; background: white; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);">
-        <h1 style="margin: 0 0 8px; font-size: 18px; line-height: 1.4;">${safeTitle}</h1>
-        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569;">${safeMessage}</p>
-      </section>
-    </main>
-  `;
-}
-
-function scheduleAgreementDocumentRevoke(objectUrl) {
-  if (!objectUrl) return;
-  window.setTimeout(() => {
-    window.URL.revokeObjectURL(objectUrl);
-  }, 10 * 60 * 1000);
-}
-
 function formatDurationLabel(duration) {
   const normalized = cleanText(duration);
   if (!normalized) return '';
@@ -442,8 +405,6 @@ function advisorApp() {
     navigatorAgreementsRaw: [],
     agreementSignalItems: [],
     selectedAgreementSignalId: null,
-    agreementDocumentOpeningId: null,
-    agreementDocumentError: '',
     agreementSearchQuery: '',
     agreementFilter: 'all',
     _maestroCreationPollTimer: null,
@@ -721,12 +682,10 @@ function advisorApp() {
     syncAgreementSelection() {
       const existingSelection = this.agreementSignals.find((item) => item.id === this.selectedAgreementSignalId);
       this.selectedAgreementSignalId = existingSelection?.id || this.agreementSignals[0]?.id || null;
-      this.agreementDocumentError = '';
     },
 
     selectAgreementSignal(signalId) {
       this.selectedAgreementSignalId = signalId;
-      this.agreementDocumentError = '';
     },
 
     setAgreementFilter(filterId) {
@@ -738,57 +697,6 @@ function advisorApp() {
       this.agreementSearchQuery = '';
       this.agreementFilter = 'all';
       this.syncAgreementSelection();
-    },
-
-    async openAgreementDocument(signal) {
-      const documentHref = cleanText(signal?.documentHref);
-      if (!signal?.id || !documentHref || this.agreementDocumentOpeningId === signal.id) return;
-
-      const popup = window.open('', '_blank');
-      if (popup) {
-        popup.opener = null;
-        renderAgreementDocumentWindow(popup, signal.title || 'Agreement document', 'Loading the latest document from DocuSign…');
-      }
-
-      this.agreementDocumentOpeningId = signal.id;
-      this.agreementDocumentError = '';
-
-      try {
-        const response = await TGK_API.requestResponse('/api/proxy', {
-          method: 'POST',
-          body: {
-            method: 'GET',
-            url: documentHref,
-            authMode: 'docusign',
-            headers: {
-              Accept: 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.8'
-            }
-          }
-        });
-        const sourceBlob = await response.blob();
-        const contentType = response.headers.get('content-type') || sourceBlob.type || 'application/pdf';
-        const blob = sourceBlob.type === contentType
-          ? sourceBlob
-          : new Blob([sourceBlob], { type: contentType });
-        const objectUrl = window.URL.createObjectURL(blob);
-
-        scheduleAgreementDocumentRevoke(objectUrl);
-
-        if (popup && !popup.closed) {
-          popup.location.replace(objectUrl);
-        } else {
-          const fallbackWindow = window.open(objectUrl, '_blank');
-          if (!fallbackWindow) {
-            this.agreementDocumentError = 'The browser blocked the document tab. Allow pop-ups and try again.';
-          }
-        }
-      } catch (error) {
-        const message = error.message || 'Unable to open agreement document.';
-        this.agreementDocumentError = message;
-        renderAgreementDocumentWindow(popup, signal.title || 'Agreement document', message);
-      } finally {
-        this.agreementDocumentOpeningId = null;
-      }
     },
 
     async viewClient(contact) {

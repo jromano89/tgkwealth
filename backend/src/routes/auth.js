@@ -5,6 +5,7 @@ const {
   getAccessToken,
   getConsentUrl,
   getUserInfoFromCode,
+  normalizeScopeString,
   readConsentState
 } = require('../services/docusign-auth');
 const {
@@ -13,6 +14,7 @@ const {
   getAppBySlug,
   getAppSlug,
   getConnectionForApp,
+  getRequiredApp,
   route,
   upsertApp,
   upsertConnection
@@ -95,29 +97,34 @@ function sendPopupResult(req, res, frontendRedirect, payload) {
 
 function getSessionPayload(db, appSlug) {
   if (!appSlug) {
-    return { connected: false };
+    return { connected: false, requestedScopes: null };
   }
 
   const app = getAppBySlug(db, appSlug);
   if (!app) {
-    return { connected: false };
+    return { connected: false, requestedScopes: null };
   }
 
   const connection = getConnectionForApp(db, app.id);
+  const payload = {
+    connected: !!connection,
+    requestedScopes: app.docusign_scopes || null,
+    app: { slug: app.slug, name: app.name }
+  };
+
   if (!connection) {
-    return { connected: false };
+    return payload;
   }
 
   return {
-    connected: true,
+    ...payload,
     userId: connection.docusign_user_id,
     accountId: connection.docusign_account_id,
     accountName: connection.account_name,
     name: connection.user_name,
     email: connection.email,
     accounts: connection.available_accounts || [],
-    accountSelectionRequired: !connection.docusign_account_id && (connection.available_accounts || []).length > 0,
-    app: { slug: app.slug, name: app.name }
+    accountSelectionRequired: !connection.docusign_account_id && (connection.available_accounts || []).length > 0
   };
 }
 
@@ -133,22 +140,40 @@ function requireConnectedApp(db, req) {
   return { app, connection };
 }
 
+function resolveRequestedScopes(db, appSlug, explicitScopes) {
+  const normalizedExplicitScopes = normalizeScopeString(explicitScopes);
+  if (normalizedExplicitScopes) {
+    return normalizedExplicitScopes;
+  }
+
+  const app = appSlug ? getAppBySlug(db, appSlug) : null;
+  const normalizedSavedScopes = normalizeScopeString(app?.docusign_scopes);
+  if (normalizedSavedScopes) {
+    return normalizedSavedScopes;
+  }
+
+  throw createError(400, 'Missing Docusign scopes. Save the requested scopes in Settings before connecting.');
+}
+
 router.get('/login', route((req, res) => {
   const appSlug = getAppSlug(req);
   if (!appSlug) {
     throw createError(400, 'Missing app slug. Pass ?app=<slug> when starting Docusign consent.');
   }
 
+  const db = getDb();
+  const requestedScopes = resolveRequestedScopes(db, appSlug, req.query.scopes);
   const frontendRedirect = req.query.redirect || req.headers.referer || '/';
   const state = createConsentState({
     frontendRedirect,
     appSlug,
     appName: req.query.appName || null,
-    display: req.query.display === 'popup' ? 'popup' : 'redirect'
+    display: req.query.display === 'popup' ? 'popup' : 'redirect',
+    requestedScopes
   });
   const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/callback`;
 
-  res.redirect(getConsentUrl(callbackUrl, state, req.query.scopes));
+  res.redirect(getConsentUrl(callbackUrl, state, requestedScopes));
 }));
 
 router.get('/callback', route(async (req, res) => {
@@ -181,7 +206,8 @@ router.get('/callback', route(async (req, res) => {
     const db = getDb();
     const app = upsertApp(db, {
       slug: consent.appSlug,
-      name: consent.appName || consent.appSlug
+      name: consent.appName || consent.appSlug,
+      docusignScopes: normalizeScopeString(consent.requestedScopes)
     });
 
     upsertConnection(db, app, {
@@ -236,6 +262,24 @@ router.post('/account', route((req, res) => {
   res.json({ success: true, account });
 }));
 
+router.post('/scopes', route((req, res) => {
+  const db = getDb();
+  const app = getRequiredApp(db, req);
+  const scopes = normalizeScopeString(req.body?.scopes);
+
+  if (!scopes) {
+    throw createError(400, 'Missing Docusign scopes');
+  }
+
+  const updatedApp = upsertApp(db, {
+    slug: app.slug,
+    name: req.body?.appName || app.name,
+    docusignScopes: scopes
+  });
+
+  res.json({ success: true, requestedScopes: updatedApp.docusign_scopes });
+}));
+
 router.get('/session', route((req, res) => {
   res.json(getSessionPayload(getDb(), getAppSlug(req)));
 }));
@@ -249,9 +293,12 @@ router.get('/prewarm', route(async (req, res) => {
   if (!session.accountId) {
     return res.json({ session, warmed: false, reason: 'account-selection-required' });
   }
+  if (!session.requestedScopes) {
+    return res.json({ session, warmed: false, reason: 'missing-scopes' });
+  }
 
   try {
-    await getAccessToken(session.userId, session.accountId);
+    await getAccessToken(session.userId, session.accountId, session.requestedScopes);
     return res.json({ session, warmed: true });
   } catch (error) {
     console.warn('Docusign auth prewarm failed:', error.message);

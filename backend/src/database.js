@@ -8,6 +8,7 @@ const CORE_SCHEMA = `
     id TEXT PRIMARY KEY,
     slug TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
+    docusign_scopes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -94,8 +95,18 @@ function getDb() {
 
 function initializeSchema(database) {
   database.exec(CORE_SCHEMA);
+  ensureColumn(database, 'apps', 'docusign_scopes', 'TEXT');
   database.exec(APP_SCHEMA);
   ensureDefaultUsers(database);
+}
+
+function ensureColumn(database, tableName, columnName, definition) {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (columns.some((column) => column.name === columnName)) {
+    return;
+  }
+
+  database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 }
 
 function ensureDefaultUsers(database) {

@@ -226,6 +226,8 @@ function settingsPanelState() {
     idvWorkflowId: window.TGK_DEMO.config.idvWorkflowId,
     assetTransferWorkflowId: window.TGK_DEMO.config.assetTransferWorkflowId,
     dirty: false,
+    resettingDefaults: false,
+    resetError: '',
 
     previewBranding() {
       applyBrandingPreview({
@@ -283,10 +285,28 @@ function settingsPanelState() {
       writeStoredSettings(existing);
     },
 
-    resetDefaults() {
+    async resetDefaults() {
+      this.resetError = '';
+      this.resettingDefaults = true;
       clearStoredSettings();
+      this.appName = TGK_DEMO_DEFAULTS.branding.appName;
+      this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
+      this.idVerification = TGK_DEMO_DEFAULTS.config.idVerification;
+      this.idvWorkflowId = TGK_DEMO_DEFAULTS.config.idvWorkflowId;
+      this.assetTransferWorkflowId = TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId;
+      this.dirty = false;
       applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
-      window.location.reload();
+
+      try {
+        if (window.TGK_API && typeof window.TGK_API.saveDocusignScopes === 'function' && typeof getDefaultDocusignScopes === 'function') {
+          await window.TGK_API.saveDocusignScopes(getDefaultDocusignScopes());
+        }
+        window.location.reload();
+      } catch (error) {
+        this.resetError = error.message || 'Unable to reset defaults.';
+      } finally {
+        this.resettingDefaults = false;
+      }
     }
   };
 }

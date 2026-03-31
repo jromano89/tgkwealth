@@ -216,6 +216,35 @@ function buildOpenApiDocument(req) {
           }
         }
       },
+      '/api/auth/scopes': {
+        post: {
+          tags: ['Auth'],
+          summary: 'Save app Docusign scopes',
+          operationId: 'saveDocusignScopes',
+          parameters: [
+            { $ref: '#/components/parameters/DemoAppHeader' }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SaveScopesRequest' }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Requested scopes persisted for the app.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SaveScopesResponse' }
+                }
+              }
+            },
+            400: { $ref: '#/components/responses/ErrorResponse' }
+          }
+        }
+      },
       '/api/auth/logout': {
         post: {
           tags: ['Auth'],
@@ -714,6 +743,7 @@ function buildOpenApiDocument(req) {
           type: 'object',
           properties: {
             connected: { type: 'boolean' },
+            requestedScopes: { type: 'string' },
             userId: { type: 'string' },
             accountId: { type: 'string' },
             accountName: { type: 'string' },
@@ -744,6 +774,13 @@ function buildOpenApiDocument(req) {
           },
           required: ['accountId']
         },
+        SaveScopesRequest: {
+          type: 'object',
+          properties: {
+            scopes: { type: 'string' }
+          },
+          required: ['scopes']
+        },
         SelectAccountResponse: {
           type: 'object',
           properties: {
@@ -751,6 +788,14 @@ function buildOpenApiDocument(req) {
             account: { $ref: '#/components/schemas/DocusignAccount' }
           },
           required: ['success', 'account']
+        },
+        SaveScopesResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            requestedScopes: { type: 'string' }
+          },
+          required: ['success', 'requestedScopes']
         },
         TaskInput: {
           type: 'object',

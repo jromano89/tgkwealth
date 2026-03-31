@@ -320,20 +320,17 @@ function sharedSettingsTemplate() {
                   <div class="flex items-start justify-between gap-4 mb-4">
                     <div>
                       <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
-                      <p class="text-xs text-gray-400 mt-1">Edit the scope string used on the next connection.</p>
+                      <p class="text-xs text-gray-400 mt-1">Save the app-wide scope string used for consent and backend DocuSign API tokens.</p>
                     </div>
                     <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
                   </div>
 
                   <textarea x-model="requestedScopesText" rows="8" class="tgk-form-input tgk-form-textarea tgk-form-input--mono"></textarea>
-                  <p class="tgk-help-text mt-2">The required <span class="font-medium">signature</span>, <span class="font-medium">impersonation</span>, <span class="font-medium">aow_manage</span>, and <span class="font-medium">adm_store_unified_repo_read</span> scopes are always included.</p>
+                  <p class="tgk-help-text mt-2">This is saved per app on the backend. If you add scopes that were not previously consented, reconnect Docusign once to grant them.</p>
 
-                  <div class="flex items-center justify-between gap-3 mt-5">
-                    <button @click="resetRequestedScopes()" class="tgk-button tgk-button--secondary">Reset Default</button>
-                    <div class="tgk-inline-actions tgk-inline-actions--end">
-                      <button @click="closeScopesModal()" class="tgk-button tgk-button--secondary">Cancel</button>
-                      <button @click="saveRequestedScopes()" class="tgk-button tgk-button--primary">Save Scopes</button>
-                    </div>
+                  <div class="flex items-center justify-end gap-3 mt-5">
+                    <button @click="closeScopesModal()" class="tgk-button tgk-button--secondary">Cancel</button>
+                    <button @click="saveRequestedScopes()" :disabled="savingScopes" class="tgk-button tgk-button--primary" x-text="savingScopes ? 'Saving...' : 'Save Scopes'"></button>
                   </div>
                 </div>
               </div>
@@ -403,9 +400,16 @@ function sharedSettingsTemplate() {
                 </div>
               </div>
 
+              <template x-if="resetError">
+                <div class="tgk-banner tgk-banner--danger">
+                  <div class="tgk-banner__label">Reset Error</div>
+                  <div class="tgk-banner__meta" x-text="resetError"></div>
+                </div>
+              </template>
+
               <div class="tgk-inline-actions">
-                <button @click="save()" :disabled="!dirty" class="tgk-button tgk-button--primary">Save Branding</button>
-                <button @click="resetDefaults()" class="tgk-button tgk-button--secondary">Reset Defaults</button>
+                <button @click="save()" :disabled="!dirty || resettingDefaults" class="tgk-button tgk-button--primary">Save Branding</button>
+                <button @click="resetDefaults()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
               </div>
             </div>
           </section>
