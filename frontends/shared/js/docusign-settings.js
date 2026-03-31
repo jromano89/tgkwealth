@@ -3,7 +3,7 @@
  * Drop-in Alpine.js component for the Docusign JWT consent flow.
  */
 function getDefaultDocusignScopes() {
-  return 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read models_read';
+  return 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
 }
 
 function docusignSettings() {

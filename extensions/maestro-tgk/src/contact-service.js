@@ -1,5 +1,6 @@
 const { createContact, getContact, listContacts, updateContact } = require('./backend-client');
 const { TYPE_ALIASES, TYPE_NAME } = require('./contact-type-definitions');
+const { evaluateOperation, filterAttributes, normalizeSearchRequest } = require('./query-utils');
 const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
 
 const COLOR_PALETTE = ['#3b5bdb', '#16a34a', '#0ea5e9', '#ec4899', '#f59f00', '#dc2626', '#7c3aed'];
@@ -172,95 +173,6 @@ function mapContactToDataRecord(contact) {
   };
 }
 
-function filterAttributes(record, attributesToSelect) {
-  if (!Array.isArray(attributesToSelect) || attributesToSelect.length === 0) {
-    return record;
-  }
-
-  const filtered = {};
-  for (const attribute of attributesToSelect) {
-    if (Object.prototype.hasOwnProperty.call(record, attribute)) {
-      filtered[attribute] = record[attribute];
-    }
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(filtered, 'Id') && record.Id) {
-    filtered.Id = record.Id;
-  }
-
-  return filtered;
-}
-
-function resolveOperand(record, operand) {
-  if (!operand) {
-    return undefined;
-  }
-  if (operand.isLiteral) {
-    return operand.name;
-  }
-  return record[operand.name];
-}
-
-function compareValues(operator, left, right) {
-  const normalizedOperator = String(operator || '').toUpperCase();
-  const leftValue = left == null ? '' : left;
-  const rightValue = right == null ? '' : right;
-  const leftString = String(leftValue).toLowerCase();
-  const rightString = String(rightValue).toLowerCase();
-  const leftNumber = Number(leftValue);
-  const rightNumber = Number(rightValue);
-  const useNumericComparison = Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftString !== '' && rightString !== '';
-
-  switch (normalizedOperator) {
-    case 'EQUALS':
-      return useNumericComparison ? leftNumber === rightNumber : leftString === rightString;
-    case 'NOT_EQUALS':
-      return useNumericComparison ? leftNumber !== rightNumber : leftString !== rightString;
-    case 'CONTAINS':
-      return leftString.includes(rightString);
-    case 'DOES_NOT_CONTAIN':
-      return !leftString.includes(rightString);
-    case 'STARTS_WITH':
-      return leftString.startsWith(rightString);
-    case 'DOES_NOT_START_WITH':
-      return !leftString.startsWith(rightString);
-    case 'ENDS_WITH':
-      return leftString.endsWith(rightString);
-    case 'DOES_NOT_END_WITH':
-      return !leftString.endsWith(rightString);
-    case 'GREATER_THAN':
-      return useNumericComparison ? leftNumber > rightNumber : leftString > rightString;
-    case 'GREATER_THAN_OR_EQUALS_TO':
-      return useNumericComparison ? leftNumber >= rightNumber : leftString >= rightString;
-    case 'LESS_THAN':
-      return useNumericComparison ? leftNumber < rightNumber : leftString < rightString;
-    case 'LESS_THAN_OR_EQUALS_TO':
-      return useNumericComparison ? leftNumber <= rightNumber : leftString <= rightString;
-    default:
-      return false;
-  }
-}
-
-function evaluateOperation(record, operation) {
-  if (!operation) {
-    return true;
-  }
-
-  if (operation.leftOperation || operation.rightOperation) {
-    const leftResult = evaluateOperation(record, operation.leftOperation);
-    const rightResult = evaluateOperation(record, operation.rightOperation);
-    return String(operation.operator || '').toUpperCase() === 'OR'
-      ? leftResult || rightResult
-      : leftResult && rightResult;
-  }
-
-  return compareValues(
-    operation.operator,
-    resolveOperand(record, operation.leftOperand),
-    resolveOperand(record, operation.rightOperand)
-  );
-}
-
 function parseDataValue(value) {
   if (!value) {
     return {};
@@ -424,19 +336,18 @@ async function patchRecord(body) {
 }
 
 async function searchRecords(body) {
-  const query = body?.query;
-  const pagination = body?.pagination || { limit: 50, skip: 0 };
+  const { query, pagination } = normalizeSearchRequest(body);
 
   if (!query) {
     throw createServiceError(400, 'BAD_REQUEST', 'Query missing in request');
   }
 
-  requireSupportedType(query.from, TYPE_ALIASES, TYPE_NAME);
+  requireSupportedType(query.from || TYPE_NAME, TYPE_ALIASES, TYPE_NAME);
   const contacts = await listContacts();
   const results = contacts
     .map(mapContactToDataRecord)
     .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
-    .slice(Math.max(0, pagination.skip || 0), Math.max(0, pagination.skip || 0) + Math.max(0, pagination.limit || 50))
+    .slice(pagination.skip, pagination.skip + pagination.limit)
     .map((record) => filterAttributes(record, query.attributesToSelect));
 
   return { records: results };

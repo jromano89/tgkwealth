@@ -400,21 +400,32 @@ function sharedSettingsTemplate() {
                 </div>
               </div>
 
-              <template x-if="resetError">
-                <div class="tgk-banner tgk-banner--danger">
-                  <div class="tgk-banner__label">Reset Error</div>
-                  <div class="tgk-banner__meta" x-text="resetError"></div>
-                </div>
-              </template>
-
               <div class="tgk-inline-actions">
                 <button @click="save()" :disabled="!dirty || resettingDefaults" class="tgk-button tgk-button--primary">Save Branding</button>
-                <button @click="resetDefaults()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
               </div>
             </div>
           </section>
         </aside>
       </div>
+
+      <section class="tgk-settings-card">
+        <div class="tgk-settings-card__header tgk-settings-card__header--split">
+          <div>
+            <div class="tgk-settings-card__eyebrow">Global Reset</div>
+            <p class="tgk-settings-card__text">Reset branding, workflow IDs, and default Docusign scopes back to the demo defaults.</p>
+          </div>
+          <button @click="resetDefaults()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
+        </div>
+
+        <div class="tgk-settings-card__body">
+          <template x-if="resetError">
+            <div class="tgk-banner tgk-banner--danger">
+              <div class="tgk-banner__label">Reset Error</div>
+              <div class="tgk-banner__meta" x-text="resetError"></div>
+            </div>
+          </template>
+        </div>
+      </section>
     </section>
   `;
 }

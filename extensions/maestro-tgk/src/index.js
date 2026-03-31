@@ -104,6 +104,10 @@ function resolveDataIoService(typeName) {
   return envelopeTypeDefs.TYPE_ALIASES.has(normalized) ? envelopeService : contactService;
 }
 
+function resolveSearchService(body) {
+  return resolveDataIoService(body?.query?.from || body?.from || body?.typeName);
+}
+
 function getRequestedTypeNames(body) {
   return new Set((body?.typeNames || []).map((item) =>
     String(typeof item === 'string' ? item : item?.typeName || '').toLowerCase()
@@ -141,7 +145,7 @@ function buildTypeDefinitionsResponse(body) {
 const DATA_IO_HANDLERS = {
   '/api/dataio/createRecord': (body) => resolveDataIoService(body?.typeName).createRecord(body),
   '/api/dataio/patchRecord': (body) => resolveDataIoService(body?.typeName).patchRecord(body),
-  '/api/dataio/searchRecords': (body) => contactService.searchRecords(body),
+  '/api/dataio/searchRecords': (body) => resolveSearchService(body).searchRecords(body),
   '/api/dataio/getTypeNames': () => ({
     typeNames: [...contactTypeDefs.TYPE_NAMES, ...envelopeTypeDefs.TYPE_NAMES]
   }),
