@@ -16,7 +16,7 @@
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260331-1"></script>
-  <script defer src="../../shared/js/api-client.js?v=20260401-5"></script>
+  <script defer src="../../shared/js/api-client.js?v=20260401-6"></script>
   <script defer src="../../shared/js/shared-ui.js?v=20260401-2"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
@@ -89,10 +89,10 @@
     </div>
 
     <!-- Portal Switch -->
-    <div class="px-3 pb-2" x-show="!sidebarCollapsed">
-      <a href="../advisor/index.html" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+    <div class="px-3 pb-2">
+      <a href="../advisor/index.html" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors" :class="sidebarCollapsed ? 'justify-center' : ''">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-        Switch to Advisor View
+        <span x-show="!sidebarCollapsed">Switch to Advisor View</span>
       </a>
     </div>
 

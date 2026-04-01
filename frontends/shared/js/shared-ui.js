@@ -256,8 +256,8 @@ function sharedSettingsTemplate() {
                       <div class="tgk-banner__footnote" x-text="session.accountId"></div>
                     </div>
                     <div class="tgk-inline-actions">
-                      <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="tgk-button tgk-button--secondary">Change Account</button>
-                      <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
+                      <button x-show="canChangeAccount()" disabled class="tgk-button tgk-button--secondary">Change Account</button>
+                      <button disabled class="tgk-button tgk-button--danger">Disconnect</button>
                     </div>
                   </div>
 
@@ -288,7 +288,7 @@ function sharedSettingsTemplate() {
                       <div class="tgk-banner__meta">Choose the Docusign account the demo should use.</div>
                     </div>
                     <div class="tgk-inline-actions">
-                      <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
+                      <button disabled class="tgk-button tgk-button--danger">Disconnect</button>
                     </div>
                   </div>
 
@@ -347,31 +347,39 @@ function sharedSettingsTemplate() {
             </div>
 
             <div class="tgk-settings-card__body">
-              <label class="tgk-settings-toggle-row">
-                <div class="tgk-settings-toggle-copy">
-                  <div class="tgk-settings-toggle-title">ID Verification</div>
-                  <div class="tgk-settings-toggle-text">Require ID verification before signing can finish.</div>
-                </div>
-                <div class="relative">
-                  <input type="checkbox" x-model="idVerification" @change="saveConfig()" class="sr-only peer">
-                  <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                  <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                </div>
-              </label>
-
               <div class="tgk-settings-field-grid">
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-idvWorkflowId">Account Opening Workflow</label>
-                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+                  <input id="tgk-idvWorkflowId" type="text" x-model="idvWorkflowId" disabled class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+
+                  <label class="tgk-settings-toggle-row mt-3">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title">ID Verification</div>
+                    </div>
+                    <div class="relative">
+                      <input type="checkbox" x-model="accountOpeningIdVerification" @change="saveConfig()" class="sr-only peer">
+                      <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
+                      <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                    </div>
+                  </label>
                 </div>
 
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow</label>
-                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" disabled class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+
+                  <label class="tgk-settings-toggle-row mt-3">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title">ID Verification</div>
+                    </div>
+                    <div class="relative">
+                      <input type="checkbox" x-model="assetTransferIdVerification" @change="saveConfig()" class="sr-only peer">
+                      <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
+                      <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                    </div>
+                  </label>
                 </div>
               </div>
-
-              <p class="tgk-help-text">Workflow IDs save locally in this browser when the field loses focus.</p>
             </div>
           </section>
         </div>
@@ -404,31 +412,13 @@ function sharedSettingsTemplate() {
               </div>
 
               <div class="tgk-inline-actions">
-                <button @click="save()" :disabled="!dirty || resettingDefaults" class="tgk-button tgk-button--primary">Save Branding</button>
+                <button @click="resetBranding()" :disabled="resettingBranding" class="tgk-button tgk-button--secondary" x-text="resettingBranding ? 'Resetting...' : 'Reset Branding'"></button>
+                <button @click="save()" :disabled="!dirty || resettingBranding" class="tgk-button tgk-button--primary">Save Branding</button>
               </div>
             </div>
           </section>
         </aside>
       </div>
-
-      <section class="tgk-settings-card">
-        <div class="tgk-settings-card__header tgk-settings-card__header--split">
-          <div>
-            <div class="tgk-settings-card__eyebrow">Global Reset</div>
-            <p class="tgk-settings-card__text">Reset branding, workflow IDs, and default Docusign scopes back to the demo defaults.</p>
-          </div>
-          <button @click="resetDefaults()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
-        </div>
-
-        <div class="tgk-settings-card__body">
-          <template x-if="resetError">
-            <div class="tgk-banner tgk-banner--danger">
-              <div class="tgk-banner__label">Reset Error</div>
-              <div class="tgk-banner__meta" x-text="resetError"></div>
-            </div>
-          </template>
-        </div>
-      </section>
     </section>
   `;
 }

@@ -578,16 +578,6 @@
         authMode: 'docusign',
         body
       });
-    },
-
-    listNavigatorAgreements(params) {
-      return this.proxy({
-        method: 'GET',
-        path: '/v1/accounts/{accountId}/agreements',
-        baseUrl: this.docusignIamBaseUrl,
-        authMode: 'docusign',
-        query: params
-      });
     }
   };
 

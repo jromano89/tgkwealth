@@ -201,7 +201,38 @@ function investorApp() {
         payload.customerEmail = customerEmail;
       }
 
+      payload.idv = window.TGK_DEMO?.config?.assetTransferIdVerification ? 'true' : 'false';
+
       return payload;
+    },
+
+    persistTaskWorkflowLaunchUrl(task, instanceUrl) {
+      if (!task?.id || !instanceUrl) {
+        return;
+      }
+
+      void TGK_API.updateTask(task.id, {
+        data: {
+          instanceUrl
+        }
+      })
+        .then((savedTask) => {
+          this.tasks = this.tasks.map((item) => (item.id === savedTask.id ? savedTask : item));
+
+          if (this.selectedClient) {
+            this.selectedClient = {
+              ...this.selectedClient,
+              tasks: (this.selectedClient.tasks || []).map((item) => (item.id === savedTask.id ? savedTask : item))
+            };
+          }
+
+          if (this.taskWorkflowTask?.id === savedTask.id) {
+            this.taskWorkflowTask = savedTask;
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to persist asset transfer launch URL:', error);
+        });
     },
 
     resetTaskWorkflowState() {
@@ -279,6 +310,7 @@ function investorApp() {
         }
 
         this.taskWorkflowInstanceUrl = result.instance_url;
+        this.persistTaskWorkflowLaunchUrl(task, result.instance_url);
       } catch (e) {
         console.error('Failed to load asset transfer workflow:', e);
         this.taskWorkflowError = e.message || 'Failed to launch asset transfer.';

@@ -24,9 +24,10 @@ const TGK_DEMO_DEFAULTS = {
     brandColor: '#3b5bdb'
   },
   config: {
-    idVerification: false,
     idvWorkflowId: TGK_RUNTIME_DEFAULTS.idvWorkflowId || '8a7bbe6b-badc-4413-818b-2e92868de402',
-    assetTransferWorkflowId: TGK_RUNTIME_DEFAULTS.assetTransferWorkflowId || 'b59acbee-8052-403a-a752-c04287ad6ee1'
+    assetTransferWorkflowId: TGK_RUNTIME_DEFAULTS.assetTransferWorkflowId || 'b59acbee-8052-403a-a752-c04287ad6ee1',
+    accountOpeningIdVerification: false,
+    assetTransferIdVerification: false
   }
 };
 
@@ -139,6 +140,36 @@ function clearStoredSettings() {
   } catch (error) {}
 }
 
+function resolveDemoConfig(savedConfig = {}) {
+  const legacyIdVerification = savedConfig.idVerification !== undefined
+    ? Boolean(savedConfig.idVerification)
+    : undefined;
+
+  return {
+    idvWorkflowId: String(savedConfig.idvWorkflowId || TGK_DEMO_DEFAULTS.config.idvWorkflowId).trim()
+      || TGK_DEMO_DEFAULTS.config.idvWorkflowId,
+    assetTransferWorkflowId: String(savedConfig.assetTransferWorkflowId || TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId).trim()
+      || TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId,
+    accountOpeningIdVerification: savedConfig.accountOpeningIdVerification !== undefined
+      ? Boolean(savedConfig.accountOpeningIdVerification)
+      : (legacyIdVerification ?? TGK_DEMO_DEFAULTS.config.accountOpeningIdVerification),
+    assetTransferIdVerification: savedConfig.assetTransferIdVerification !== undefined
+      ? Boolean(savedConfig.assetTransferIdVerification)
+      : (legacyIdVerification ?? TGK_DEMO_DEFAULTS.config.assetTransferIdVerification)
+  };
+}
+
+function syncRuntimeConfig(nextConfig) {
+  if (!window.TGK_DEMO) {
+    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
+  }
+
+  window.TGK_DEMO.config = resolveDemoConfig({
+    ...(window.TGK_DEMO.config || {}),
+    ...nextConfig
+  });
+}
+
 function buildDemoSettingsSnapshot(savedSettings) {
   const savedBranding = savedSettings.branding || {};
   return {
@@ -146,10 +177,7 @@ function buildDemoSettingsSnapshot(savedSettings) {
       appName: savedBranding.appName || TGK_DEMO_DEFAULTS.branding.appName,
       brandColor: normalizeHexColor(savedBranding.brandColor)
     },
-    config: {
-      ...TGK_DEMO_DEFAULTS.config,
-      ...(savedSettings.config || {})
-    },
+    config: resolveDemoConfig(savedSettings.config || {}),
     DEFAULTS: TGK_DEMO_DEFAULTS
   };
 }
@@ -222,12 +250,22 @@ function settingsPanelState() {
   return {
     appName: window.TGK_DEMO.branding.appName,
     brandColor: window.TGK_DEMO.branding.brandColor,
-    idVerification: window.TGK_DEMO.config.idVerification,
     idvWorkflowId: window.TGK_DEMO.config.idvWorkflowId,
     assetTransferWorkflowId: window.TGK_DEMO.config.assetTransferWorkflowId,
+    accountOpeningIdVerification: window.TGK_DEMO.config.accountOpeningIdVerification,
+    assetTransferIdVerification: window.TGK_DEMO.config.assetTransferIdVerification,
     dirty: false,
-    resettingDefaults: false,
-    resetError: '',
+    resettingBranding: false,
+
+    currentConfig() {
+      return resolveDemoConfig({
+        ...(readStoredSettings().config || {}),
+        idvWorkflowId: this.idvWorkflowId,
+        assetTransferWorkflowId: this.assetTransferWorkflowId,
+        accountOpeningIdVerification: this.accountOpeningIdVerification,
+        assetTransferIdVerification: this.assetTransferIdVerification
+      });
+    },
 
     previewBranding() {
       applyBrandingPreview({
@@ -252,61 +290,49 @@ function settingsPanelState() {
       const existing = readStoredSettings();
       const nextBrandColor = normalizeHexColor(this.brandColor);
       const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
+      const nextConfig = this.currentConfig();
+
       writeStoredSettings({
         branding: {
           appName: nextAppName,
           brandColor: nextBrandColor
         },
-        config: {
-          ...window.TGK_DEMO.DEFAULTS.config,
-          ...(existing.config || {}),
-          idVerification: this.idVerification,
-          idvWorkflowId: this.idvWorkflowId,
-          assetTransferWorkflowId: this.assetTransferWorkflowId
-        }
+        config: nextConfig
       });
 
       applyBrandingPreview({
         appName: nextAppName,
         brandColor: nextBrandColor
       });
+      syncRuntimeConfig(nextConfig);
+      this.dirty = false;
       window.location.reload();
     },
 
     saveConfig() {
       const existing = readStoredSettings();
-      existing.config = {
-        ...existing.config,
-        idVerification: this.idVerification,
-        idvWorkflowId: this.idvWorkflowId,
-        assetTransferWorkflowId: this.assetTransferWorkflowId
-      };
-      delete existing.config.countersignatures;
+      const nextConfig = this.currentConfig();
+      existing.config = nextConfig;
       writeStoredSettings(existing);
+      syncRuntimeConfig(nextConfig);
     },
 
-    async resetDefaults() {
-      this.resetError = '';
-      this.resettingDefaults = true;
-      clearStoredSettings();
+    resetBranding() {
+      this.resettingBranding = true;
+      const existing = readStoredSettings();
       this.appName = TGK_DEMO_DEFAULTS.branding.appName;
       this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
-      this.idVerification = TGK_DEMO_DEFAULTS.config.idVerification;
-      this.idvWorkflowId = TGK_DEMO_DEFAULTS.config.idvWorkflowId;
-      this.assetTransferWorkflowId = TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId;
       this.dirty = false;
+      writeStoredSettings({
+        ...existing,
+        branding: {
+          appName: TGK_DEMO_DEFAULTS.branding.appName,
+          brandColor: TGK_DEMO_DEFAULTS.branding.brandColor
+        },
+        config: this.currentConfig()
+      });
       applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
-
-      try {
-        if (window.TGK_API && typeof window.TGK_API.saveDocusignScopes === 'function' && typeof getDefaultDocusignScopes === 'function') {
-          await window.TGK_API.saveDocusignScopes(getDefaultDocusignScopes());
-        }
-        window.location.reload();
-      } catch (error) {
-        this.resetError = error.message || 'Unable to reset defaults.';
-      } finally {
-        this.resettingDefaults = false;
-      }
+      this.resettingBranding = false;
     }
   };
 }
