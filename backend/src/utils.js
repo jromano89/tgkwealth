@@ -10,6 +10,10 @@ function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+function asObject(value) {
+  return isPlainObject(value) ? { ...value } : {};
+}
+
 function parseJsonFields(row) {
   if (!row) return row;
   const parsed = { ...row };
@@ -208,6 +212,7 @@ function route(handler) {
 }
 
 module.exports = {
+  asObject,
   clearAppConnection,
   createError,
   getAppBySlug,

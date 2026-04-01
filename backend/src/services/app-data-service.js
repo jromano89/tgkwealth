@@ -1,26 +1,9 @@
 const { randomUUID } = require('crypto');
 const store = require('../data-store');
-const { createError } = require('../utils');
-
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
-}
-
-function normalizeOptionalText(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (value === null) {
-    return null;
-  }
-
-  const normalized = String(value).trim();
-  return normalized ? normalized : null;
-}
+const { asObject, createError, normalizeOptionalString } = require('../utils');
 
 function normalizeRequiredText(value, label) {
-  const normalized = normalizeOptionalText(value);
+  const normalized = normalizeOptionalString(value);
   if (!normalized) {
     throw createError(400, `Missing ${label}`);
   }
@@ -59,10 +42,10 @@ function normalizeOptionalPhone(value) {
   }
 
   if (value && typeof value === 'object') {
-    return normalizeOptionalText(value.number || value.normalizedNumber || value.phone);
+    return normalizeOptionalString(value.number || value.normalizedNumber || value.phone);
   }
 
-  return normalizeOptionalText(value);
+  return normalizeOptionalString(value);
 }
 
 function mergeData(existingData, nextData) {
@@ -81,53 +64,40 @@ function mergeData(existingData, nextData) {
 }
 
 function deriveDisplayName({ displayName, data, email, organization, id }) {
-  const explicit = normalizeOptionalText(displayName);
+  const explicit = normalizeOptionalString(displayName);
   if (explicit) {
     return explicit;
   }
 
   const mergedData = asObject(data);
-  const firstName = normalizeOptionalText(mergedData.firstName);
-  const lastName = normalizeOptionalText(mergedData.lastName);
+  const firstName = normalizeOptionalString(mergedData.firstName);
+  const lastName = normalizeOptionalString(mergedData.lastName);
   const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
   if (combinedName) {
     return combinedName;
   }
 
-  const fallback = normalizeOptionalText(email)
-    || normalizeOptionalText(organization)
-    || normalizeOptionalText(id);
+  const fallback = normalizeOptionalString(email)
+    || normalizeOptionalString(organization)
+    || normalizeOptionalString(id);
 
   return fallback || null;
 }
 
-function resolveEmployeeReference(db, appSlug, value) {
-  const employeeId = normalizeOptionalText(value);
-  if (!employeeId) {
+function resolveReference(db, appSlug, value, table, label) {
+  const id = normalizeOptionalString(value);
+  if (!id) {
     return null;
   }
 
-  return store.ensureEmployeeBelongsToApp(db, appSlug, employeeId).id;
-}
-
-function resolveCustomerReference(db, appSlug, value) {
-  const customerId = normalizeOptionalText(value);
-  if (!customerId) {
-    return null;
-  }
-
-  return store.ensureCustomerBelongsToApp(db, appSlug, customerId).id;
-}
-
-function normalizeRecordData(existingData, inputData) {
-  return mergeData(existingData, inputData);
+  return store.ensureRecordBelongsToApp(db, table, appSlug, id, label).id;
 }
 
 function normalizeEmployeeWrite(existingEmployee, input = {}) {
   const id = input.id || existingEmployee?.id || randomUUID();
-  const data = normalizeRecordData(existingEmployee?.data, input.data);
-  const email = normalizeOptionalText(input.email !== undefined ? input.email : existingEmployee?.email);
-  const title = normalizeOptionalText(input.title !== undefined ? input.title : existingEmployee?.title);
+  const data = mergeData(existingEmployee?.data, input.data);
+  const email = normalizeOptionalString(input.email !== undefined ? input.email : existingEmployee?.email);
+  const title = normalizeOptionalString(input.title !== undefined ? input.title : existingEmployee?.title);
   const displayName = deriveDisplayName({
     displayName: input.displayName !== undefined ? input.displayName : existingEmployee?.display_name,
     data: data !== undefined ? data : existingEmployee?.data,
@@ -139,9 +109,9 @@ function normalizeEmployeeWrite(existingEmployee, input = {}) {
   return {
     id,
     display_name: displayName,
-    email: input.email !== undefined ? normalizeOptionalText(input.email) : undefined,
+    email: input.email !== undefined ? normalizeOptionalString(input.email) : undefined,
     phone: input.phone !== undefined ? normalizeOptionalPhone(input.phone) : undefined,
-    title: input.title !== undefined ? normalizeOptionalText(input.title) : undefined,
+    title: input.title !== undefined ? normalizeOptionalString(input.title) : undefined,
     data,
     created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
   };
@@ -149,9 +119,9 @@ function normalizeEmployeeWrite(existingEmployee, input = {}) {
 
 function normalizeCustomerWrite(db, appSlug, existingCustomer, input = {}) {
   const id = input.id || existingCustomer?.id || randomUUID();
-  const data = normalizeRecordData(existingCustomer?.data, input.data);
-  const email = normalizeOptionalText(input.email !== undefined ? input.email : existingCustomer?.email);
-  const organization = normalizeOptionalText(input.organization !== undefined ? input.organization : existingCustomer?.organization);
+  const data = mergeData(existingCustomer?.data, input.data);
+  const email = normalizeOptionalString(input.email !== undefined ? input.email : existingCustomer?.email);
+  const organization = normalizeOptionalString(input.organization !== undefined ? input.organization : existingCustomer?.organization);
   const displayName = deriveDisplayName({
     displayName: input.displayName !== undefined ? input.displayName : existingCustomer?.display_name,
     data: data !== undefined ? data : existingCustomer?.data,
@@ -163,13 +133,13 @@ function normalizeCustomerWrite(db, appSlug, existingCustomer, input = {}) {
   return {
     id,
     employee_id: input.employeeId !== undefined
-      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      ? resolveReference(db, appSlug, input.employeeId, 'employees', 'employeeId')
       : undefined,
     display_name: displayName,
-    email: input.email !== undefined ? normalizeOptionalText(input.email) : undefined,
+    email: input.email !== undefined ? normalizeOptionalString(input.email) : undefined,
     phone: input.phone !== undefined ? normalizeOptionalPhone(input.phone) : undefined,
-    organization: input.organization !== undefined ? normalizeOptionalText(input.organization) : undefined,
-    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
+    organization: input.organization !== undefined ? normalizeOptionalString(input.organization) : undefined,
+    status: input.status !== undefined ? normalizeOptionalString(input.status) : undefined,
     data,
     created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
   };
@@ -179,14 +149,14 @@ function normalizeEnvelopeWrite(db, appSlug, existingEnvelope, input = {}) {
   return {
     id: existingEnvelope?.id || normalizeRequiredText(input.id, 'envelope id'),
     employee_id: input.employeeId !== undefined
-      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      ? resolveReference(db, appSlug, input.employeeId, 'employees', 'employeeId')
       : undefined,
     customer_id: input.customerId !== undefined
-      ? resolveCustomerReference(db, appSlug, input.customerId)
+      ? resolveReference(db, appSlug, input.customerId, 'customers', 'customerId')
       : undefined,
-    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
-    name: input.name !== undefined ? normalizeOptionalText(input.name) : undefined,
-    data: normalizeRecordData(existingEnvelope?.data, input.data),
+    status: input.status !== undefined ? normalizeOptionalString(input.status) : undefined,
+    name: input.name !== undefined ? normalizeOptionalString(input.name) : undefined,
+    data: mergeData(existingEnvelope?.data, input.data),
     created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
   };
 }
@@ -195,16 +165,16 @@ function normalizeTaskWrite(db, appSlug, existingTask, input = {}) {
   return {
     id: input.id || existingTask?.id || randomUUID(),
     employee_id: input.employeeId !== undefined
-      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      ? resolveReference(db, appSlug, input.employeeId, 'employees', 'employeeId')
       : undefined,
     customer_id: input.customerId !== undefined
-      ? resolveCustomerReference(db, appSlug, input.customerId)
+      ? resolveReference(db, appSlug, input.customerId, 'customers', 'customerId')
       : undefined,
-    title: input.title !== undefined ? normalizeOptionalText(input.title) : undefined,
-    description: input.description !== undefined ? normalizeOptionalText(input.description) : undefined,
-    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
+    title: input.title !== undefined ? normalizeOptionalString(input.title) : undefined,
+    description: input.description !== undefined ? normalizeOptionalString(input.description) : undefined,
+    status: input.status !== undefined ? normalizeOptionalString(input.status) : undefined,
     due_at: input.dueAt !== undefined ? normalizeOptionalDate(input.dueAt) : undefined,
-    data: normalizeRecordData(existingTask?.data, input.data),
+    data: mergeData(existingTask?.data, input.data),
     created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
   };
 }

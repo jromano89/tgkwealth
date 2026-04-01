@@ -1,3 +1,23 @@
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
+}
+
+function parseDataValue(value) {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === 'string') {
+    try {
+      return asObject(JSON.parse(value));
+    } catch (error) {
+      return {};
+    }
+  }
+
+  return asObject(value);
+}
+
 function createServiceError(statusCode, code, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -29,7 +49,9 @@ function requireSupportedType(typeName, aliases, canonicalTypeName) {
 }
 
 module.exports = {
+  asObject,
   createServiceError,
+  parseDataValue,
   pickFirstDefined,
   requireSupportedType
 };

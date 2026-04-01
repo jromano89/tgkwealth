@@ -15,7 +15,6 @@ const FIELD_DEFINITIONS = [
   { name: 'Id', label: 'Customer ID', type: 'String', optional: false, readableOnly: true },
   { name: 'EmployeeId', label: 'Employee ID', type: 'String', optional: true },
   { name: 'DisplayName', label: 'Display Name', type: 'String', optional: true },
-  { name: 'FullName', label: 'Full Name', type: 'String', optional: true },
   { name: 'FirstName', label: 'First Name', type: 'String', optional: true },
   { name: 'LastName', label: 'Last Name', type: 'String', optional: true },
   { name: 'Email', label: 'Email', type: 'String', optional: true },
@@ -23,7 +22,6 @@ const FIELD_DEFINITIONS = [
   { name: 'Organization', label: 'Organization', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
   { name: 'DataJson', label: 'Data JSON', type: 'String', optional: true },
-  { name: 'ExternalId', label: 'External ID', type: 'String', optional: true },
   { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true },
   { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];

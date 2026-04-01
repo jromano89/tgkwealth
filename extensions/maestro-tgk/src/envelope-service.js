@@ -1,28 +1,7 @@
 const { createEnvelope, listEnvelopes, updateEnvelope } = require('./backend-client');
 const envelopeTypeDefs = require('./envelope-type-definitions');
 const { evaluateOperation, filterAttributes, getLiteralComparisonValue, normalizeSearchRequest } = require('./query-utils');
-const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
-
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
-}
-
-function parseDataValue(value) {
-  if (!value) {
-    return {};
-  }
-
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return asObject(parsed);
-    } catch (error) {
-      return {};
-    }
-  }
-
-  return asObject(value);
-}
+const { asObject, createServiceError, parseDataValue, pickFirstDefined, requireSupportedType } = require('./service-utils');
 
 function normalizeOptionalText(value) {
   if (value === undefined || value === null) {
@@ -37,7 +16,7 @@ function buildEnvelopePayload(rawInput) {
   const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
 
   return {
-    id: normalizeOptionalText(pickFirstDefined(input, ['Id', 'id'])) || undefined,
+    id: normalizeOptionalText(pickFirstDefined(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) || undefined,
     customerId: normalizeOptionalText(pickFirstDefined(input, ['CustomerId', 'customerId'])) || null,
     employeeId: normalizeOptionalText(pickFirstDefined(input, ['EmployeeId', 'employeeId'])) || null,
     status: normalizeOptionalText(pickFirstDefined(input, ['Status', 'status'])) || null,
@@ -50,6 +29,7 @@ function buildEnvelopePayload(rawInput) {
 function mapEnvelopeToDataRecord(envelope) {
   return {
     Id: envelope.id,
+    EnvelopeId: envelope.id,
     Name: envelope.name || '',
     Status: envelope.status || '',
     CustomerId: envelope.customer_id || '',
@@ -63,7 +43,7 @@ function mapEnvelopeToDataRecord(envelope) {
 function buildEnvelopeSearchFilters(query) {
   const operation = query?.queryFilter?.operation;
   const filters = {
-    id: getLiteralComparisonValue(operation, 'Id'),
+    id: getLiteralComparisonValue(operation, 'EnvelopeId') || getLiteralComparisonValue(operation, 'Id'),
     customerId: getLiteralComparisonValue(operation, 'CustomerId'),
     employeeId: getLiteralComparisonValue(operation, 'EmployeeId'),
     status: getLiteralComparisonValue(operation, 'Status')
@@ -114,6 +94,9 @@ async function createRecord(body) {
     const payload = buildEnvelopePayload(data);
     if (requestedId) {
       payload.id = requestedId;
+    }
+    if (!payload.id) {
+      throw createServiceError(400, 'BAD_REQUEST', 'EnvelopeId is required when creating an envelope record.');
     }
     const created = await createEnvelope(payload);
     return { recordId: created.id };

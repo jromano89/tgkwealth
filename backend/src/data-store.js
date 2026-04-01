@@ -1,12 +1,4 @@
-const { createError, parseJsonFields, serializeJson } = require('./utils');
-
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
-}
-
-function normalizeData(data) {
-  return asObject(data);
-}
+const { asObject, createError, parseJsonFields, serializeJson } = require('./utils');
 
 function parseRecord(row) {
   if (!row) {
@@ -16,7 +8,7 @@ function parseRecord(row) {
   const parsed = parseJsonFields(row);
   return {
     ...parsed,
-    data: normalizeData(parsed.data)
+    data: asObject(parsed.data)
   };
 }
 
@@ -28,7 +20,7 @@ function parseApp(row) {
   const parsed = parseJsonFields(row);
   return {
     ...parsed,
-    data: normalizeData(parsed.data),
+    data: asObject(parsed.data),
     docusign_available_accounts: Array.isArray(parsed.docusign_available_accounts)
       ? parsed.docusign_available_accounts
       : []
@@ -103,30 +95,17 @@ function getTask(db, appSlug, taskId) {
   return getScopedRow(db, 'tasks', appSlug, taskId, parseRecord);
 }
 
-function ensureEmployeeBelongsToApp(db, appSlug, employeeId) {
-  if (!employeeId) {
+function ensureRecordBelongsToApp(db, table, appSlug, recordId, label) {
+  if (!recordId) {
     return null;
   }
 
-  const employee = getEmployee(db, appSlug, employeeId);
-  if (!employee) {
-    throw createError(400, 'employeeId must belong to the current app');
+  const record = getScopedRow(db, table, appSlug, recordId);
+  if (!record) {
+    throw createError(400, `${label} must belong to the current app`);
   }
 
-  return employee;
-}
-
-function ensureCustomerBelongsToApp(db, appSlug, customerId) {
-  if (!customerId) {
-    return null;
-  }
-
-  const customer = getCustomer(db, appSlug, customerId);
-  if (!customer) {
-    throw createError(400, 'customerId must belong to the current app');
-  }
-
-  return customer;
+  return record;
 }
 
 function listEmployees(db, appSlug, filters = {}) {
@@ -167,7 +146,7 @@ function createEmployee(db, appSlug, employee) {
     employee.email ?? null,
     employee.phone ?? null,
     employee.title ?? null,
-    serializeJson(normalizeData(employee.data)),
+    serializeJson(asObject(employee.data)),
     employee.created_at || new Date().toISOString(),
     employee.updated_at || employee.created_at || new Date().toISOString()
   );
@@ -181,7 +160,7 @@ function updateEmployee(db, appSlug, employeeId, employee) {
     email: employee.email,
     phone: employee.phone,
     title: employee.title,
-    data: employee.data !== undefined ? serializeJson(normalizeData(employee.data)) : undefined
+    data: employee.data !== undefined ? serializeJson(asObject(employee.data)) : undefined
   });
 
   if (statement) {
@@ -241,7 +220,7 @@ function createCustomer(db, appSlug, customer) {
     customer.phone ?? null,
     customer.organization ?? null,
     customer.status ?? 'active',
-    serializeJson(normalizeData(customer.data)),
+    serializeJson(asObject(customer.data)),
     customer.created_at || new Date().toISOString(),
     customer.updated_at || customer.created_at || new Date().toISOString()
   );
@@ -257,7 +236,7 @@ function updateCustomer(db, appSlug, customerId, customer) {
     phone: customer.phone,
     organization: customer.organization,
     status: customer.status,
-    data: customer.data !== undefined ? serializeJson(normalizeData(customer.data)) : undefined
+    data: customer.data !== undefined ? serializeJson(asObject(customer.data)) : undefined
   });
 
   if (statement) {
@@ -327,7 +306,7 @@ function createEnvelope(db, appSlug, envelope) {
     envelope.customer_id ?? null,
     envelope.status ?? 'created',
     envelope.name ?? null,
-    serializeJson(normalizeData(envelope.data)),
+    serializeJson(asObject(envelope.data)),
     envelope.created_at || new Date().toISOString(),
     envelope.updated_at || envelope.created_at || new Date().toISOString()
   );
@@ -346,7 +325,7 @@ function updateEnvelope(db, appSlug, envelopeId, envelope) {
     customer_id: envelope.customer_id,
     status: envelope.status,
     name: envelope.name,
-    data: envelope.data !== undefined ? serializeJson(normalizeData(envelope.data)) : undefined
+    data: envelope.data !== undefined ? serializeJson(asObject(envelope.data)) : undefined
   });
 
   if (statement) {
@@ -414,7 +393,7 @@ function createTask(db, appSlug, task) {
     task.description ?? null,
     task.status ?? 'pending',
     task.due_at ?? null,
-    serializeJson(normalizeData(task.data)),
+    serializeJson(asObject(task.data)),
     task.created_at || new Date().toISOString(),
     task.updated_at || task.created_at || new Date().toISOString()
   );
@@ -430,7 +409,7 @@ function updateTask(db, appSlug, taskId, task) {
     description: task.description,
     status: task.status,
     due_at: task.due_at,
-    data: task.data !== undefined ? serializeJson(normalizeData(task.data)) : undefined
+    data: task.data !== undefined ? serializeJson(asObject(task.data)) : undefined
   });
 
   if (statement) {
@@ -452,12 +431,10 @@ module.exports = {
   deleteCustomer,
   deleteTask,
   ensureAppBelongsToDb,
-  ensureCustomerBelongsToApp,
-  ensureEmployeeBelongsToApp,
+  ensureRecordBelongsToApp,
   getCustomer,
   getEmployee,
   getEnvelope,
-  getScopedRow,
   getTask,
   listCustomers,
   listEmployees,

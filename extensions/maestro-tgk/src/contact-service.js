@@ -1,27 +1,21 @@
 const { createCustomer, getCustomer, listCustomers, updateCustomer } = require('./backend-client');
 const { TYPE_ALIASES, TYPE_NAME } = require('./contact-type-definitions');
 const { evaluateOperation, filterAttributes, normalizeSearchRequest } = require('./query-utils');
-const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
+const { asObject, createServiceError, parseDataValue, pickFirstDefined, requireSupportedType } = require('./service-utils');
 
 const STRUCTURED_DATA_KEYS = ['Data', 'data', 'CustomerData', 'customerData', 'Metadata', 'metadata', 'DataJson', 'dataJson'];
 const CONSUMED_INPUT_KEYS = new Set([
   'Id', 'id',
   'EmployeeId', 'employeeId',
   'DisplayName', 'displayName',
-  'FullName', 'fullName',
   'FirstName', 'firstName',
   'LastName', 'lastName',
   'Email', 'email',
   'Phone', 'phone',
   'Organization', 'organization', 'Company', 'company',
   'Status', 'status',
-  'ExternalId', 'externalId',
   'Data', 'data', 'CustomerData', 'customerData', 'Metadata', 'metadata', 'DataJson', 'dataJson'
 ]);
-
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
-}
 
 function normalizeOptionalText(value) {
   if (value === undefined || value === null) {
@@ -52,23 +46,6 @@ function normalizePhone(value) {
   return String(value);
 }
 
-function parseDataValue(value) {
-  if (!value) {
-    return {};
-  }
-
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return asObject(parsed);
-    } catch (error) {
-      return {};
-    }
-  }
-
-  return asObject(value);
-}
-
 function collectExtensionFields(input) {
   const fields = {};
   for (const [key, value] of Object.entries(input || {})) {
@@ -81,7 +58,7 @@ function collectExtensionFields(input) {
 }
 
 function buildDisplayName(input, existingCustomer) {
-  const explicitDisplayName = normalizeOptionalText(pickFirstDefined(input, ['DisplayName', 'displayName', 'FullName', 'fullName']));
+  const explicitDisplayName = normalizeOptionalText(pickFirstDefined(input, ['DisplayName', 'displayName']));
   if (explicitDisplayName) {
     return explicitDisplayName;
   }
@@ -110,16 +87,12 @@ function buildCustomerData(input, existingData) {
 
   const firstName = normalizeOptionalText(pickFirstDefined(mergedInput, ['FirstName', 'firstName']));
   const lastName = normalizeOptionalText(pickFirstDefined(mergedInput, ['LastName', 'lastName']));
-  const externalId = normalizeOptionalText(pickFirstDefined(mergedInput, ['ExternalId', 'externalId']));
 
   if (firstName !== undefined) {
     nextData.firstName = firstName;
   }
   if (lastName !== undefined) {
     nextData.lastName = lastName;
-  }
-  if (externalId !== undefined) {
-    nextData.externalId = externalId;
   }
 
   const extensionFields = collectExtensionFields(input);
@@ -183,7 +156,6 @@ function mapCustomerToDataRecord(customer) {
     Id: customer.id,
     EmployeeId: customer.employee_id || '',
     DisplayName: customer.display_name || '',
-    FullName: fullName,
     FirstName: data.firstName || '',
     LastName: data.lastName || '',
     Email: customer.email || '',
@@ -191,7 +163,6 @@ function mapCustomerToDataRecord(customer) {
     Organization: customer.organization || '',
     Status: customer.status || '',
     DataJson: JSON.stringify(data || {}),
-    ExternalId: data.externalId || '',
     CreatedAt: customer.created_at || '',
     UpdatedAt: customer.updated_at || ''
   };
