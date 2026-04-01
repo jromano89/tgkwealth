@@ -2,21 +2,76 @@ const { randomUUID } = require('crypto');
 const store = require('../data-store');
 const { createError } = require('../utils');
 
-function requireText(value, message) {
-  const normalized = String(value || '').trim();
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
+}
+
+function normalizeOptionalText(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeRequiredText(value, label) {
+  const normalized = normalizeOptionalText(value);
   if (!normalized) {
-    throw createError(400, message);
+    throw createError(400, `Missing ${label}`);
   }
   return normalized;
 }
 
-function asObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
+function normalizeOptionalDate(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  const normalized = new Date(value);
+  if (Number.isNaN(normalized.valueOf())) {
+    throw createError(400, 'Invalid date value');
+  }
+
+  return normalized.toISOString();
+}
+
+function normalizeOptionalPhone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized || null;
+  }
+
+  if (value && typeof value === 'object') {
+    return normalizeOptionalText(value.number || value.normalizedNumber || value.phone);
+  }
+
+  return normalizeOptionalText(value);
 }
 
 function mergeData(existingData, nextData) {
   if (nextData === undefined) {
     return undefined;
+  }
+
+  if (nextData === null) {
+    return {};
   }
 
   return {
@@ -25,194 +80,274 @@ function mergeData(existingData, nextData) {
   };
 }
 
-function resolveOwnerUserId(db, appId, ownerUserId) {
-  if (ownerUserId) {
-    return store.ensureUserBelongsToApp(db, appId, ownerUserId).id;
+function deriveDisplayName({ displayName, data, email, organization, id }) {
+  const explicit = normalizeOptionalText(displayName);
+  if (explicit) {
+    return explicit;
   }
 
-  const defaultUser = store.getPrimaryUser(db, appId);
-  if (!defaultUser) {
-    throw createError(400, 'No user is configured for this app');
+  const mergedData = asObject(data);
+  const firstName = normalizeOptionalText(mergedData.firstName);
+  const lastName = normalizeOptionalText(mergedData.lastName);
+  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  if (combinedName) {
+    return combinedName;
   }
 
-  return defaultUser.id;
+  const fallback = normalizeOptionalText(email)
+    || normalizeOptionalText(organization)
+    || normalizeOptionalText(id);
+
+  return fallback || null;
 }
 
-function resolveAssociations(db, appId, input = {}) {
-  const contact = input.contactId ? store.ensureContactBelongsToApp(db, appId, input.contactId) : null;
-  const user = input.userId
-    ? store.ensureUserBelongsToApp(db, appId, input.userId)
-    : (contact ? store.ensureUserBelongsToApp(db, appId, contact.owner_user_id) : null);
+function resolveEmployeeReference(db, appSlug, value) {
+  const employeeId = normalizeOptionalText(value);
+  if (!employeeId) {
+    return null;
+  }
+
+  return store.ensureEmployeeBelongsToApp(db, appSlug, employeeId).id;
+}
+
+function resolveCustomerReference(db, appSlug, value) {
+  const customerId = normalizeOptionalText(value);
+  if (!customerId) {
+    return null;
+  }
+
+  return store.ensureCustomerBelongsToApp(db, appSlug, customerId).id;
+}
+
+function normalizeRecordData(existingData, inputData) {
+  return mergeData(existingData, inputData);
+}
+
+function normalizeEmployeeWrite(existingEmployee, input = {}) {
+  const id = input.id || existingEmployee?.id || randomUUID();
+  const data = normalizeRecordData(existingEmployee?.data, input.data);
+  const email = normalizeOptionalText(input.email !== undefined ? input.email : existingEmployee?.email);
+  const title = normalizeOptionalText(input.title !== undefined ? input.title : existingEmployee?.title);
+  const displayName = deriveDisplayName({
+    displayName: input.displayName !== undefined ? input.displayName : existingEmployee?.display_name,
+    data: data !== undefined ? data : existingEmployee?.data,
+    email,
+    organization: title,
+    id
+  });
 
   return {
-    contactId: contact?.id || null,
-    userId: user?.id || null
+    id,
+    display_name: displayName,
+    email: input.email !== undefined ? normalizeOptionalText(input.email) : undefined,
+    phone: input.phone !== undefined ? normalizeOptionalPhone(input.phone) : undefined,
+    title: input.title !== undefined ? normalizeOptionalText(input.title) : undefined,
+    data,
+    created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
   };
 }
 
-function normalizeTasksInput(tasks, defaults = {}) {
-  if (tasks === undefined) {
-    return undefined;
-  }
-
-  if (!Array.isArray(tasks)) {
-    throw createError(400, 'tasks must be an array');
-  }
-
-  return tasks.map((task) => {
-    const normalizedTask = asObject(task);
-
-    return {
-      id: normalizedTask.id || randomUUID(),
-      user_id: normalizedTask.userId || normalizedTask.user_id || defaults.userId || null,
-      contact_id: normalizedTask.contactId || normalizedTask.contact_id || defaults.contactId || null,
-      title: requireText(normalizedTask.title, 'task title is required'),
-      description: normalizedTask.description || null,
-      status: normalizedTask.status || 'pending',
-      created_at: normalizedTask.created_at || normalizedTask.createdAt || new Date().toISOString()
-    };
+function normalizeCustomerWrite(db, appSlug, existingCustomer, input = {}) {
+  const id = input.id || existingCustomer?.id || randomUUID();
+  const data = normalizeRecordData(existingCustomer?.data, input.data);
+  const email = normalizeOptionalText(input.email !== undefined ? input.email : existingCustomer?.email);
+  const organization = normalizeOptionalText(input.organization !== undefined ? input.organization : existingCustomer?.organization);
+  const displayName = deriveDisplayName({
+    displayName: input.displayName !== undefined ? input.displayName : existingCustomer?.display_name,
+    data: data !== undefined ? data : existingCustomer?.data,
+    email,
+    organization,
+    id
   });
-}
 
-function listUsersForApp(db, appId, filters) {
-  return store.listUsers(db, appId, filters);
-}
-
-function createUserForApp(db, appId, input = {}) {
-  const id = input.id || randomUUID();
-  return store.createUser(db, appId, {
+  return {
     id,
-    displayName: requireText(input.displayName, 'displayName is required'),
-    email: input.email || null,
-    phone: input.phone || null,
-    title: input.title || null,
-    data: asObject(input.data),
-    tasks: normalizeTasksInput(input.tasks, { userId: id })
+    employee_id: input.employeeId !== undefined
+      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      : undefined,
+    display_name: displayName,
+    email: input.email !== undefined ? normalizeOptionalText(input.email) : undefined,
+    phone: input.phone !== undefined ? normalizeOptionalPhone(input.phone) : undefined,
+    organization: input.organization !== undefined ? normalizeOptionalText(input.organization) : undefined,
+    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
+    data,
+    created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
+  };
+}
+
+function normalizeEnvelopeWrite(db, appSlug, existingEnvelope, input = {}) {
+  return {
+    id: existingEnvelope?.id || normalizeRequiredText(input.id, 'envelope id'),
+    employee_id: input.employeeId !== undefined
+      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      : undefined,
+    customer_id: input.customerId !== undefined
+      ? resolveCustomerReference(db, appSlug, input.customerId)
+      : undefined,
+    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
+    name: input.name !== undefined ? normalizeOptionalText(input.name) : undefined,
+    data: normalizeRecordData(existingEnvelope?.data, input.data),
+    created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
+  };
+}
+
+function normalizeTaskWrite(db, appSlug, existingTask, input = {}) {
+  return {
+    id: input.id || existingTask?.id || randomUUID(),
+    employee_id: input.employeeId !== undefined
+      ? resolveEmployeeReference(db, appSlug, input.employeeId)
+      : undefined,
+    customer_id: input.customerId !== undefined
+      ? resolveCustomerReference(db, appSlug, input.customerId)
+      : undefined,
+    title: input.title !== undefined ? normalizeOptionalText(input.title) : undefined,
+    description: input.description !== undefined ? normalizeOptionalText(input.description) : undefined,
+    status: input.status !== undefined ? normalizeOptionalText(input.status) : undefined,
+    due_at: input.dueAt !== undefined ? normalizeOptionalDate(input.dueAt) : undefined,
+    data: normalizeRecordData(existingTask?.data, input.data),
+    created_at: input.createdAt !== undefined ? normalizeOptionalDate(input.createdAt) : undefined
+  };
+}
+
+function listEmployeesForApp(db, appSlug, filters) {
+  return store.listEmployees(db, appSlug, filters);
+}
+
+function getEmployeeForApp(db, appSlug, employeeId) {
+  return store.requireScopedRow(db, 'employees', appSlug, employeeId, 'Employee');
+}
+
+function createEmployeeForApp(db, appSlug, input = {}) {
+  const record = normalizeEmployeeWrite(null, input);
+  return store.createEmployee(db, appSlug, {
+    ...record,
+    created_at: record.created_at || new Date().toISOString(),
+    updated_at: record.updated_at || record.created_at || new Date().toISOString()
   });
 }
 
-function updateUserForApp(db, appId, userId, input = {}) {
-  const existing = store.getUser(db, appId, userId);
+function updateEmployeeForApp(db, appSlug, employeeId, input = {}) {
+  const existing = store.getEmployee(db, appSlug, employeeId);
   if (!existing) {
-    throw createError(404, 'User not found');
+    throw createError(404, 'Employee not found');
   }
-  return store.updateUser(db, appId, userId, {
-    displayName: input.displayName,
-    email: input.email,
-    phone: input.phone,
-    title: input.title,
-    data: mergeData(existing.data, input.data),
-    tasks: normalizeTasksInput(input.tasks, { userId })
+
+  return store.updateEmployee(db, appSlug, employeeId, normalizeEmployeeWrite(existing, input));
+}
+
+function listCustomersForApp(db, appSlug, filters) {
+  return store.listCustomers(db, appSlug, filters);
+}
+
+function getCustomerForApp(db, appSlug, customerId) {
+  return store.requireScopedRow(db, 'customers', appSlug, customerId, 'Customer');
+}
+
+function createCustomerForApp(db, appSlug, input = {}) {
+  const record = normalizeCustomerWrite(db, appSlug, null, input);
+  return store.createCustomer(db, appSlug, {
+    ...record,
+    created_at: record.created_at || new Date().toISOString(),
+    updated_at: record.updated_at || record.created_at || new Date().toISOString()
   });
 }
 
-function listContactsForApp(db, appId, filters) {
-  return store.listContacts(db, appId, filters);
-}
-
-function listEnvelopesForApp(db, appId, filters) {
-  return store.listEnvelopes(db, appId, filters);
-}
-
-function createContactForApp(db, appId, input = {}) {
-  const id = input.id || randomUUID();
-  const ownerUserId = resolveOwnerUserId(db, appId, input.ownerUserId);
-  return store.createContact(db, appId, {
-    id,
-    ownerUserId,
-    ref: input.ref || null,
-    displayName: requireText(input.displayName, 'displayName is required'),
-    email: input.email || null,
-    phone: input.phone || null,
-    organization: input.organization || null,
-    status: input.status || 'active',
-    source: input.source || 'api',
-    data: asObject(input.data),
-    tasks: normalizeTasksInput(input.tasks, {
-      contactId: id,
-      userId: ownerUserId
-    })
-  });
-}
-
-function getContactDetailsForApp(db, appId, contactId) {
-  return store.getContactDetails(db, appId, contactId);
-}
-
-function updateContactForApp(db, appId, contactId, input = {}) {
-  const existing = store.getContact(db, appId, contactId);
+function updateCustomerForApp(db, appSlug, customerId, input = {}) {
+  const existing = store.getCustomer(db, appSlug, customerId);
   if (!existing) {
-    throw createError(404, 'Contact not found');
+    throw createError(404, 'Customer not found');
   }
 
-  const ownerUserId = input.ownerUserId !== undefined
-    ? resolveOwnerUserId(db, appId, input.ownerUserId)
-    : existing.owner_user_id;
+  return store.updateCustomer(db, appSlug, customerId, normalizeCustomerWrite(db, appSlug, existing, input));
+}
 
-  return store.updateContact(db, appId, contactId, {
-    ownerUserId: input.ownerUserId !== undefined ? ownerUserId : undefined,
-    ref: input.ref,
-    displayName: input.displayName,
-    email: input.email,
-    phone: input.phone,
-    organization: input.organization,
-    status: input.status,
-    data: mergeData(existing.data, input.data),
-    tasks: normalizeTasksInput(input.tasks, {
-      contactId,
-      userId: ownerUserId
-    })
+function deleteCustomerForApp(db, appSlug, customerId) {
+  if (!store.getCustomer(db, appSlug, customerId)) {
+    throw createError(404, 'Customer not found');
+  }
+
+  store.deleteCustomer(db, appSlug, customerId);
+  return { success: true };
+}
+
+function listEnvelopesForApp(db, appSlug, filters) {
+  return store.listEnvelopes(db, appSlug, filters);
+}
+
+function getEnvelopeForApp(db, appSlug, envelopeId) {
+  return store.requireScopedRow(db, 'envelopes', appSlug, envelopeId, 'Envelope');
+}
+
+function createEnvelopeForApp(db, appSlug, input = {}) {
+  const record = normalizeEnvelopeWrite(db, appSlug, null, input);
+  return store.createEnvelope(db, appSlug, {
+    ...record,
+    created_at: record.created_at || new Date().toISOString(),
+    updated_at: record.updated_at || record.created_at || new Date().toISOString()
   });
 }
 
-function deleteContactForApp(db, appId, contactId) {
-  if (!store.getContact(db, appId, contactId)) {
-    throw createError(404, 'Contact not found');
+function updateEnvelopeForApp(db, appSlug, envelopeId, input = {}) {
+  const existing = store.getEnvelope(db, appSlug, envelopeId);
+  if (!existing) {
+    throw createError(404, 'Envelope not found');
   }
-  store.deleteContactCascade(db, appId, contactId);
-  return { deleted: true };
+
+  return store.updateEnvelope(db, appSlug, envelopeId, normalizeEnvelopeWrite(db, appSlug, existing, input));
 }
 
-function createEnvelopeForApp(db, appId, input = {}) {
-  const { contactId, userId } = resolveAssociations(db, appId, input);
-  if (!contactId && !userId) {
-    throw createError(400, 'contactId or userId is required');
-  }
+function listTasksForApp(db, appSlug, filters) {
+  return store.listTasks(db, appSlug, filters);
+}
 
-  return store.createEnvelope(db, appId, {
-    id: input.id || randomUUID(),
-    userId,
-    docusignEnvelopeId: input.docusignEnvelopeId || input.docusign_envelope_id || null,
-    contactId,
-    status: input.status || 'sent',
-    documentName: input.documentName || input.document_name || null,
-    completedAt: input.completedAt || input.completed_at || null,
-    createdAt: input.createdAt || input.created_at || null
+function getTaskForApp(db, appSlug, taskId) {
+  return store.requireScopedRow(db, 'tasks', appSlug, taskId, 'Task');
+}
+
+function createTaskForApp(db, appSlug, input = {}) {
+  const record = normalizeTaskWrite(db, appSlug, null, input);
+  return store.createTask(db, appSlug, {
+    ...record,
+    created_at: record.created_at || new Date().toISOString(),
+    updated_at: record.updated_at || record.created_at || new Date().toISOString()
   });
 }
 
-function updateEnvelopeForApp(db, appId, envelopeId, input = {}) {
-  const { contactId, userId } = resolveAssociations(db, appId, input);
-  return store.updateEnvelope(db, appId, envelopeId, {
-    userId,
-    docusignEnvelopeId: input.docusignEnvelopeId || input.docusign_envelope_id || null,
-    contactId,
-    status: input.status,
-    documentName: input.documentName || input.document_name || null,
-    completedAt: input.completedAt || input.completed_at || null
-  });
+function updateTaskForApp(db, appSlug, taskId, input = {}) {
+  const existing = store.getTask(db, appSlug, taskId);
+  if (!existing) {
+    throw createError(404, 'Task not found');
+  }
+
+  return store.updateTask(db, appSlug, taskId, normalizeTaskWrite(db, appSlug, existing, input));
+}
+
+function deleteTaskForApp(db, appSlug, taskId) {
+  if (!store.getTask(db, appSlug, taskId)) {
+    throw createError(404, 'Task not found');
+  }
+
+  store.deleteTask(db, appSlug, taskId);
+  return { success: true };
 }
 
 module.exports = {
-  createContactForApp,
+  createCustomerForApp,
+  createEmployeeForApp,
   createEnvelopeForApp,
-  createUserForApp,
-  deleteContactForApp,
-  getContactDetailsForApp,
-  listContactsForApp,
+  createTaskForApp,
+  deleteCustomerForApp,
+  deleteTaskForApp,
+  getCustomerForApp,
+  getEmployeeForApp,
+  getEnvelopeForApp,
+  getTaskForApp,
+  listCustomersForApp,
+  listEmployeesForApp,
   listEnvelopesForApp,
-  listUsersForApp,
-  updateContactForApp,
+  listTasksForApp,
+  updateCustomerForApp,
+  updateEmployeeForApp,
   updateEnvelopeForApp,
-  updateUserForApp
+  updateTaskForApp
 };

@@ -3,7 +3,6 @@ const { getDb } = require('../database');
 const { getAccessToken } = require('../services/docusign-auth');
 const {
   createError,
-  getConnectionForApp,
   getRequiredApp,
   isPlainObject,
   requireSelectedDocusignAccount,
@@ -61,8 +60,7 @@ function normalizeProxyRequest(body) {
 
 function getDocusignSession(req) {
   const db = getDb();
-  const app = getRequiredApp(db, req);
-  const connection = requireSelectedDocusignAccount(getConnectionForApp(db, app.id));
+  const app = requireSelectedDocusignAccount(getRequiredApp(db, req));
   const scopes = String(app.docusign_scopes || '').trim();
 
   if (!scopes) {
@@ -70,8 +68,8 @@ function getDocusignSession(req) {
   }
 
   return {
-    userId: connection.docusign_user_id,
-    accountId: connection.docusign_account_id,
+    userId: app.docusign_user_id,
+    accountId: app.docusign_account_id,
     scopes
   };
 }

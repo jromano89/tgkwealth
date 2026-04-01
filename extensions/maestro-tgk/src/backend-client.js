@@ -79,34 +79,29 @@ function createMutationRequest(method, pathnameBuilder) {
   };
 }
 
-const createContact = createJsonRequest('POST', '/api/data/contacts');
+const createCustomer = createJsonRequest('POST', '/api/data/customers');
 const createEnvelope = createJsonRequest('POST', '/api/data/envelopes');
-const updateContact = createMutationRequest('PUT', (id) => `/api/data/contacts/${encodeURIComponent(id)}`);
+const updateCustomer = createMutationRequest('PUT', (id) => `/api/data/customers/${encodeURIComponent(id)}`);
 const updateEnvelope = createMutationRequest('PUT', (id) => `/api/data/envelopes/${encodeURIComponent(id)}`);
 
-function listContacts() {
-  return request('/api/data/contacts');
-}
-
-function listUsers() {
-  return request('/api/data/users');
+function listCustomers() {
+  return request('/api/data/customers');
 }
 
 function listEnvelopes(query) {
   return request('/api/data/envelopes', { query });
 }
 
-function getContact(id) {
-  return request(`/api/data/contacts/${encodeURIComponent(id)}`);
+function getCustomer(id) {
+  return request(`/api/data/customers/${encodeURIComponent(id)}`);
 }
 
 module.exports = {
-  createContact,
+  createCustomer,
   createEnvelope,
-  getContact,
-  listContacts,
+  getCustomer,
+  listCustomers,
   listEnvelopes,
-  listUsers,
-  updateContact,
+  updateCustomer,
   updateEnvelope
 };

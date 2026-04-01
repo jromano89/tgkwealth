@@ -5,7 +5,7 @@ function investorApp() {
     tab: 'overview',
     advisors: [],
     assignedAdvisor: null,
-    contacts: [],
+    customers: [],
     selectedClientId: null,
     selectedClient: null,
     accounts: [],
@@ -18,11 +18,11 @@ function investorApp() {
     async init() {
       this.initializeBrandingState();
       try {
-        this.advisors = await TGK_API.getUsers();
+        this.advisors = await TGK_API.getEmployees();
         this.assignedAdvisor = this.advisors[0] || null;
-        this.contacts = this.sortContacts(await TGK_API.getContacts());
+        this.customers = this.sortCustomers(await TGK_API.getCustomers());
         this.setTab('overview');
-        const initialClient = this.contacts[0];
+        const initialClient = this.customers[0];
         if (initialClient) {
           this.selectedClientId = initialClient.id;
           await this.loadClient();
@@ -34,8 +34,8 @@ function investorApp() {
       TGK_API.scheduleDocusignWarmup();
     },
 
-    sortContacts(contacts) {
-      return [...(contacts || [])].sort((a, b) => {
+    sortCustomers(customers) {
+      return [...(customers || [])].sort((a, b) => {
         const left = `${a.first_name || ''} ${a.last_name || ''}`.trim();
         const right = `${b.first_name || ''} ${b.last_name || ''}`.trim();
         return left.localeCompare(right, undefined, { sensitivity: 'base' });
@@ -50,12 +50,12 @@ function investorApp() {
     async loadClient() {
       if (!this.selectedClientId) return;
       try {
-        const detail = await TGK_API.getContact(this.selectedClientId);
+        const detail = await TGK_API.getCustomer(this.selectedClientId);
         this.selectedClient = detail;
         this.accounts = detail.accounts || [];
         this.envelopes = detail.envelopes || [];
         this.tasks = detail.tasks || [];
-        this.assignedAdvisor = detail.owner || this.advisors[0] || null;
+        this.assignedAdvisor = this.advisors.find((advisor) => advisor.id === detail.employee_id) || this.advisors[0] || null;
       } catch (e) {
         console.error('Failed to load client:', e);
         this.selectedClient = null;
@@ -95,7 +95,7 @@ function investorApp() {
     async dismissTask(id) {
       try {
         const nextTasks = this.tasks.filter((task) => task.id !== id);
-        await TGK_API.updateContactRaw(this.selectedClientId, { tasks: nextTasks });
+        await TGK_API.deleteTask(id);
         this.tasks = nextTasks;
         if (this.selectedClient) {
           this.selectedClient = {

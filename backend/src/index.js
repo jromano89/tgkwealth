@@ -1,4 +1,10 @@
-require('dotenv/config');
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Load both repo-root .env and backend/.env for local runs; existing env vars still win.
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+
 const express = require('express');
 const { getDb } = require('./database');
 const {

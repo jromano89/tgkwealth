@@ -97,11 +97,11 @@ function createEnvelopeModalHelpers() {
     },
 
     async viewEnvelopeDoc(envelope) {
-      const envelopeId = envelope?.docusign_envelope_id || envelope?.id;
+      const envelopeId = envelope?.id;
       if (!envelopeId) return;
 
       const requestKey = `${envelopeId}:${Date.now()}`;
-      const title = envelope?.document_name || 'Document';
+      const title = envelope?.name || 'Document';
 
       this.closeEnvelopeDocModal();
       this.envelopeDocModal = {
@@ -151,10 +151,10 @@ function createEnvelopeModalHelpers() {
     },
 
     async viewEnvelopeHistory(envelope) {
-      const envelopeId = envelope?.docusign_envelope_id || envelope?.id;
+      const envelopeId = envelope?.id;
       if (!envelopeId) return;
 
-      const title = envelope?.document_name || 'Document';
+      const title = envelope?.name || 'Document';
       const requestKey = `${envelopeId}:${Date.now()}`;
 
       this.envelopeHistoryModal = {

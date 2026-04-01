@@ -13,11 +13,10 @@ const {
   createError,
   getAppBySlug,
   getAppSlug,
-  getConnectionForApp,
   getRequiredApp,
+  requireDocusignConnection,
   route,
-  upsertApp,
-  upsertConnection
+  upsertApp
 } = require('../utils');
 
 const router = express.Router();
@@ -105,39 +104,41 @@ function getSessionPayload(db, appSlug) {
     return { connected: false, requestedScopes: null };
   }
 
-  const connection = getConnectionForApp(db, app.id);
+  const accounts = Array.isArray(app.docusign_available_accounts) ? app.docusign_available_accounts : [];
   const payload = {
-    connected: !!connection,
+    connected: !!app.docusign_user_id,
     requestedScopes: app.docusign_scopes || null,
-    app: { slug: app.slug, name: app.name }
+    app: {
+      slug: app.slug,
+      data: app.data || {}
+    }
   };
 
-  if (!connection) {
+  if (!app.docusign_user_id) {
     return payload;
   }
 
   return {
     ...payload,
-    userId: connection.docusign_user_id,
-    accountId: connection.docusign_account_id,
-    accountName: connection.account_name,
-    name: connection.user_name,
-    email: connection.email,
-    accounts: connection.available_accounts || [],
-    accountSelectionRequired: !connection.docusign_account_id && (connection.available_accounts || []).length > 0
+    userId: app.docusign_user_id,
+    accountId: app.docusign_account_id,
+    accountName: app.docusign_account_name,
+    name: app.docusign_user_name,
+    email: app.docusign_email,
+    accounts,
+    accountSelectionRequired: !app.docusign_account_id && accounts.length > 0
   };
 }
 
 function requireConnectedApp(db, req) {
   const appSlug = getAppSlug(req);
   const app = appSlug ? getAppBySlug(db, appSlug) : null;
-  const connection = app ? getConnectionForApp(db, app.id) : null;
 
-  if (!app || !connection) {
+  if (!app || !app.docusign_user_id) {
     throw createError(404, 'App is not connected to Docusign yet.');
   }
 
-  return { app, connection };
+  return requireDocusignConnection(app);
 }
 
 function resolveRequestedScopes(db, appSlug, explicitScopes) {
@@ -167,7 +168,6 @@ router.get('/login', route((req, res) => {
   const state = createConsentState({
     frontendRedirect,
     appSlug,
-    appName: req.query.appName || null,
     display: req.query.display === 'popup' ? 'popup' : 'redirect',
     requestedScopes
   });
@@ -204,19 +204,15 @@ router.get('/callback', route(async (req, res) => {
     }
 
     const db = getDb();
-    const app = upsertApp(db, {
+    upsertApp(db, {
       slug: consent.appSlug,
-      name: consent.appName || consent.appSlug,
-      docusignScopes: normalizeScopeString(consent.requestedScopes)
-    });
-
-    upsertConnection(db, app, {
-      userId: userInfo.sub,
-      accountId: null,
-      accountName: null,
-      userName: userInfo.name,
-      email: userInfo.email,
-      availableAccounts: accounts
+      docusignScopes: normalizeScopeString(consent.requestedScopes),
+      docusignUserId: userInfo.sub,
+      docusignAccountId: null,
+      docusignAccountName: null,
+      docusignUserName: userInfo.name,
+      docusignEmail: userInfo.email,
+      docusignAvailableAccounts: accounts
     });
 
     if (display === 'popup') {
@@ -242,21 +238,22 @@ router.post('/account', route((req, res) => {
   }
 
   const db = getDb();
-  const { app, connection } = requireConnectedApp(db, req);
-  const accounts = connection.available_accounts || [];
+  const app = requireConnectedApp(db, req);
+  const accounts = Array.isArray(app.docusign_available_accounts) ? app.docusign_available_accounts : [];
   const account = accounts.find((item) => item.accountId === accountId);
 
   if (!account) {
     throw createError(400, 'Invalid account ID');
   }
 
-  upsertConnection(db, app, {
-    userId: connection.docusign_user_id,
-    accountId: account.accountId,
-    accountName: account.accountName,
-    userName: connection.user_name,
-    email: connection.email,
-    availableAccounts: accounts
+  upsertApp(db, {
+    slug: app.slug,
+    docusignUserId: app.docusign_user_id,
+    docusignAccountId: account.accountId,
+    docusignAccountName: account.accountName,
+    docusignUserName: app.docusign_user_name,
+    docusignEmail: app.docusign_email,
+    docusignAvailableAccounts: accounts
   });
 
   res.json({ success: true, account });
@@ -273,7 +270,6 @@ router.post('/scopes', route((req, res) => {
 
   const updatedApp = upsertApp(db, {
     slug: app.slug,
-    name: req.body?.appName || app.name,
     docusignScopes: scopes
   });
 
@@ -313,9 +309,8 @@ router.post('/logout', route((req, res) => {
   }
 
   const db = getDb();
-  const app = getAppBySlug(db, appSlug);
-  if (app) {
-    clearAppConnection(db, app.id);
+  if (getAppBySlug(db, appSlug)) {
+    clearAppConnection(db, appSlug);
   }
 
   res.json({ success: true });

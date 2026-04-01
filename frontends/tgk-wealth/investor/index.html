@@ -16,12 +16,12 @@
   <script defer src="../runtime-config.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="../../shared/js/settings-panel.js?v=20260331-1"></script>
-  <script defer src="../../shared/js/api-client.js?v=20260330-1"></script>
-  <script defer src="../../shared/js/shared-ui.js?v=20260331-14"></script>
+  <script defer src="../../shared/js/api-client.js?v=20260401-3"></script>
+  <script defer src="../../shared/js/shared-ui.js?v=20260401-1"></script>
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260331-3"></script>
-  <script defer src="js/app.js?v=20260330-3"></script>
+  <script defer src="js/app.js?v=20260401-2"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="tgk-portal-body" data-portal="investor">
@@ -77,7 +77,7 @@
 
       <div class="px-1 pt-3" x-show="!sidebarCollapsed">
         <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
-          <template x-for="c in contacts" :key="c.id">
+          <template x-for="c in customers" :key="c.id">
             <option :value="c.id" x-text="c.first_name + ' ' + c.last_name"></option>
           </template>
         </select>
@@ -304,9 +304,9 @@
               <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white transition-colors hover:border-gray-300">
                 <div class="flex items-center gap-4 min-w-0 flex-1">
                   <div class="min-w-0 flex-1">
-                    <div class="text-[15px] font-semibold leading-5 text-navy truncate" x-text="env.document_name || 'Untitled'"></div>
+                    <div class="text-[15px] font-semibold leading-5 text-navy truncate" x-text="env.name || 'Untitled'"></div>
                     <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
-                      <span class="font-mono text-gray-400 truncate max-w-full" x-text="env.docusign_envelope_id || env.id || ''"></span>
+                      <span class="font-mono text-gray-400 truncate max-w-full" x-text="env.id || ''"></span>
                       <template x-if="envelopeTimestampLabel(env)">
                         <span class="inline-flex items-center gap-2 text-gray-500">
                           <span class="w-1 h-1 rounded-full bg-gray-300"></span>

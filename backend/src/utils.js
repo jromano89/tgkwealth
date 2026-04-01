@@ -1,12 +1,4 @@
-const { randomUUID } = require('crypto');
-const JSON_FIELD_NAMES = ['data', 'tasks', 'available_accounts'];
-const DEFAULT_USER = {
-  displayName: 'Gordon Gecko',
-  email: 'g.gecko@tgkwealth.com',
-  phone: '(212) 555-0100',
-  title: 'Senior Advisor',
-  data: { avatar: 'GG' }
-};
+const JSON_FIELD_NAMES = ['data', 'docusign_available_accounts'];
 
 function createError(statusCode, message) {
   const err = new Error(message);
@@ -23,7 +15,11 @@ function parseJsonFields(row) {
   const parsed = { ...row };
   for (const key of JSON_FIELD_NAMES) {
     if (parsed[key] && typeof parsed[key] === 'string') {
-      try { parsed[key] = JSON.parse(parsed[key]); } catch {}
+      try {
+        parsed[key] = JSON.parse(parsed[key]);
+      } catch (error) {
+        // Ignore invalid JSON and keep the raw value.
+      }
     }
   }
   return parsed;
@@ -41,76 +37,119 @@ function normalizeSlug(slug) {
     .replace(/^-+|-+$/g, '');
 }
 
+function normalizeOptionalString(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeOptionalData(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isPlainObject(value)) {
+    return {};
+  }
+
+  return { ...value };
+}
+
 function getAppSlug(req) {
   const bodyApp = isPlainObject(req.body) ? req.body.app : null;
   return normalizeSlug(
-    req.headers['x-demo-app'] ||
-    req.query?.app ||
-    bodyApp?.slug ||
-    req.body?.appSlug
+    req.headers['x-demo-app']
+    || req.query?.app
+    || bodyApp?.slug
+    || req.body?.appSlug
   );
 }
 
 function getAppBySlug(db, slug) {
   if (!slug) return null;
-  return db.prepare('SELECT * FROM apps WHERE slug = ?').get(normalizeSlug(slug));
+  return parseJsonFields(
+    db.prepare('SELECT * FROM apps WHERE slug = ?').get(normalizeSlug(slug))
+  );
 }
 
-function upsertApp(db, { slug, name, docusignScopes }) {
-  const normalizedSlug = normalizeSlug(slug);
-  if (!normalizedSlug) {
+function upsertApp(db, input = {}) {
+  const slug = normalizeSlug(input.slug);
+  if (!slug) {
     throw createError(400, 'Missing app slug');
   }
 
-  const existing = getAppBySlug(db, normalizedSlug);
-  const id = existing?.id || randomUUID();
-  const normalizedDocusignScopes = typeof docusignScopes === 'string' && docusignScopes.trim()
-    ? docusignScopes.trim()
-    : undefined;
+  const existing = getAppBySlug(db, slug);
+  const next = {
+    slug,
+    data: input.data !== undefined
+      ? serializeJson(normalizeOptionalData(input.data) || {})
+      : serializeJson(existing?.data || {}),
+    docusign_scopes: input.docusignScopes !== undefined
+      ? normalizeOptionalString(input.docusignScopes)
+      : (existing?.docusign_scopes || null),
+    docusign_user_id: input.docusignUserId !== undefined
+      ? normalizeOptionalString(input.docusignUserId)
+      : (existing?.docusign_user_id || null),
+    docusign_account_id: input.docusignAccountId !== undefined
+      ? normalizeOptionalString(input.docusignAccountId)
+      : (existing?.docusign_account_id || null),
+    docusign_account_name: input.docusignAccountName !== undefined
+      ? normalizeOptionalString(input.docusignAccountName)
+      : (existing?.docusign_account_name || null),
+    docusign_user_name: input.docusignUserName !== undefined
+      ? normalizeOptionalString(input.docusignUserName)
+      : (existing?.docusign_user_name || null),
+    docusign_email: input.docusignEmail !== undefined
+      ? normalizeOptionalString(input.docusignEmail)
+      : (existing?.docusign_email || null),
+    docusign_available_accounts: input.docusignAvailableAccounts !== undefined
+      ? serializeJson(Array.isArray(input.docusignAvailableAccounts) ? input.docusignAvailableAccounts : [])
+      : serializeJson(existing?.docusign_available_accounts || [])
+  };
+
   db.prepare(`
-    INSERT INTO apps (id, slug, name, docusign_scopes)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO apps (
+      slug,
+      data,
+      docusign_scopes,
+      docusign_user_id,
+      docusign_account_id,
+      docusign_account_name,
+      docusign_user_name,
+      docusign_email,
+      docusign_available_accounts
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(slug) DO UPDATE SET
-      name = COALESCE(excluded.name, apps.name),
-      docusign_scopes = COALESCE(excluded.docusign_scopes, apps.docusign_scopes),
+      data = excluded.data,
+      docusign_scopes = excluded.docusign_scopes,
+      docusign_user_id = excluded.docusign_user_id,
+      docusign_account_id = excluded.docusign_account_id,
+      docusign_account_name = excluded.docusign_account_name,
+      docusign_user_name = excluded.docusign_user_name,
+      docusign_email = excluded.docusign_email,
+      docusign_available_accounts = excluded.docusign_available_accounts,
       updated_at = CURRENT_TIMESTAMP
   `).run(
-    id,
-    normalizedSlug,
-    name || existing?.name || normalizedSlug,
-    normalizedDocusignScopes !== undefined ? normalizedDocusignScopes : (existing?.docusign_scopes || null)
+    next.slug,
+    next.data,
+    next.docusign_scopes,
+    next.docusign_user_id,
+    next.docusign_account_id,
+    next.docusign_account_name,
+    next.docusign_user_name,
+    next.docusign_email,
+    next.docusign_available_accounts
   );
 
-  return getAppBySlug(db, normalizedSlug);
-}
-
-function ensureDefaultUser(db, app) {
-  if (!app) {
-    return null;
-  }
-
-  const existing = db.prepare('SELECT * FROM users WHERE app_id = ? ORDER BY created_at ASC LIMIT 1').get(app.id);
-  if (existing) {
-    return parseJsonFields(existing);
-  }
-
-  const id = randomUUID();
-  db.prepare(`
-    INSERT INTO users (id, app_id, display_name, email, phone, title, data)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    app.id,
-    DEFAULT_USER.displayName,
-    DEFAULT_USER.email,
-    DEFAULT_USER.phone,
-    DEFAULT_USER.title,
-    serializeJson(DEFAULT_USER.data)
-  );
-
-  return parseJsonFields(
-    db.prepare('SELECT * FROM users WHERE id = ?').get(id)
-  );
+  return getAppBySlug(db, slug);
 }
 
 function getRequiredApp(db, req) {
@@ -119,64 +158,41 @@ function getRequiredApp(db, req) {
     throw createError(400, 'Missing app slug. Set TGK_CONFIG.appSlug on the frontend.');
   }
 
-  const bodyApp = isPlainObject(req.body) ? req.body.app : null;
-  const app = upsertApp(db, {
-    slug,
-    name: bodyApp?.name || req.body?.appName || req.query?.appName || null
-  });
+  return upsertApp(db, { slug });
+}
 
-  ensureDefaultUser(db, app);
+function requireDocusignConnection(app) {
+  if (!app?.docusign_user_id) {
+    throw createError(401, 'No active Docusign connection for this app. Use /api/auth/login to connect.');
+  }
   return app;
 }
 
-function getConnectionForApp(db, appId) {
-  return parseJsonFields(
-    db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(appId)
-  );
+function requireSelectedDocusignAccount(app) {
+  const connectedApp = requireDocusignConnection(app);
+  if (!connectedApp.docusign_account_id) {
+    throw createError(409, 'Docusign is connected, but no account is selected. Open Settings and save an account first.');
+  }
+  return connectedApp;
 }
 
-function requireSelectedDocusignAccount(connection) {
-  if (!connection) throw createError(401, 'No active Docusign connection for this app. Use /api/auth/login to connect.');
-  if (!connection.docusign_account_id) throw createError(409, 'Docusign is connected, but no account is selected. Open Settings and save an account first.');
-  return connection;
-}
-
-function upsertConnection(db, app, { userId, accountId, accountName, userName, email, availableAccounts }) {
-  const existing = parseJsonFields(db.prepare('SELECT * FROM docusign_connections WHERE app_id = ?').get(app.id));
-  const id = existing?.id || randomUUID();
-  const resolvedAccountId = accountId !== undefined ? accountId : existing?.docusign_account_id || null;
-  const resolvedAccountName = accountName !== undefined ? accountName : existing?.account_name || null;
-  const resolvedUserName = userName !== undefined ? userName : existing?.user_name || null;
-  const resolvedEmail = email !== undefined ? email : existing?.email || null;
-  const resolvedAvailableAccounts = availableAccounts !== undefined ? availableAccounts : (existing?.available_accounts || []);
+function clearAppConnection(db, slug) {
+  const normalizedSlug = normalizeSlug(slug);
+  if (!normalizedSlug) {
+    return;
+  }
 
   db.prepare(`
-    INSERT INTO docusign_connections (id, app_id, docusign_user_id, docusign_account_id, account_name, user_name, email, available_accounts)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(app_id) DO UPDATE SET
-      docusign_user_id = excluded.docusign_user_id,
-      docusign_account_id = excluded.docusign_account_id,
-      account_name = excluded.account_name,
-      user_name = excluded.user_name,
-      email = excluded.email,
-      available_accounts = excluded.available_accounts,
+    UPDATE apps SET
+      docusign_user_id = NULL,
+      docusign_account_id = NULL,
+      docusign_account_name = NULL,
+      docusign_user_name = NULL,
+      docusign_email = NULL,
+      docusign_available_accounts = NULL,
       updated_at = CURRENT_TIMESTAMP
-  `).run(
-    id,
-    app.id,
-    userId,
-    resolvedAccountId,
-    resolvedAccountName,
-    resolvedUserName,
-    resolvedEmail,
-    serializeJson(resolvedAvailableAccounts)
-  );
-
-  return getConnectionForApp(db, app.id);
-}
-
-function clearAppConnection(db, appId) {
-  db.prepare('DELETE FROM docusign_connections WHERE app_id = ?').run(appId);
+    WHERE slug = ?
+  `).run(normalizedSlug);
 }
 
 function sendError(res, error) {
@@ -196,16 +212,15 @@ module.exports = {
   createError,
   getAppBySlug,
   getAppSlug,
-  getConnectionForApp,
   getRequiredApp,
   isPlainObject,
-  requireSelectedDocusignAccount,
+  normalizeOptionalString,
   normalizeSlug,
   parseJsonFields,
+  requireDocusignConnection,
+  requireSelectedDocusignAccount,
   route,
   sendError,
   serializeJson,
-  ensureDefaultUser,
-  upsertApp,
-  upsertConnection
+  upsertApp
 };

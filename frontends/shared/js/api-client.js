@@ -22,6 +22,22 @@
     };
   }
 
+  function pickDisplayName(value, fallbacks) {
+    const explicit = String(value || '').trim();
+    if (explicit) {
+      return explicit;
+    }
+
+    for (const fallback of fallbacks || []) {
+      const normalized = String(fallback || '').trim();
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return '';
+  }
+
   function withSearchParams(path, params) {
     if (!params) {
       return path;
@@ -35,38 +51,42 @@
     return `${collectionPath}/${encodeURIComponent(id)}`;
   }
 
-  function mapUser(user) {
-    const data = user?.data || {};
-    const name = splitDisplayName(user?.display_name);
+  function mapEmployee(employee) {
+    const data = employee?.data || {};
+    const displayName = pickDisplayName(employee?.display_name, [
+      [data.firstName, data.lastName].filter(Boolean).join(' '),
+      employee?.email,
+      employee?.title,
+      employee?.id
+    ]);
+    const name = splitDisplayName(displayName);
     return {
-      id: user.id,
+      id: employee.id,
       first_name: data.firstName || name.firstName,
       last_name: data.lastName || name.lastName,
-      name: user.display_name || '',
-      email: user.email,
-      phone: user.phone,
-      title: user.title || data.title || '',
+      name: displayName,
+      email: employee.email,
+      phone: employee.phone,
+      title: employee.title || data.title || '',
       metadata: {
         ...data,
-        title: user.title || data.title || ''
+        title: employee.title || data.title || ''
       },
-      tasks: Array.isArray(user?.tasks) ? user.tasks : (Array.isArray(data.tasks) ? data.tasks : []),
-      created_at: user.created_at
+      created_at: employee.created_at
     };
   }
 
-  function mapEmbeddedAccount(account, contactId) {
+  function mapEmbeddedAccount(account, customerId) {
     const data = account && typeof account === 'object' ? account : {};
     return {
       id: data.id,
-      contact_id: contactId,
+      customer_id: customerId,
       account_type: data.typeCode || data.accountType || data.kind || 'account',
       status: data.status || 'active',
       metadata: {
         ...data,
         name: data.name || data.title || 'Untitled Account'
       },
-      source: data.source || 'api',
       created_at: data.created_at || ''
     };
   }
@@ -74,29 +94,46 @@
   function mapEnvelope(envelope) {
     return {
       ...envelope,
-      document_name: envelope?.document_name || ''
+      status: envelope?.status || 'created',
+      name: envelope?.name || ''
     };
   }
 
-  function mapContactToView(contact) {
-    const data = contact?.data || {};
-    const name = splitDisplayName(contact?.display_name);
+  function mapTask(task) {
+    const data = task?.data || {};
     return {
-      id: contact.id,
+      ...task,
+      title: task?.title || data.title || 'Untitled task',
+      description: task?.description || data.description || '',
+      status: task?.status || 'pending'
+    };
+  }
+
+  function mapCustomerToView(customer) {
+    const data = customer?.data || {};
+    const displayName = pickDisplayName(customer?.display_name, [
+      [data.firstName, data.lastName].filter(Boolean).join(' '),
+      customer?.email,
+      customer?.organization,
+      customer?.id
+    ]);
+    const name = splitDisplayName(displayName);
+    return {
+      id: customer.id,
       first_name: data.firstName || name.firstName,
       last_name: data.lastName || name.lastName,
-      email: contact.email,
-      phone: contact.phone,
-      company: contact.organization,
+      name: displayName,
+      email: customer.email,
+      phone: customer.phone,
+      company: customer.organization,
       type: data.contactType || 'investor',
       tags: Array.isArray(data.tags) ? data.tags : [],
       metadata: {
         ...data,
-        status: contact.status || data.status
+        status: customer.status || data.status
       },
-      owner: contact.owner ? mapUser(contact.owner) : null,
-      source: contact.source,
-      created_at: contact.created_at
+      employee_id: customer.employee_id || null,
+      created_at: customer.created_at
     };
   }
 
@@ -409,46 +446,76 @@
       return `${this.baseUrl}/api/auth/login?${params.toString()}`;
     },
 
-    getUsers(params) {
-      return this.get(withSearchParams('/api/data/users', params)).then((users) => users.map(mapUser));
+    getEmployees(params) {
+      return this.get(withSearchParams('/api/data/employees', params)).then((employees) => employees.map(mapEmployee));
     },
-    getContactsRaw(params) {
-      return this.get(withSearchParams('/api/data/contacts', params));
+    getCustomersRaw(params) {
+      return this.get(withSearchParams('/api/data/customers', params));
     },
-    getContactRaw(id) {
-      return this.get(getItemPath('/api/data/contacts', id));
+    getCustomerRaw(id) {
+      return this.get(getItemPath('/api/data/customers', id));
     },
-    updateContactRaw(id, body) {
-      return this.put(getItemPath('/api/data/contacts', id), body);
+    updateCustomerRaw(id, body) {
+      return this.put(getItemPath('/api/data/customers', id), body);
     },
-    deleteContactRaw(id) {
-      return this.del(getItemPath('/api/data/contacts', id));
+    deleteCustomerRaw(id) {
+      return this.del(getItemPath('/api/data/customers', id));
+    },
+    getTasksRaw(params) {
+      return this.get(withSearchParams('/api/data/tasks', params));
+    },
+    getTaskRaw(id) {
+      return this.get(getItemPath('/api/data/tasks', id));
+    },
+    createTaskRaw(body) {
+      return this.post('/api/data/tasks', body);
+    },
+    updateTaskRaw(id, body) {
+      return this.put(getItemPath('/api/data/tasks', id), body);
+    },
+    deleteTaskRaw(id) {
+      return this.del(getItemPath('/api/data/tasks', id));
+    },
+    getEnvelopesRaw(params) {
+      return this.get(withSearchParams('/api/data/envelopes', params));
     },
 
-    async getContacts(params) {
-      const contacts = await this.getContactsRaw(params);
-      return contacts.map(mapContactToView);
+    async getCustomers(params) {
+      const customers = await this.getCustomersRaw(params);
+      return customers.map(mapCustomerToView);
     },
-    async getContact(id) {
-      const contact = await this.getContactRaw(id);
+    async getCustomer(id) {
+      const [customer, envelopes, tasks] = await Promise.all([
+        this.getCustomerRaw(id),
+        this.getEnvelopesRaw({ customerId: id }),
+        this.getTasksRaw({ customerId: id })
+      ]);
       return {
-        ...mapContactToView(contact),
-        accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
-        envelopes: (contact.envelopes || []).map(mapEnvelope),
-        tasks: Array.isArray(contact.tasks) ? contact.tasks : []
+        ...mapCustomerToView(customer),
+        accounts: (customer.data?.accounts || []).map((account) => mapEmbeddedAccount(account, customer.id)),
+        envelopes: envelopes.map(mapEnvelope),
+        tasks: tasks.map(mapTask)
       };
     },
-    async updateContact(id, body) {
-      const contact = await this.updateContactRaw(id, body);
-      return {
-        ...mapContactToView(contact),
-        accounts: (contact.data?.accounts || []).map((account) => mapEmbeddedAccount(account, contact.id)),
-        envelopes: (contact.envelopes || []).map(mapEnvelope),
-        tasks: Array.isArray(contact.tasks) ? contact.tasks : []
-      };
+    async updateCustomer(id, body) {
+      await this.updateCustomerRaw(id, body);
+      return this.getCustomer(id);
     },
-    deleteContact(id) {
-      return this.deleteContactRaw(id);
+    deleteCustomer(id) {
+      return this.deleteCustomerRaw(id);
+    },
+    async getTasks(params) {
+      const tasks = await this.getTasksRaw(params);
+      return tasks.map(mapTask);
+    },
+    async createTask(body) {
+      return mapTask(await this.createTaskRaw(body));
+    },
+    async updateTask(id, body) {
+      return mapTask(await this.updateTaskRaw(id, body));
+    },
+    deleteTask(id) {
+      return this.deleteTaskRaw(id);
     },
 
     proxy(options) {

@@ -1,71 +1,99 @@
-const { createEnvelope, listEnvelopes, listUsers, updateEnvelope } = require('./backend-client');
+const { createEnvelope, listEnvelopes, updateEnvelope } = require('./backend-client');
 const envelopeTypeDefs = require('./envelope-type-definitions');
 const { evaluateOperation, filterAttributes, getLiteralComparisonValue, normalizeSearchRequest } = require('./query-utils');
 const { createServiceError, pickFirstDefined, requireSupportedType } = require('./service-utils');
+
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
+}
+
+function parseDataValue(value) {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return asObject(parsed);
+    } catch (error) {
+      return {};
+    }
+  }
+
+  return asObject(value);
+}
+
+function normalizeOptionalText(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  return normalized || undefined;
+}
 
 function buildEnvelopePayload(rawInput) {
   const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
 
   return {
-    docusignEnvelopeId: pickFirstDefined(input, ['DocusignEnvelopeId', 'docusignEnvelopeId', 'EnvelopeId', 'envelopeId']) || null,
-    contactId: pickFirstDefined(input, ['ContactId', 'contactId']) || null,
-    userId: pickFirstDefined(input, ['UserId', 'userId', 'OwnerUserId', 'ownerUserId']) || null,
-    status: pickFirstDefined(input, ['Status', 'status']) || 'sent',
-    documentName: pickFirstDefined(input, ['DocumentName', 'documentName']) || null
+    id: normalizeOptionalText(pickFirstDefined(input, ['Id', 'id'])) || undefined,
+    customerId: normalizeOptionalText(pickFirstDefined(input, ['CustomerId', 'customerId'])) || null,
+    employeeId: normalizeOptionalText(pickFirstDefined(input, ['EmployeeId', 'employeeId'])) || null,
+    status: normalizeOptionalText(pickFirstDefined(input, ['Status', 'status'])) || null,
+    name: normalizeOptionalText(pickFirstDefined(input, ['Name', 'name'])) || null,
+    createdAt: normalizeOptionalText(pickFirstDefined(input, ['CreatedAt', 'createdAt'])) || null,
+    data: parseDataValue(pickFirstDefined(input, ['Data', 'data', 'Metadata', 'metadata', 'DataJson', 'dataJson']))
   };
 }
 
 function mapEnvelopeToDataRecord(envelope) {
   return {
     Id: envelope.id,
-    DocusignEnvelopeId: envelope.docusign_envelope_id || '',
-    DocumentName: envelope.document_name || '',
+    Name: envelope.name || '',
     Status: envelope.status || '',
-    ContactId: envelope.contact_id || '',
-    UserId: envelope.user_id || '',
-    CreatedAt: envelope.created_at || ''
+    CustomerId: envelope.customer_id || '',
+    EmployeeId: envelope.employee_id || '',
+    DataJson: JSON.stringify(asObject(envelope.data)),
+    CreatedAt: envelope.created_at || '',
+    UpdatedAt: envelope.updated_at || ''
   };
-}
-
-async function getDefaultUserId() {
-  const users = await listUsers();
-  if (!Array.isArray(users) || users.length === 0) {
-    return null;
-  }
-
-  return users
-    .slice()
-    .sort((left, right) => String(left?.created_at || '').localeCompare(String(right?.created_at || '')))[0]?.id || null;
 }
 
 function buildEnvelopeSearchFilters(query) {
   const operation = query?.queryFilter?.operation;
   const filters = {
     id: getLiteralComparisonValue(operation, 'Id'),
-    docusignEnvelopeId: getLiteralComparisonValue(operation, 'DocusignEnvelopeId'),
-    contactId: getLiteralComparisonValue(operation, 'ContactId'),
-    userId: getLiteralComparisonValue(operation, 'UserId'),
+    customerId: getLiteralComparisonValue(operation, 'CustomerId'),
+    employeeId: getLiteralComparisonValue(operation, 'EmployeeId'),
     status: getLiteralComparisonValue(operation, 'Status')
   };
 
   return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== ''));
 }
 
-async function buildEnvelopeCreatePayload(rawInput, requestedId) {
-  const payload = buildEnvelopePayload(rawInput);
-  if (requestedId) {
-    payload.id = requestedId;
+function normalizeEnvelopeWriteError(error) {
+  if (error?.statusCode !== 400) {
+    return error;
   }
 
-  if (!payload.contactId && !payload.userId) {
-    payload.userId = await getDefaultUserId();
+  if (error.message === 'customerId must belong to the current app') {
+    return createServiceError(
+      400,
+      'BAD_REQUEST',
+      'Envelope CustomerId must be the TGK customer Id for this app.'
+    );
   }
 
-  if (!payload.contactId && !payload.userId) {
-    throw createServiceError(400, 'BAD_REQUEST', 'Envelope create requires ContactId or UserId, and no default app user is available');
+  if (error.message === 'employeeId must belong to the current app') {
+    return createServiceError(
+      400,
+      'BAD_REQUEST',
+      'Envelope EmployeeId must be the TGK employee Id for this app.'
+    );
   }
 
-  return payload;
+  return error;
 }
 
 async function listEnvelopesForQuery(query) {
@@ -82,9 +110,16 @@ async function createRecord(body) {
   }
 
   requireSupportedType(typeName, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  const payload = await buildEnvelopeCreatePayload(data, requestedId);
-  const created = await createEnvelope(payload);
-  return { recordId: created.id };
+  try {
+    const payload = buildEnvelopePayload(data);
+    if (requestedId) {
+      payload.id = requestedId;
+    }
+    const created = await createEnvelope(payload);
+    return { recordId: created.id };
+  } catch (error) {
+    throw normalizeEnvelopeWriteError(error);
+  }
 }
 
 async function patchRecord(body) {
@@ -97,9 +132,12 @@ async function patchRecord(body) {
   }
 
   requireSupportedType(typeName, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  const payload = buildEnvelopePayload(data);
-  await updateEnvelope(recordId, payload);
-  return { success: true };
+  try {
+    await updateEnvelope(recordId, buildEnvelopePayload(data));
+    return { success: true };
+  } catch (error) {
+    throw normalizeEnvelopeWriteError(error);
+  }
 }
 
 async function searchRecords(body) {

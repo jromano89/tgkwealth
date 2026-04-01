@@ -17,48 +17,76 @@ function created(res, payload) {
   res.status(201).json(payload);
 }
 
-router.get('/users', withApp((req, res, db, app) => {
-  res.json(service.listUsersForApp(db, app.id, req.query));
+router.get('/employees', withApp((req, res, db, app) => {
+  res.json(service.listEmployeesForApp(db, app.slug, req.query));
 }));
 
-router.post('/users', withApp((req, res, db, app) => {
-  created(res, service.createUserForApp(db, app.id, req.body));
+router.get('/employees/:id', withApp((req, res, db, app) => {
+  res.json(service.getEmployeeForApp(db, app.slug, req.params.id));
 }));
 
-router.put('/users/:id', withApp((req, res, db, app) => {
-  res.json(service.updateUserForApp(db, app.id, req.params.id, req.body));
+router.post('/employees', withApp((req, res, db, app) => {
+  created(res, service.createEmployeeForApp(db, app.slug, req.body));
 }));
 
-router.get('/contacts', withApp((req, res, db, app) => {
-  res.json(service.listContactsForApp(db, app.id, req.query));
+router.put('/employees/:id', withApp((req, res, db, app) => {
+  res.json(service.updateEmployeeForApp(db, app.slug, req.params.id, req.body));
+}));
+
+router.get('/customers', withApp((req, res, db, app) => {
+  res.json(service.listCustomersForApp(db, app.slug, req.query));
+}));
+
+router.get('/customers/:id', withApp((req, res, db, app) => {
+  res.json(service.getCustomerForApp(db, app.slug, req.params.id));
+}));
+
+router.post('/customers', withApp((req, res, db, app) => {
+  created(res, service.createCustomerForApp(db, app.slug, req.body));
+}));
+
+router.put('/customers/:id', withApp((req, res, db, app) => {
+  res.json(service.updateCustomerForApp(db, app.slug, req.params.id, req.body));
+}));
+
+router.delete('/customers/:id', withApp((req, res, db, app) => {
+  res.json(service.deleteCustomerForApp(db, app.slug, req.params.id));
 }));
 
 router.get('/envelopes', withApp((req, res, db, app) => {
-  res.json(service.listEnvelopesForApp(db, app.id, req.query));
+  res.json(service.listEnvelopesForApp(db, app.slug, req.query));
 }));
 
-router.post('/contacts', withApp((req, res, db, app) => {
-  created(res, service.createContactForApp(db, app.id, req.body));
-}));
-
-router.get('/contacts/:id', withApp((req, res, db, app) => {
-  res.json(service.getContactDetailsForApp(db, app.id, req.params.id));
-}));
-
-router.put('/contacts/:id', withApp((req, res, db, app) => {
-  res.json(service.updateContactForApp(db, app.id, req.params.id, req.body));
-}));
-
-router.delete('/contacts/:id', withApp((req, res, db, app) => {
-  res.json(service.deleteContactForApp(db, app.id, req.params.id));
+router.get('/envelopes/:id', withApp((req, res, db, app) => {
+  res.json(service.getEnvelopeForApp(db, app.slug, req.params.id));
 }));
 
 router.post('/envelopes', withApp((req, res, db, app) => {
-  created(res, service.createEnvelopeForApp(db, app.id, req.body));
+  created(res, service.createEnvelopeForApp(db, app.slug, req.body));
 }));
 
 router.put('/envelopes/:id', withApp((req, res, db, app) => {
-  res.json(service.updateEnvelopeForApp(db, app.id, req.params.id, req.body));
+  res.json(service.updateEnvelopeForApp(db, app.slug, req.params.id, req.body));
+}));
+
+router.get('/tasks', withApp((req, res, db, app) => {
+  res.json(service.listTasksForApp(db, app.slug, req.query));
+}));
+
+router.get('/tasks/:id', withApp((req, res, db, app) => {
+  res.json(service.getTaskForApp(db, app.slug, req.params.id));
+}));
+
+router.post('/tasks', withApp((req, res, db, app) => {
+  created(res, service.createTaskForApp(db, app.slug, req.body));
+}));
+
+router.put('/tasks/:id', withApp((req, res, db, app) => {
+  res.json(service.updateTaskForApp(db, app.slug, req.params.id, req.body));
+}));
+
+router.delete('/tasks/:id', withApp((req, res, db, app) => {
+  res.json(service.deleteTaskForApp(db, app.slug, req.params.id));
 }));
 
 module.exports = router;

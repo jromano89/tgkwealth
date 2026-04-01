@@ -1,8 +1,8 @@
-const { METAMODEL, mm, createDecorator, crudDecorator, createPropertyDeclaration } = require('./type-helpers');
+const { mm, createDecorator, crudDecorator, createPropertyDeclaration } = require('./type-helpers');
 
 const TYPE_NAME = 'Envelope';
 const NAMESPACE = 'org.tgk.maestro';
-const TYPE_ALIASES = new Set(['envelope', 'document']);
+const TYPE_ALIASES = new Set(['envelope', 'document', 'agreement']);
 
 const TYPE_NAMES = [
   {
@@ -14,12 +14,13 @@ const TYPE_NAMES = [
 
 const FIELD_DEFINITIONS = [
   { name: 'Id', label: 'Envelope ID', type: 'String', optional: false, readableOnly: true },
-  { name: 'DocusignEnvelopeId', label: 'Docusign Envelope ID', type: 'String', optional: true },
-  { name: 'DocumentName', label: 'Document Name', type: 'String', optional: true },
+  { name: 'Name', label: 'Envelope Name', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
-  { name: 'ContactId', label: 'Contact ID', type: 'String', optional: true },
-  { name: 'UserId', label: 'User ID', type: 'String', optional: true },
-  { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true }
+  { name: 'CustomerId', label: 'Customer ID', type: 'String', optional: true },
+  { name: 'EmployeeId', label: 'Employee ID', type: 'String', optional: true },
+  { name: 'DataJson', label: 'Data JSON', type: 'String', optional: true },
+  { name: 'CreatedAt', label: 'Created At', type: 'DateTime', optional: true, readableOnly: true },
+  { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 
 const TYPE_DEFINITIONS = {
@@ -45,5 +46,6 @@ module.exports = {
   TYPE_ALIASES,
   TYPE_DEFINITIONS,
   TYPE_NAMES,
-  TYPE_NAME
+  TYPE_NAME,
+  NAMESPACE
 };

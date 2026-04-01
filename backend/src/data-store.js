@@ -5,20 +5,22 @@ function asObject(value) {
 }
 
 function normalizeData(data) {
-  const normalized = asObject(data);
-  delete normalized.tasks;
-  return normalized;
+  return asObject(data);
 }
 
-function parseTasks(tasks) {
-  return Array.isArray(tasks) ? tasks : [];
+function parseRecord(row) {
+  if (!row) {
+    return row;
+  }
+
+  const parsed = parseJsonFields(row);
+  return {
+    ...parsed,
+    data: normalizeData(parsed.data)
+  };
 }
 
-function serializeTasks(tasks) {
-  return serializeJson(parseTasks(tasks));
-}
-
-function parseUser(row) {
+function parseApp(row) {
   if (!row) {
     return row;
   }
@@ -27,143 +29,170 @@ function parseUser(row) {
   return {
     ...parsed,
     data: normalizeData(parsed.data),
-    tasks: parseTasks(parsed.tasks)
+    docusign_available_accounts: Array.isArray(parsed.docusign_available_accounts)
+      ? parsed.docusign_available_accounts
+      : []
   };
 }
 
-function parseContact(row) {
-  if (!row) {
-    return row;
-  }
-
-  const parsed = parseJsonFields(row);
-  return {
-    ...parsed,
-    data: normalizeData(parsed.data),
-    tasks: parseTasks(parsed.tasks)
-  };
+function listScopedRows(db, table, appSlug, options = {}) {
+  const filters = options.filters || [];
+  const params = options.params || [];
+  const orderBy = options.orderBy || 'created_at DESC';
+  const parseRow = options.parseRow || parseRecord;
+  const whereClause = filters.length > 0 ? ` AND ${filters.join(' AND ')}` : '';
+  const query = `SELECT * FROM ${table} WHERE app_slug = ?${whereClause} ORDER BY ${orderBy}`;
+  return db.prepare(query).all(appSlug, ...params).map(parseRow);
 }
 
-function parseEnvelope(row) {
-  return row ? { ...row } : row;
-}
-
-function getScopedRow(db, table, appId, id, parseRow = parseJsonFields) {
+function getScopedRow(db, table, appSlug, id, parseRow = parseRecord) {
   return parseRow(
-    db.prepare(`SELECT * FROM ${table} WHERE id = ? AND app_id = ?`).get(id, appId)
+    db.prepare(`SELECT * FROM ${table} WHERE id = ? AND app_slug = ?`).get(id, appSlug)
   );
 }
 
-function requireScopedRow(db, table, appId, id, label, parseRow = parseJsonFields) {
-  const row = getScopedRow(db, table, appId, id, parseRow);
+function requireScopedRow(db, table, appSlug, id, label, parseRow = parseRecord) {
+  const row = getScopedRow(db, table, appSlug, id, parseRow);
   if (!row) {
     throw createError(404, `${label} not found`);
   }
   return row;
 }
 
-function listScopedRows(db, table, appId, { filters = [], params = [], orderBy = 'created_at DESC', parseRow = parseJsonFields } = {}) {
-  const whereClause = filters.length > 0 ? ` AND ${filters.join(' AND ')}` : '';
-  const query = `SELECT * FROM ${table} WHERE app_id = ?${whereClause} ORDER BY ${orderBy}`;
-  return db.prepare(query).all(appId, ...params).map(parseRow);
+function buildDynamicUpdate(table, recordId, appSlug, fields) {
+  const entries = Object.entries(fields).filter(([, value]) => value !== undefined);
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const assignments = entries.map(([column]) => `${column} = ?`);
+  const values = entries.map(([, value]) => value);
+  assignments.push('updated_at = CURRENT_TIMESTAMP');
+
+  return {
+    query: `UPDATE ${table} SET ${assignments.join(', ')} WHERE id = ? AND app_slug = ?`,
+    values: [...values, recordId, appSlug]
+  };
 }
 
-function getPrimaryUser(db, appId) {
-  return parseUser(
-    db.prepare('SELECT * FROM users WHERE app_id = ? ORDER BY created_at ASC LIMIT 1').get(appId)
+function ensureAppBelongsToDb(db, appSlug) {
+  const app = parseApp(
+    db.prepare('SELECT * FROM apps WHERE slug = ?').get(appSlug)
   );
+
+  if (!app) {
+    throw createError(404, 'App not found');
+  }
+
+  return app;
 }
 
-function getUser(db, appId, userId) {
-  return getScopedRow(db, 'users', appId, userId, parseUser);
+function getEmployee(db, appSlug, employeeId) {
+  return getScopedRow(db, 'employees', appSlug, employeeId, parseRecord);
 }
 
-function getContact(db, appId, contactId) {
-  return getScopedRow(db, 'contacts', appId, contactId, parseContact);
+function getCustomer(db, appSlug, customerId) {
+  return getScopedRow(db, 'customers', appSlug, customerId, parseRecord);
 }
 
-function ensureUserBelongsToApp(db, appId, userId) {
-  if (!userId) {
+function getEnvelope(db, appSlug, envelopeId) {
+  return getScopedRow(db, 'envelopes', appSlug, envelopeId, parseRecord);
+}
+
+function getTask(db, appSlug, taskId) {
+  return getScopedRow(db, 'tasks', appSlug, taskId, parseRecord);
+}
+
+function ensureEmployeeBelongsToApp(db, appSlug, employeeId) {
+  if (!employeeId) {
     return null;
   }
 
-  const user = getUser(db, appId, userId);
-  if (!user) {
-    throw createError(400, 'userId must belong to the current app');
+  const employee = getEmployee(db, appSlug, employeeId);
+  if (!employee) {
+    throw createError(400, 'employeeId must belong to the current app');
   }
 
-  return user;
+  return employee;
 }
 
-function ensureContactBelongsToApp(db, appId, contactId) {
-  if (!contactId) {
+function ensureCustomerBelongsToApp(db, appSlug, customerId) {
+  if (!customerId) {
     return null;
   }
 
-  const contact = getContact(db, appId, contactId);
-  if (!contact) {
-    throw createError(400, 'contactId must belong to the current app');
+  const customer = getCustomer(db, appSlug, customerId);
+  if (!customer) {
+    throw createError(400, 'customerId must belong to the current app');
   }
 
-  return contact;
+  return customer;
 }
 
-function listUsers(db, appId, filters = {}) {
+function listEmployees(db, appSlug, filters = {}) {
+  ensureAppBelongsToDb(db, appSlug);
   const conditions = [];
   const params = [];
 
   if (filters.search) {
-    conditions.push('(display_name LIKE ? OR email LIKE ? OR title LIKE ?)');
-    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+    conditions.push('(display_name LIKE ? OR email LIKE ? OR title LIKE ? OR id LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
   }
 
-  return listScopedRows(db, 'users', appId, { filters: conditions, params, parseRow: parseUser });
+  return listScopedRows(db, 'employees', appSlug, {
+    filters: conditions,
+    params,
+    orderBy: 'COALESCE(display_name, email, title, id) COLLATE NOCASE ASC'
+  });
 }
 
-function createUser(db, appId, user) {
+function createEmployee(db, appSlug, employee) {
   db.prepare(`
-    INSERT INTO users (id, app_id, display_name, email, phone, title, data, tasks)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO employees (
+      id,
+      app_slug,
+      display_name,
+      email,
+      phone,
+      title,
+      data,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    user.id,
-    appId,
-    user.displayName,
-    user.email || null,
-    user.phone || null,
-    user.title || null,
-    serializeJson(normalizeData(user.data)),
-    serializeTasks(user.tasks)
+    employee.id,
+    appSlug,
+    employee.display_name ?? null,
+    employee.email ?? null,
+    employee.phone ?? null,
+    employee.title ?? null,
+    serializeJson(normalizeData(employee.data)),
+    employee.created_at || new Date().toISOString(),
+    employee.updated_at || employee.created_at || new Date().toISOString()
   );
 
-  return getUser(db, appId, user.id);
+  return getEmployee(db, appSlug, employee.id);
 }
 
-function updateUser(db, appId, userId, user) {
-  db.prepare(`
-    UPDATE users SET
-      display_name = COALESCE(?, display_name),
-      email = COALESCE(?, email),
-      phone = COALESCE(?, phone),
-      title = COALESCE(?, title),
-      data = COALESCE(?, data),
-      tasks = COALESCE(?, tasks),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND app_id = ?
-  `).run(
-    user.displayName,
-    user.email,
-    user.phone,
-    user.title,
-    user.data !== undefined ? serializeJson(normalizeData(user.data)) : null,
-    user.tasks !== undefined ? serializeTasks(user.tasks) : null,
-    userId,
-    appId
-  );
+function updateEmployee(db, appSlug, employeeId, employee) {
+  const statement = buildDynamicUpdate('employees', employeeId, appSlug, {
+    display_name: employee.display_name,
+    email: employee.email,
+    phone: employee.phone,
+    title: employee.title,
+    data: employee.data !== undefined ? serializeJson(normalizeData(employee.data)) : undefined
+  });
 
-  return getUser(db, appId, userId);
+  if (statement) {
+    db.prepare(statement.query).run(...statement.values);
+  }
+
+  return getEmployee(db, appSlug, employeeId);
 }
 
-function listContacts(db, appId, filters = {}) {
+function listCustomers(db, appSlug, filters = {}) {
+  ensureAppBelongsToDb(db, appSlug);
   const conditions = [];
   const params = [];
 
@@ -171,23 +200,81 @@ function listContacts(db, appId, filters = {}) {
     conditions.push('status = ?');
     params.push(filters.status);
   }
-  if (filters.source) {
-    conditions.push('source = ?');
-    params.push(filters.source);
-  }
-  if (filters.ownerUserId) {
-    conditions.push('owner_user_id = ?');
-    params.push(filters.ownerUserId);
+  if (filters.employeeId) {
+    conditions.push('employee_id = ?');
+    params.push(filters.employeeId);
   }
   if (filters.search) {
-    conditions.push('(display_name LIKE ? OR email LIKE ? OR organization LIKE ?)');
-    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+    conditions.push('(display_name LIKE ? OR email LIKE ? OR organization LIKE ? OR id LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
   }
 
-  return listScopedRows(db, 'contacts', appId, { filters: conditions, params, parseRow: parseContact });
+  return listScopedRows(db, 'customers', appSlug, {
+    filters: conditions,
+    params,
+    orderBy: 'COALESCE(display_name, email, organization, id) COLLATE NOCASE ASC'
+  });
 }
 
-function listEnvelopes(db, appId, filters = {}) {
+function createCustomer(db, appSlug, customer) {
+  db.prepare(`
+    INSERT INTO customers (
+      id,
+      app_slug,
+      employee_id,
+      display_name,
+      email,
+      phone,
+      organization,
+      status,
+      data,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    customer.id,
+    appSlug,
+    customer.employee_id ?? null,
+    customer.display_name ?? null,
+    customer.email ?? null,
+    customer.phone ?? null,
+    customer.organization ?? null,
+    customer.status ?? 'active',
+    serializeJson(normalizeData(customer.data)),
+    customer.created_at || new Date().toISOString(),
+    customer.updated_at || customer.created_at || new Date().toISOString()
+  );
+
+  return getCustomer(db, appSlug, customer.id);
+}
+
+function updateCustomer(db, appSlug, customerId, customer) {
+  const statement = buildDynamicUpdate('customers', customerId, appSlug, {
+    employee_id: customer.employee_id,
+    display_name: customer.display_name,
+    email: customer.email,
+    phone: customer.phone,
+    organization: customer.organization,
+    status: customer.status,
+    data: customer.data !== undefined ? serializeJson(normalizeData(customer.data)) : undefined
+  });
+
+  if (statement) {
+    db.prepare(statement.query).run(...statement.values);
+  }
+
+  return getCustomer(db, appSlug, customerId);
+}
+
+function deleteCustomer(db, appSlug, customerId) {
+  db.prepare('UPDATE envelopes SET customer_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE app_slug = ? AND customer_id = ?').run(appSlug, customerId);
+  db.prepare('UPDATE tasks SET customer_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE app_slug = ? AND customer_id = ?').run(appSlug, customerId);
+  db.prepare('DELETE FROM customers WHERE id = ? AND app_slug = ?').run(customerId, appSlug);
+}
+
+function listEnvelopes(db, appSlug, filters = {}) {
+  ensureAppBelongsToDb(db, appSlug);
   const conditions = [];
   const params = [];
 
@@ -199,202 +286,186 @@ function listEnvelopes(db, appId, filters = {}) {
     conditions.push('status = ?');
     params.push(filters.status);
   }
-  if (filters.userId) {
-    conditions.push('user_id = ?');
-    params.push(filters.userId);
+  if (filters.employeeId) {
+    conditions.push('employee_id = ?');
+    params.push(filters.employeeId);
   }
-  if (filters.contactId) {
-    conditions.push('contact_id = ?');
-    params.push(filters.contactId);
-  }
-  if (filters.docusignEnvelopeId) {
-    conditions.push('docusign_envelope_id = ?');
-    params.push(filters.docusignEnvelopeId);
+  if (filters.customerId) {
+    conditions.push('customer_id = ?');
+    params.push(filters.customerId);
   }
   if (filters.search) {
-    conditions.push('(document_name LIKE ? OR docusign_envelope_id LIKE ? OR id LIKE ?)');
-    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+    conditions.push('(name LIKE ? OR id LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`);
   }
 
-  return listScopedRows(db, 'envelopes', appId, { filters: conditions, params, parseRow: parseEnvelope });
+  return listScopedRows(db, 'envelopes', appSlug, {
+    filters: conditions,
+    params,
+    orderBy: 'created_at DESC'
+  });
 }
 
-function createContact(db, appId, contact) {
-  db.prepare(`
-    INSERT INTO contacts (
-      id,
-      app_id,
-      owner_user_id,
-      ref,
-      display_name,
-      email,
-      phone,
-      organization,
-      status,
-      data,
-      tasks,
-      source
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    contact.id,
-    appId,
-    contact.ownerUserId,
-    contact.ref || null,
-    contact.displayName,
-    contact.email || null,
-    contact.phone || null,
-    contact.organization || null,
-    contact.status || 'active',
-    serializeJson(normalizeData(contact.data)),
-    serializeTasks(contact.tasks),
-    contact.source || 'api'
-  );
-
-  return getContact(db, appId, contact.id);
-}
-
-function updateContact(db, appId, contactId, contact) {
-  db.prepare(`
-    UPDATE contacts SET
-      owner_user_id = COALESCE(?, owner_user_id),
-      ref = COALESCE(?, ref),
-      display_name = COALESCE(?, display_name),
-      email = COALESCE(?, email),
-      phone = COALESCE(?, phone),
-      organization = COALESCE(?, organization),
-      status = COALESCE(?, status),
-      data = COALESCE(?, data),
-      tasks = COALESCE(?, tasks),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND app_id = ?
-  `).run(
-    contact.ownerUserId,
-    contact.ref,
-    contact.displayName,
-    contact.email,
-    contact.phone,
-    contact.organization,
-    contact.status,
-    contact.data !== undefined ? serializeJson(normalizeData(contact.data)) : null,
-    contact.tasks !== undefined ? serializeTasks(contact.tasks) : null,
-    contactId,
-    appId
-  );
-
-  return getContact(db, appId, contactId);
-}
-
-function getContactDetails(db, appId, contactId) {
-  const contact = requireScopedRow(db, 'contacts', appId, contactId, 'Contact', parseContact);
-  const owner = contact.owner_user_id ? getUser(db, appId, contact.owner_user_id) : null;
-  const envelopes = db.prepare(
-    'SELECT * FROM envelopes WHERE app_id = ? AND contact_id = ? ORDER BY created_at DESC'
-  ).all(appId, contact.id).map(parseEnvelope);
-
-  return {
-    ...contact,
-    owner,
-    envelopes
-  };
-}
-
-function deleteContactCascade(db, appId, contactId) {
-  db.prepare('DELETE FROM envelopes WHERE app_id = ? AND contact_id = ?').run(appId, contactId);
-  db.prepare('DELETE FROM contacts WHERE id = ? AND app_id = ?').run(contactId, appId);
-}
-
-function createEnvelope(db, appId, envelope) {
+function createEnvelope(db, appSlug, envelope) {
   db.prepare(`
     INSERT INTO envelopes (
       id,
-      app_id,
-      user_id,
-      docusign_envelope_id,
-      contact_id,
+      app_slug,
+      employee_id,
+      customer_id,
       status,
-      document_name,
-      completed_at,
-      created_at
+      name,
+      data,
+      created_at,
+      updated_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     envelope.id,
-    appId,
-    envelope.userId || null,
-    envelope.docusignEnvelopeId || null,
-    envelope.contactId || null,
-    envelope.status || 'sent',
-    envelope.documentName || null,
-    envelope.status === 'completed'
-      ? (envelope.completedAt || new Date().toISOString())
-      : (envelope.completedAt || null),
-    envelope.createdAt || new Date().toISOString()
+    appSlug,
+    envelope.employee_id ?? null,
+    envelope.customer_id ?? null,
+    envelope.status ?? 'created',
+    envelope.name ?? null,
+    serializeJson(normalizeData(envelope.data)),
+    envelope.created_at || new Date().toISOString(),
+    envelope.updated_at || envelope.created_at || new Date().toISOString()
   );
 
-  return getScopedRow(db, 'envelopes', appId, envelope.id, parseEnvelope);
+  return getEnvelope(db, appSlug, envelope.id);
 }
 
-function findEnvelope(db, appId, idOrEnvelopeId) {
-  return parseEnvelope(
-    db.prepare(
-      'SELECT * FROM envelopes WHERE app_id = ? AND (id = ? OR docusign_envelope_id = ?)'
-    ).get(appId, idOrEnvelopeId, idOrEnvelopeId)
-  );
-}
-
-function updateEnvelope(db, appId, idOrEnvelopeId, envelope) {
-  const existing = findEnvelope(db, appId, idOrEnvelopeId);
+function updateEnvelope(db, appSlug, envelopeId, envelope) {
+  const existing = getEnvelope(db, appSlug, envelopeId);
   if (!existing) {
     throw createError(404, 'Envelope not found');
   }
 
-  const nextStatus = envelope.status || existing.status;
+  const statement = buildDynamicUpdate('envelopes', envelopeId, appSlug, {
+    employee_id: envelope.employee_id,
+    customer_id: envelope.customer_id,
+    status: envelope.status,
+    name: envelope.name,
+    data: envelope.data !== undefined ? serializeJson(normalizeData(envelope.data)) : undefined
+  });
+
+  if (statement) {
+    db.prepare(statement.query).run(...statement.values);
+  }
+
+  return getEnvelope(db, appSlug, envelopeId);
+}
+
+function listTasks(db, appSlug, filters = {}) {
+  ensureAppBelongsToDb(db, appSlug);
+  const conditions = [];
+  const params = [];
+
+  if (filters.id) {
+    conditions.push('id = ?');
+    params.push(filters.id);
+  }
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.employeeId) {
+    conditions.push('employee_id = ?');
+    params.push(filters.employeeId);
+  }
+  if (filters.customerId) {
+    conditions.push('customer_id = ?');
+    params.push(filters.customerId);
+  }
+  if (filters.search) {
+    conditions.push('(title LIKE ? OR description LIKE ? OR id LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  return listScopedRows(db, 'tasks', appSlug, {
+    filters: conditions,
+    params,
+    orderBy: 'COALESCE(due_at, created_at) DESC'
+  });
+}
+
+function createTask(db, appSlug, task) {
   db.prepare(`
-    UPDATE envelopes SET
-      user_id = COALESCE(?, user_id),
-      docusign_envelope_id = COALESCE(?, docusign_envelope_id),
-      contact_id = COALESCE(?, contact_id),
-      status = COALESCE(?, status),
-      document_name = COALESCE(?, document_name),
-      completed_at = CASE
-        WHEN ? = 'completed' THEN COALESCE(?, completed_at, CURRENT_TIMESTAMP)
-        ELSE completed_at
-      END
-    WHERE id = ? AND app_id = ?
+    INSERT INTO tasks (
+      id,
+      app_slug,
+      employee_id,
+      customer_id,
+      title,
+      description,
+      status,
+      due_at,
+      data,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    envelope.userId,
-    envelope.docusignEnvelopeId,
-    envelope.contactId,
-    envelope.status,
-    envelope.documentName,
-    nextStatus,
-    envelope.completedAt || null,
-    existing.id,
-    appId
+    task.id,
+    appSlug,
+    task.employee_id ?? null,
+    task.customer_id ?? null,
+    task.title ?? null,
+    task.description ?? null,
+    task.status ?? 'pending',
+    task.due_at ?? null,
+    serializeJson(normalizeData(task.data)),
+    task.created_at || new Date().toISOString(),
+    task.updated_at || task.created_at || new Date().toISOString()
   );
 
-  return getScopedRow(db, 'envelopes', appId, existing.id, parseEnvelope);
+  return getTask(db, appSlug, task.id);
+}
+
+function updateTask(db, appSlug, taskId, task) {
+  const statement = buildDynamicUpdate('tasks', taskId, appSlug, {
+    employee_id: task.employee_id,
+    customer_id: task.customer_id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    due_at: task.due_at,
+    data: task.data !== undefined ? serializeJson(normalizeData(task.data)) : undefined
+  });
+
+  if (statement) {
+    db.prepare(statement.query).run(...statement.values);
+  }
+
+  return getTask(db, appSlug, taskId);
+}
+
+function deleteTask(db, appSlug, taskId) {
+  db.prepare('DELETE FROM tasks WHERE id = ? AND app_slug = ?').run(taskId, appSlug);
 }
 
 module.exports = {
-  createContact,
+  createCustomer,
+  createEmployee,
   createEnvelope,
-  createUser,
-  deleteContactCascade,
-  ensureContactBelongsToApp,
-  ensureUserBelongsToApp,
-  findEnvelope,
-  getContact,
-  getContactDetails,
-  getPrimaryUser,
+  createTask,
+  deleteCustomer,
+  deleteTask,
+  ensureAppBelongsToDb,
+  ensureCustomerBelongsToApp,
+  ensureEmployeeBelongsToApp,
+  getCustomer,
+  getEmployee,
+  getEnvelope,
   getScopedRow,
-  getUser,
-  listContacts,
+  getTask,
+  listCustomers,
+  listEmployees,
   listEnvelopes,
-  listUsers,
+  listTasks,
   requireScopedRow,
-  updateContact,
+  updateCustomer,
+  updateEmployee,
   updateEnvelope,
-  updateUser
+  updateTask
 };

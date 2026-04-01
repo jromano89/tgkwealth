@@ -1,4 +1,3 @@
-const MAESTRO_CONTACT_SOURCE = 'maestro-extension';
 const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
@@ -381,7 +380,7 @@ function advisorApp() {
     ...createEnvelopeModalHelpers(),
     view: 'dashboard',
     currentUser: null,
-    contacts: [],
+    customers: [],
     selectedContact: null,
     selectedContactAccounts: [],
     selectedContactEnvelopes: [],
@@ -415,12 +414,12 @@ function advisorApp() {
     async init() {
       this.initializeBrandingState();
       try {
-        const users = await TGK_API.getUsers();
-        this.currentUser = users[0] || null;
-        this.contacts = await TGK_API.getContacts();
+        const employees = await TGK_API.getEmployees();
+        this.currentUser = employees[0] || null;
+        this.customers = await TGK_API.getCustomers();
         this.setView('dashboard');
       } catch (e) {
-        console.error('Failed to load contacts:', e);
+        console.error('Failed to load customers:', e);
       }
       this.loading = false;
       TGK_API.scheduleDocusignWarmup();
@@ -435,28 +434,28 @@ function advisorApp() {
       }
     },
 
-    get filteredContacts() {
-      if (!this.searchQuery.trim()) return this.contacts;
+    get filteredCustomers() {
+      if (!this.searchQuery.trim()) return this.customers;
       const q = this.searchQuery.toLowerCase();
-      return this.contacts.filter(c =>
+      return this.customers.filter(c =>
         `${c.first_name} ${c.last_name} ${c.email} ${c.metadata?.role || ''} ${c.metadata?.riskProfile || ''}`.toLowerCase().includes(q)
       );
     },
 
     get totalAum() {
-      return this.contacts.reduce((sum, c) => sum + (c.metadata?.value || 0), 0);
+      return this.customers.reduce((sum, c) => sum + (c.metadata?.value || 0), 0);
     },
 
     get totalNetWorth() {
-      return this.contacts.reduce((sum, c) => sum + (c.metadata?.netWorth || 0), 0);
+      return this.customers.reduce((sum, c) => sum + (c.metadata?.netWorth || 0), 0);
     },
 
     get pendingReviews() {
-      return this.contacts.filter(c => c.metadata?.status === 'review').length;
+      return this.customers.filter(c => c.metadata?.status === 'review').length;
     },
 
     get complianceAlerts() {
-      return this.contacts.filter(c => c.tags?.includes('review-needed')).length;
+      return this.customers.filter(c => c.tags?.includes('review-needed')).length;
     },
 
     get allAgreementSignals() {
@@ -702,7 +701,7 @@ function advisorApp() {
     async viewClient(contact) {
       this.selectedContact = contact;
       try {
-        const detail = await TGK_API.getContact(contact.id);
+        const detail = await TGK_API.getCustomer(contact.id);
         this.selectedContact = detail;
         this.selectedContactAccounts = detail.accounts || [];
         this.selectedContactEnvelopes = detail.envelopes || [];
@@ -724,13 +723,13 @@ function advisorApp() {
           return;
         }
         try {
-          const detail = await TGK_API.getContact(contactId);
+          const detail = await TGK_API.getCustomer(contactId);
           app.selectedContact = detail;
           app.selectedContactAccounts = detail.accounts || [];
           app.selectedContactEnvelopes = detail.envelopes || [];
-          const idx = app.contacts.findIndex(c => c.id === contactId);
+          const idx = app.customers.findIndex(c => c.id === contactId);
           if (idx !== -1) {
-            app.contacts[idx] = { ...app.contacts[idx], ...detail, accounts: undefined, envelopes: undefined };
+            app.customers[idx] = { ...app.customers[idx], ...detail, accounts: undefined, envelopes: undefined };
           }
           if (detail.metadata?.status === 'active') {
             app.stopClientDetailRefresh();
@@ -748,16 +747,16 @@ function advisorApp() {
       }
     },
 
-    async deleteContact(contact, event) {
+    async deleteCustomer(contact, event) {
       event.stopPropagation();
       try {
-        await TGK_API.deleteContact(contact.id);
-        this.contacts = this.contacts.filter(c => c.id !== contact.id);
+        await TGK_API.deleteCustomer(contact.id);
+        this.customers = this.customers.filter(c => c.id !== contact.id);
         if (this.selectedContact?.id === contact.id) {
           this.goBack();
         }
       } catch (e) {
-        console.error('Failed to delete contact:', e);
+        console.error('Failed to delete customer:', e);
       }
     },
 
@@ -805,24 +804,24 @@ function advisorApp() {
       return TGK_API.warmDocusignExperience();
     },
 
-    async fetchMaestroContacts() {
+    async fetchMaestroCustomers() {
       try {
-        return await TGK_API.getContacts({ source: MAESTRO_CONTACT_SOURCE });
+        return await TGK_API.getCustomers();
       } catch (e) {
         return [];
       }
     },
 
-    async snapshotMaestroContacts() {
-      const contacts = await this.fetchMaestroContacts();
-      this._maestroKnownContactIds = new Set((contacts || []).map((contact) => contact.id));
+    async snapshotMaestroCustomers() {
+      const customers = await this.fetchMaestroCustomers();
+      this._maestroKnownContactIds = new Set((customers || []).map((customer) => customer.id));
     },
 
     async refreshContactsAfterOnboarding(targetId) {
       try {
-        const contacts = await TGK_API.getContacts();
-        this.contacts = contacts;
-        return contacts.find((contact) => contact.id === targetId) || null;
+        const customers = await TGK_API.getCustomers();
+        this.customers = customers;
+        return customers.find((customer) => customer.id === targetId) || null;
       } catch (e) {
         return null;
       }
@@ -833,18 +832,18 @@ function advisorApp() {
         return;
       }
       this._maestroTrackingStarted = true;
-      await this.snapshotMaestroContacts();
+      await this.snapshotMaestroCustomers();
       if (!this.showOnboarding || this.maestroCompleted) {
         return;
       }
       this.startMaestroCreationPolling();
     },
 
-    findNewMaestroContact(extensionContacts) {
+    findNewMaestroCustomer(extensionCustomers) {
       const knownIds = this._maestroKnownContactIds || new Set();
-      const newContacts = (extensionContacts || []).filter((contact) => !knownIds.has(contact.id));
-      if (newContacts.length === 0) return null;
-      return newContacts.reduce(function (a, b) {
+      const newCustomers = (extensionCustomers || []).filter((customer) => !knownIds.has(customer.id));
+      if (newCustomers.length === 0) return null;
+      return newCustomers.reduce(function (a, b) {
         return new Date(b.created_at) > new Date(a.created_at) ? b : a;
       });
     },
@@ -855,14 +854,14 @@ function advisorApp() {
       const poll = async function () {
         if (!app.showOnboarding || app.maestroCompleted) return;
         try {
-          const extensionContacts = await app.fetchMaestroContacts();
-          const target = app.findNewMaestroContact(extensionContacts);
+          const extensionCustomers = await app.fetchMaestroCustomers();
+          const target = app.findNewMaestroCustomer(extensionCustomers);
           if (target) {
             await app.completeOnboardingWithContact(target);
             return;
           }
         } catch (e) {
-          console.warn('Could not poll for Maestro-created contacts:', e);
+          console.warn('Could not poll for Maestro-created customers:', e);
         }
         app._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
       };
@@ -932,14 +931,6 @@ function advisorApp() {
       this.startOnboardingLoading();
 
       try {
-        const session = await TGK_API.getSession();
-        if (!session?.connected) {
-          throw new Error('Connect a Docusign account before launching account opening.');
-        }
-        if (!session?.accountId) {
-          throw new Error('Select and save a Docusign account in Settings before launching account opening.');
-        }
-
         const result = await TGK_API.triggerMaestroWorkflow(this.maestroWorkflowId, {
           instance_name: `TGK Wealth Account Opening ${new Date().toISOString()}`,
           trigger_inputs: {}
