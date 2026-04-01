@@ -151,11 +151,57 @@ function investorApp() {
       ).trim();
     },
 
+    getTaskWorkflowCustomerId(task) {
+      return String(
+        task?.customer_id
+        || task?.customerId
+        || task?.data?.customerId
+        || task?.data?.customer_id
+        || this.selectedClient?.id
+        || this.selectedClientId
+        || ''
+      ).trim();
+    },
+
+    getTaskWorkflowCustomerName(task) {
+      return String(
+        task?.data?.customerName
+        || task?.data?.customer_name
+        || this.selectedClient?.name
+        || [this.selectedClient?.first_name, this.selectedClient?.last_name].filter(Boolean).join(' ')
+        || ''
+      ).trim();
+    },
+
+    getTaskWorkflowCustomerEmail(task) {
+      return String(
+        task?.data?.customerEmail
+        || task?.data?.customer_email
+        || this.selectedClient?.email
+        || ''
+      ).trim();
+    },
+
     getTaskWorkflowTriggerInputs(task) {
       const triggerInputs = task?.data?.triggerInputs || task?.data?.trigger_inputs;
-      return triggerInputs && typeof triggerInputs === 'object' && !Array.isArray(triggerInputs)
+      const payload = triggerInputs && typeof triggerInputs === 'object' && !Array.isArray(triggerInputs)
         ? { ...triggerInputs }
         : {};
+      const customerId = this.getTaskWorkflowCustomerId(task);
+      const customerName = this.getTaskWorkflowCustomerName(task);
+      const customerEmail = this.getTaskWorkflowCustomerEmail(task);
+
+      if (customerId) {
+        payload.customerId = customerId;
+      }
+      if (customerName) {
+        payload.customerName = customerName;
+      }
+      if (customerEmail) {
+        payload.customerEmail = customerEmail;
+      }
+
+      return payload;
     },
 
     resetTaskWorkflowState() {

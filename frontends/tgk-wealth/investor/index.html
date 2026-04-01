@@ -21,7 +21,7 @@
   <script defer src="../../shared/js/stock-ticker.js"></script>
   <script defer src="../../shared/js/news-panel.js"></script>
   <script defer src="../../shared/js/docusign-settings.js?v=20260331-3"></script>
-  <script defer src="js/app.js?v=20260401-4"></script>
+  <script defer src="js/app.js?v=20260401-5"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="tgk-portal-body" data-portal="investor">
@@ -367,12 +367,6 @@
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-navy" x-text="task.title"></div>
                   <p class="text-xs text-gray-500 mt-1" x-text="task.description"></p>
-                  <template x-if="taskCanLaunchWorkflow(task)">
-                    <div class="mt-2 inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/5 px-2.5 py-1 text-[11px] font-semibold text-brand">
-                      <span>Continue Asset Transfer</span>
-                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h4m0 0v4m0-4l-8 8m-4 0h4v4"/></svg>
-                    </div>
-                  </template>
                 </div>
                 <button @click.stop="dismissTask(task.id)" class="text-gray-300 hover:text-green-500 transition-colors flex-shrink-0 mt-0.5" title="Mark complete">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -399,9 +393,6 @@
       <div class="relative flex h-[min(95vh,1040px)] w-[min(92vw,1260px)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <div class="min-w-0 pr-4">
-            <div class="mb-1 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">
-              Asset Transfer
-            </div>
             <h2 class="font-serif text-lg font-semibold text-navy leading-tight" x-text="taskWorkflowTask?.title || 'Continue Asset Transfer'"></h2>
             <p class="mt-1 text-sm text-gray-500" x-text="clientName || selectedClient?.display_name || 'Investor workflow'"></p>
           </div>
