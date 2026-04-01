@@ -2,6 +2,7 @@ const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
+const CLIENT_DETAIL_REFRESH_MAX_MS = 20 * 60 * 1000;
 
 function formatDisplayDate(dateString, options = {}) {
   if (!dateString) return '';
@@ -705,7 +706,7 @@ function advisorApp() {
     async viewClient(contact) {
       this.selectedContact = contact;
       try {
-        const detail = await TGK_API.getCustomer(contact.id);
+        const detail = await TGK_API.getCustomer(contact.id, { includeTasks: false });
         this.selectedContact = detail;
         this.selectedContactAccounts = detail.accounts || [];
         this.selectedContactEnvelopes = detail.envelopes || [];
@@ -721,13 +722,18 @@ function advisorApp() {
       this.stopClientDetailRefresh();
       if (normalizeStatusValue(this.selectedContact?.metadata?.status) !== 'pending') return;
       const app = this;
+      const refreshDeadlineAt = Date.now() + CLIENT_DETAIL_REFRESH_MAX_MS;
       this._clientDetailRefreshTimer = window.setInterval(async function () {
         if (app.view !== 'client' || !app.selectedContact || app.selectedContact.id !== contactId) {
           app.stopClientDetailRefresh();
           return;
         }
+        if (Date.now() >= refreshDeadlineAt) {
+          app.stopClientDetailRefresh();
+          return;
+        }
         try {
-          const detail = await TGK_API.getCustomer(contactId);
+          const detail = await TGK_API.getCustomer(contactId, { includeTasks: false });
           app.selectedContact = detail;
           app.selectedContactAccounts = detail.accounts || [];
           app.selectedContactEnvelopes = detail.envelopes || [];

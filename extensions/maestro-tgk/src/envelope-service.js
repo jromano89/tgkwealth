@@ -12,18 +12,42 @@ function normalizeOptionalText(value) {
   return normalized || undefined;
 }
 
+function hasOwnField(input, aliases) {
+  return aliases.some((alias) => Object.prototype.hasOwnProperty.call(input, alias));
+}
+
+function readOptionalTextField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return normalizeOptionalText(pickFirstDefined(input, aliases)) || null;
+}
+
+function readOptionalDataField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return parseDataValue(pickFirstDefined(input, aliases));
+}
+
 function buildEnvelopePayload(rawInput) {
   const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+  const payload = {};
 
-  return {
-    id: normalizeOptionalText(pickFirstDefined(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) || undefined,
-    customerId: normalizeOptionalText(pickFirstDefined(input, ['CustomerId', 'customerId'])) || null,
-    employeeId: normalizeOptionalText(pickFirstDefined(input, ['EmployeeId', 'employeeId'])) || null,
-    status: normalizeOptionalText(pickFirstDefined(input, ['Status', 'status'])) || null,
-    name: normalizeOptionalText(pickFirstDefined(input, ['Name', 'name'])) || null,
-    createdAt: normalizeOptionalText(pickFirstDefined(input, ['CreatedAt', 'createdAt'])) || null,
-    data: parseDataValue(pickFirstDefined(input, ['Data', 'data', 'Metadata', 'metadata', 'DataJson', 'dataJson']))
-  };
+  if (hasOwnField(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) {
+    payload.id = normalizeOptionalText(pickFirstDefined(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) || undefined;
+  }
+
+  payload.customerId = readOptionalTextField(input, ['CustomerId', 'customerId']);
+  payload.employeeId = readOptionalTextField(input, ['EmployeeId', 'employeeId']);
+  payload.status = readOptionalTextField(input, ['Status', 'status']);
+  payload.name = readOptionalTextField(input, ['Name', 'name']);
+  payload.createdAt = readOptionalTextField(input, ['CreatedAt', 'createdAt']);
+  payload.data = readOptionalDataField(input, ['Data', 'data', 'Metadata', 'metadata', 'DataJson', 'dataJson']);
+
+  return payload;
 }
 
 function mapEnvelopeToDataRecord(envelope) {

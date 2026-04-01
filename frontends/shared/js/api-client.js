@@ -484,12 +484,23 @@
       const customers = await this.getCustomersRaw(params);
       return customers.map(mapCustomerToView);
     },
-    async getCustomer(id) {
-      const [customer, envelopes, tasks] = await Promise.all([
-        this.getCustomerRaw(id),
-        this.getEnvelopesRaw({ customerId: id }),
-        this.getTasksRaw({ customerId: id })
-      ]);
+    async getCustomer(id, options = {}) {
+      const includeEnvelopes = options.includeEnvelopes !== false;
+      const includeTasks = options.includeTasks !== false;
+      const requests = [this.getCustomerRaw(id)];
+
+      if (includeEnvelopes) {
+        requests.push(this.getEnvelopesRaw({ customerId: id }));
+      }
+      if (includeTasks) {
+        requests.push(this.getTasksRaw({ customerId: id }));
+      }
+
+      const responses = await Promise.all(requests);
+      const customer = responses[0];
+      const envelopes = includeEnvelopes ? responses[1] : [];
+      const tasks = includeTasks ? responses[responses.length - 1] : [];
+
       return {
         ...mapCustomerToView(customer),
         accounts: (customer.data?.accounts || []).map((account) => mapEmbeddedAccount(account, customer.id)),
