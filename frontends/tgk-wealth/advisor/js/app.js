@@ -52,6 +52,10 @@ function normalizeSearchText(value) {
   return cleanText(value).toLowerCase();
 }
 
+function normalizeStatusValue(value) {
+  return cleanText(value).toLowerCase();
+}
+
 function formatEnumLabel(value) {
   const normalized = cleanText(value);
   if (!normalized) return '';
@@ -451,7 +455,7 @@ function advisorApp() {
     },
 
     get pendingReviews() {
-      return this.customers.filter(c => c.metadata?.status === 'review').length;
+      return this.customers.filter(c => normalizeStatusValue(c.metadata?.status) === 'review').length;
     },
 
     get complianceAlerts() {
@@ -715,7 +719,7 @@ function advisorApp() {
 
     startClientDetailRefresh(contactId) {
       this.stopClientDetailRefresh();
-      if (this.selectedContact?.metadata?.status !== 'pending') return;
+      if (normalizeStatusValue(this.selectedContact?.metadata?.status) !== 'pending') return;
       const app = this;
       this._clientDetailRefreshTimer = window.setInterval(async function () {
         if (app.view !== 'client' || !app.selectedContact || app.selectedContact.id !== contactId) {
@@ -731,7 +735,7 @@ function advisorApp() {
           if (idx !== -1) {
             app.customers[idx] = { ...app.customers[idx], ...detail, accounts: undefined, envelopes: undefined };
           }
-          if (detail.metadata?.status === 'active') {
+          if (normalizeStatusValue(detail.metadata?.status) === 'active') {
             app.stopClientDetailRefresh();
           }
         } catch (e) {

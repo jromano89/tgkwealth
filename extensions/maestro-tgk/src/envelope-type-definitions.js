@@ -13,7 +13,6 @@ const TYPE_NAMES = [
 ];
 
 const FIELD_DEFINITIONS = [
-  { name: 'Id', label: 'Envelope ID', type: 'String', optional: false, readableOnly: true },
   { name: 'EnvelopeId', label: 'Envelope ID', type: 'String', optional: false },
   { name: 'Name', label: 'Envelope Name', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
@@ -32,7 +31,7 @@ const TYPE_DEFINITIONS = {
       isAbstract: false,
       identified: {
         $class: mm('IdentifiedBy'),
-        name: 'Id'
+        name: 'EnvelopeId'
       },
       decorators: [
         createDecorator('Term', 'Envelope'),

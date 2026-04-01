@@ -28,7 +28,6 @@ function buildEnvelopePayload(rawInput) {
 
 function mapEnvelopeToDataRecord(envelope) {
   return {
-    Id: envelope.id,
     EnvelopeId: envelope.id,
     Name: envelope.name || '',
     Status: envelope.status || '',
@@ -136,7 +135,13 @@ async function searchRecords(body) {
     .map(mapEnvelopeToDataRecord)
     .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
     .slice(pagination.skip, pagination.skip + pagination.limit)
-    .map((record) => filterAttributes(record, query.attributesToSelect));
+    .map((record) => {
+      const filtered = filterAttributes(record, query.attributesToSelect);
+      if (!Object.prototype.hasOwnProperty.call(filtered, 'EnvelopeId') && record.EnvelopeId) {
+        filtered.EnvelopeId = record.EnvelopeId;
+      }
+      return filtered;
+    });
 
   return { records: results };
 }
