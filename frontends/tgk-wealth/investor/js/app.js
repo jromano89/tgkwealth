@@ -12,8 +12,15 @@ function investorApp() {
     envelopes: [],
     sidebarCollapsed: false,
     loading: true,
-
+    assetTransferWorkflowId: window.TGK_DEMO?.config?.assetTransferWorkflowId || 'b59acbee-8052-403a-a752-c04287ad6ee1',
     tasks: [],
+    showTaskWorkflow: false,
+    taskWorkflowTask: null,
+    taskWorkflowInstanceUrl: '',
+    taskWorkflowError: null,
+    taskWorkflowLoading: false,
+    taskWorkflowLoadingIndex: 0,
+    taskWorkflowLoadingTimer: null,
 
     async init() {
       this.initializeBrandingState();
@@ -107,6 +114,131 @@ function investorApp() {
         }
       } catch (e) {
         console.error('Failed to dismiss task:', e);
+      }
+    },
+
+    taskCanLaunchWorkflow(task) {
+      return String(task?.data?.workflow || '').trim().toLowerCase() === 'asset-transfer';
+    },
+
+    handleTaskClick(task) {
+      if (!this.taskCanLaunchWorkflow(task)) {
+        return;
+      }
+
+      this.openTaskWorkflow(task);
+    },
+
+    warmTaskWorkflow() {
+      return TGK_API.warmDocusignExperience();
+    },
+
+    getTaskWorkflowId(task) {
+      return String(
+        task?.data?.workflowId
+        || task?.data?.workflow_id
+        || this.assetTransferWorkflowId
+        || ''
+      ).trim();
+    },
+
+    getTaskWorkflowLaunchUrl(task) {
+      return String(
+        task?.data?.instanceUrl
+        || task?.data?.instance_url
+        || task?.data?.maestroInstanceUrl
+        || ''
+      ).trim();
+    },
+
+    getTaskWorkflowTriggerInputs(task) {
+      const triggerInputs = task?.data?.triggerInputs || task?.data?.trigger_inputs;
+      return triggerInputs && typeof triggerInputs === 'object' && !Array.isArray(triggerInputs)
+        ? { ...triggerInputs }
+        : {};
+    },
+
+    resetTaskWorkflowState() {
+      this.showTaskWorkflow = false;
+      this.taskWorkflowTask = null;
+      this.taskWorkflowInstanceUrl = '';
+      this.taskWorkflowError = null;
+      this.taskWorkflowLoading = false;
+      this.stopTaskWorkflowLoading();
+    },
+
+    async openTaskWorkflow(task) {
+      this.resetTaskWorkflowState();
+      this.showTaskWorkflow = true;
+      this.taskWorkflowTask = task || null;
+      this.warmTaskWorkflow();
+      await this.loadTaskWorkflow(task);
+    },
+
+    closeTaskWorkflow() {
+      this.resetTaskWorkflowState();
+    },
+
+    startTaskWorkflowLoading() {
+      this.stopTaskWorkflowLoading();
+      this.taskWorkflowLoadingIndex = 0;
+      this.taskWorkflowLoadingTimer = window.setInterval(() => {
+        this.taskWorkflowLoadingIndex = Math.min(
+          this.taskWorkflowLoadingIndex + 1,
+          this.taskWorkflowLoadingSteps.length - 1
+        );
+      }, 1400);
+    },
+
+    stopTaskWorkflowLoading() {
+      if (this.taskWorkflowLoadingTimer) {
+        window.clearInterval(this.taskWorkflowLoadingTimer);
+        this.taskWorkflowLoadingTimer = null;
+      }
+    },
+
+    get taskWorkflowLoadingSteps() {
+      return [
+        'Connecting to Docusign IAM',
+        'Preparing asset transfer',
+        'Launching the embedded experience'
+      ];
+    },
+
+    async loadTaskWorkflow(task) {
+      this.taskWorkflowLoading = true;
+      this.taskWorkflowError = null;
+      this.taskWorkflowInstanceUrl = '';
+      this.startTaskWorkflowLoading();
+
+      try {
+        const existingInstanceUrl = this.getTaskWorkflowLaunchUrl(task);
+        if (existingInstanceUrl) {
+          this.taskWorkflowInstanceUrl = existingInstanceUrl;
+          return;
+        }
+
+        const workflowId = this.getTaskWorkflowId(task);
+        if (!workflowId) {
+          throw new Error('No asset transfer workflow is configured.');
+        }
+
+        const result = await TGK_API.triggerMaestroWorkflow(workflowId, {
+          instance_name: `TGK Wealth Asset Transfer ${this.clientName || task?.title || ''} ${new Date().toISOString()}`.trim(),
+          trigger_inputs: this.getTaskWorkflowTriggerInputs(task)
+        });
+
+        if (!result?.instance_url) {
+          throw new Error('Docusign IAM did not return a launch URL.');
+        }
+
+        this.taskWorkflowInstanceUrl = result.instance_url;
+      } catch (e) {
+        console.error('Failed to load asset transfer workflow:', e);
+        this.taskWorkflowError = e.message || 'Failed to launch asset transfer.';
+      } finally {
+        this.taskWorkflowLoading = false;
+        this.stopTaskWorkflowLoading();
       }
     },
 
