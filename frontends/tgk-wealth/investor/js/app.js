@@ -22,7 +22,8 @@ function investorApp() {
         this.assignedAdvisor = this.advisors[0] || null;
         this.customers = this.sortCustomers(await TGK_API.getCustomers());
         this.setTab('overview');
-        const initialClient = this.customers[0];
+        const preferredClientId = TGK_API.getPreferredCustomerId();
+        const initialClient = this.customers.find((customer) => customer.id === preferredClientId) || this.customers[0];
         if (initialClient) {
           this.selectedClientId = initialClient.id;
           await this.loadClient();
@@ -52,6 +53,7 @@ function investorApp() {
       try {
         const detail = await TGK_API.getCustomer(this.selectedClientId);
         this.selectedClient = detail;
+        TGK_API.setPreferredCustomerId(detail.id);
         this.accounts = detail.accounts || [];
         this.envelopes = detail.envelopes || [];
         this.tasks = detail.tasks || [];

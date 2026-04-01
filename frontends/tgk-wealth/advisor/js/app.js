@@ -704,10 +704,12 @@ function advisorApp() {
     },
 
     async viewClient(contact) {
+      TGK_API.setPreferredCustomerId(contact?.id);
       this.selectedContact = contact;
       try {
         const detail = await TGK_API.getCustomer(contact.id, { includeTasks: false });
         this.selectedContact = detail;
+        TGK_API.setPreferredCustomerId(detail.id);
         this.selectedContactAccounts = detail.accounts || [];
         this.selectedContactEnvelopes = detail.envelopes || [];
       } catch (e) {

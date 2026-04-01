@@ -99,14 +99,26 @@ function appendQuery(url, query) {
   });
 }
 
+function normalizeProxyPath(baseUrl, path) {
+  const rawPath = String(path || '');
+  if (!rawPath.startsWith('/')) {
+    return rawPath;
+  }
+
+  const basePath = String(baseUrl.pathname || '/').replace(/\/+$/, '') || '/';
+  if (basePath === '/' || rawPath === basePath || rawPath.startsWith(`${basePath}/`)) {
+    return rawPath;
+  }
+
+  return rawPath.replace(/^\/+/, '');
+}
+
 function buildTargetUrl(proxyRequest, docusign) {
   const base = replaceDocusignPlaceholders(proxyRequest.baseUrl, docusign);
+  const baseUrl = new URL(base.endsWith('/') ? base : `${base}/`);
   const target = proxyRequest.url
     ? new URL(replaceDocusignPlaceholders(proxyRequest.url, docusign))
-    : new URL(
-      replaceDocusignPlaceholders(proxyRequest.path, docusign),
-      base.endsWith('/') ? base : `${base}/`
-    );
+    : new URL(normalizeProxyPath(baseUrl, replaceDocusignPlaceholders(proxyRequest.path, docusign)), baseUrl);
 
   appendQuery(target, proxyRequest.query);
   return target.toString();

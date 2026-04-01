@@ -7,6 +7,7 @@
   const SESSION_CACHE_TTL_MS = 30000;
   const DOCUSIGN_PREWARM_SUCCESS_TTL_MS = 10 * 60 * 1000;
   const DOCUSIGN_PREWARM_RETRY_TTL_MS = 30000;
+  const SELECTED_CUSTOMER_STORAGE_PREFIX = 'tgk_selected_customer:';
 
   function splitDisplayName(displayName) {
     const parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
@@ -201,6 +202,10 @@
     } = options || {};
 
     return { method, url, path, baseUrl, authMode, bearerToken, headers, query, body };
+  }
+
+  function getSelectedCustomerStorageKey(appSlug) {
+    return `${SELECTED_CUSTOMER_STORAGE_PREFIX}${String(appSlug || 'default').trim().toLowerCase()}`;
   }
 
   const TGK_API = {
@@ -404,6 +409,28 @@
       preconnect.crossOrigin = '';
       preconnect.dataset.warmOrigin = key;
       document.head.appendChild(preconnect);
+    },
+
+    getPreferredCustomerId() {
+      try {
+        return window.localStorage.getItem(getSelectedCustomerStorageKey(this.appSlug)) || '';
+      } catch (error) {
+        return '';
+      }
+    },
+
+    setPreferredCustomerId(customerId) {
+      try {
+        const key = getSelectedCustomerStorageKey(this.appSlug);
+        const normalized = String(customerId || '').trim();
+        if (!normalized) {
+          window.localStorage.removeItem(key);
+          return;
+        }
+        window.localStorage.setItem(key, normalized);
+      } catch (error) {
+        // Ignore localStorage write failures.
+      }
     },
 
     async warmDocusignExperience() {
