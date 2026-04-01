@@ -5,19 +5,29 @@ Optional DocuSign Maestro Data IO service for TGK. Enables realistic end-to-end 
 ## Design
 
 - Separate service — does not touch SQLite directly
-- Writes to the TGK backend API (`/api/data/contacts`)
+- Writes to the TGK backend API (`/api/data/employees`, `/api/data/customers`, `/api/data/tasks`, `/api/data/envelopes`)
+- Registry-driven Data IO types keep the entity wiring thin and consistent
 - Fake client-credentials auth (private demo use only)
 - TGK-specific for now; harder to share across verticals than the backend
 
 ## Data IO Contract
 
-Canonical type: `Contact` (aliases: `Investor`, `Profile`)
+Canonical types:
 
-- `CreateRecord` -> create contact
-- `PatchRecord` -> update contact
-- `SearchRecords`, `GetTypeNames`, `GetTypeDefinitions` included for Data IO completeness
+- `Customer` for customer rows
+- `Employee` for advisors/internal operators
+- `Task` for app-scoped tasks
+- `Envelope` for tracked Docusign envelopes
 
-Returned `recordId` is the TGK contact id.
+Supported operations for each type:
+
+- `CreateRecord`
+- `PatchRecord`
+- `SearchRecords`
+- `GetTypeNames`
+- `GetTypeDefinitions`
+
+Returned `recordId` is the TGK row id. For `Envelope`, that is the Docusign envelope id. The old `Contact` alias is still accepted as an input synonym for `Customer`.
 
 ## Run
 

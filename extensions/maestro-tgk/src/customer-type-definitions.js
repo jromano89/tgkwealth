@@ -1,7 +1,7 @@
-const { mm, createDecorator, crudDecorator, createPropertyDeclaration } = require('./type-helpers');
+const { createConceptTypeDefinitions } = require('./type-helpers');
 
 const TYPE_NAME = 'Customer';
-const TYPE_ALIASES = new Set(['customer', 'contact', 'investor', 'client']);
+const TYPE_ALIASES = new Set(['customer', 'client', 'investor', 'contact']);
 
 const TYPE_NAMES = [
   {
@@ -26,24 +26,12 @@ const FIELD_DEFINITIONS = [
   { name: 'UpdatedAt', label: 'Updated At', type: 'DateTime', optional: true, readableOnly: true }
 ];
 
-const TYPE_DEFINITIONS = {
-  declarations: [
-    {
-      $class: mm('ConceptDeclaration'),
-      name: TYPE_NAME,
-      isAbstract: false,
-      identified: {
-        $class: mm('IdentifiedBy'),
-        name: 'Id'
-      },
-      decorators: [
-        createDecorator('Term', 'Customer'),
-        crudDecorator(false)
-      ],
-      properties: FIELD_DEFINITIONS.map(createPropertyDeclaration)
-    }
-  ]
-};
+const TYPE_DEFINITIONS = createConceptTypeDefinitions({
+  typeName: TYPE_NAME,
+  term: 'Customer',
+  identifiedBy: 'Id',
+  fields: FIELD_DEFINITIONS
+});
 
 module.exports = {
   TYPE_ALIASES,

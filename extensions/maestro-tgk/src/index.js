@@ -2,10 +2,7 @@ const http = require('http');
 const { config, getPublicBaseUrl } = require('./config');
 const { handlePreflight, readParsedBody, sendJson, sendText } = require('./http');
 const { buildManifest } = require('./manifest');
-const contactService = require('./contact-service');
-const envelopeService = require('./envelope-service');
-const contactTypeDefs = require('./contact-type-definitions');
-const envelopeTypeDefs = require('./envelope-type-definitions');
+const { getTypeDefinitions, getTypeNames, resolveDataIoService } = require('./dataio-registry');
 
 const INFO_TEXT_ROUTES = {
   '/support': 'TGK Maestro extension support.',
@@ -99,11 +96,6 @@ async function handleOauthToken(req, res) {
   });
 }
 
-function resolveDataIoService(typeName) {
-  const normalized = String(typeName || '').toLowerCase();
-  return envelopeTypeDefs.TYPE_ALIASES.has(normalized) ? envelopeService : contactService;
-}
-
 function resolveSearchService(body) {
   return resolveDataIoService(body?.query?.from || body?.from || body?.typeName);
 }
@@ -115,31 +107,7 @@ function getRequestedTypeNames(body) {
 }
 
 function buildTypeDefinitionsResponse(body) {
-  const requestedTypeNames = getRequestedTypeNames(body);
-  const wantsContactTypes = [...requestedTypeNames].some((typeName) => contactTypeDefs.TYPE_ALIASES.has(typeName));
-  const wantsEnvelopeTypes = [...requestedTypeNames].some((typeName) => envelopeTypeDefs.TYPE_ALIASES.has(typeName));
-  const declarations = [];
-  const errors = [];
-
-  if (wantsContactTypes) {
-    declarations.push(...contactTypeDefs.TYPE_DEFINITIONS.declarations);
-  }
-
-  if (wantsEnvelopeTypes) {
-    declarations.push(...envelopeTypeDefs.TYPE_DEFINITIONS.declarations);
-  }
-
-  if (!wantsContactTypes && !wantsEnvelopeTypes) {
-    for (const typeName of requestedTypeNames) {
-      errors.push({
-        typeName,
-        code: 'UNKNOWN',
-        message: `Unsupported type "${typeName}".`
-      });
-    }
-  }
-
-  return { declarations, errors };
+  return getTypeDefinitions([...getRequestedTypeNames(body)]);
 }
 
 const DATA_IO_HANDLERS = {
@@ -147,7 +115,7 @@ const DATA_IO_HANDLERS = {
   '/api/dataio/patchRecord': (body) => resolveDataIoService(body?.typeName).patchRecord(body),
   '/api/dataio/searchRecords': (body) => resolveSearchService(body).searchRecords(body),
   '/api/dataio/getTypeNames': () => ({
-    typeNames: [...contactTypeDefs.TYPE_NAMES, ...envelopeTypeDefs.TYPE_NAMES]
+    typeNames: getTypeNames()
   }),
   '/api/dataio/getTypeDefinitions': (body) => buildTypeDefinitionsResponse(body)
 };

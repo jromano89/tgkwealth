@@ -1,50 +1,34 @@
 const { createEnvelope, listEnvelopes, updateEnvelope } = require('./backend-client');
-const envelopeTypeDefs = require('./envelope-type-definitions');
-const { evaluateOperation, filterAttributes, getLiteralComparisonValue, normalizeSearchRequest } = require('./query-utils');
-const { asObject, createServiceError, parseDataValue, pickFirstDefined, requireSupportedType } = require('./service-utils');
+const { createDataIoService } = require('./dataio-service');
+const { TYPE_ALIASES, TYPE_NAME } = require('./envelope-type-definitions');
+const { getLiteralComparisonValue } = require('./query-utils');
+const {
+  asObject,
+  createServiceError,
+  hasOwnField,
+  normalizeOptionalText,
+  pickFirstDefined,
+  readOptionalDataField,
+  readOptionalTextField,
+  serializeData
+} = require('./service-utils');
 
-function normalizeOptionalText(value) {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  const normalized = String(value).trim();
-  return normalized || undefined;
-}
-
-function hasOwnField(input, aliases) {
-  return aliases.some((alias) => Object.prototype.hasOwnProperty.call(input, alias));
-}
-
-function readOptionalTextField(input, aliases) {
-  if (!hasOwnField(input, aliases)) {
-    return undefined;
-  }
-
-  return normalizeOptionalText(pickFirstDefined(input, aliases)) || null;
-}
-
-function readOptionalDataField(input, aliases) {
-  if (!hasOwnField(input, aliases)) {
-    return undefined;
-  }
-
-  return parseDataValue(pickFirstDefined(input, aliases));
-}
-
-function buildEnvelopePayload(rawInput) {
-  const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+function buildEnvelopePayload(rawInput, { recordId } = {}) {
+  const input = asObject(rawInput);
   const payload = {};
 
-  if (hasOwnField(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) {
-    payload.id = normalizeOptionalText(pickFirstDefined(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) || undefined;
+  if (recordId || hasOwnField(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) {
+    payload.id = normalizeOptionalText(recordId || pickFirstDefined(input, ['EnvelopeId', 'envelopeId', 'Id', 'id'])) || undefined;
+  }
+
+  if (!payload.id) {
+    throw createServiceError(400, 'BAD_REQUEST', 'EnvelopeId is required when creating or updating an envelope record.');
   }
 
   payload.customerId = readOptionalTextField(input, ['CustomerId', 'customerId']);
   payload.employeeId = readOptionalTextField(input, ['EmployeeId', 'employeeId']);
   payload.status = readOptionalTextField(input, ['Status', 'status']);
   payload.name = readOptionalTextField(input, ['Name', 'name']);
-  payload.createdAt = readOptionalTextField(input, ['CreatedAt', 'createdAt']);
   payload.data = readOptionalDataField(input, ['Data', 'data', 'Metadata', 'metadata', 'DataJson', 'dataJson']);
 
   return payload;
@@ -57,7 +41,7 @@ function mapEnvelopeToDataRecord(envelope) {
     Status: envelope.status || '',
     CustomerId: envelope.customer_id || '',
     EmployeeId: envelope.employee_id || '',
-    DataJson: JSON.stringify(asObject(envelope.data)),
+    DataJson: serializeData(asObject(envelope.data)),
     CreatedAt: envelope.created_at || '',
     UpdatedAt: envelope.updated_at || ''
   };
@@ -99,79 +83,15 @@ function normalizeEnvelopeWriteError(error) {
   return error;
 }
 
-async function listEnvelopesForQuery(query) {
-  return listEnvelopes(buildEnvelopeSearchFilters(query));
-}
-
-async function createRecord(body) {
-  const data = body?.data;
-  const requestedId = body?.recordId;
-  const typeName = body?.typeName;
-
-  if (!data || !typeName) {
-    throw createServiceError(400, 'BAD_REQUEST', 'data or typeName missing in request');
-  }
-
-  requireSupportedType(typeName, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  try {
-    const payload = buildEnvelopePayload(data);
-    if (requestedId) {
-      payload.id = requestedId;
-    }
-    if (!payload.id) {
-      throw createServiceError(400, 'BAD_REQUEST', 'EnvelopeId is required when creating an envelope record.');
-    }
-    const created = await createEnvelope(payload);
-    return { recordId: created.id };
-  } catch (error) {
-    throw normalizeEnvelopeWriteError(error);
-  }
-}
-
-async function patchRecord(body) {
-  const data = body?.data;
-  const typeName = body?.typeName;
-  const recordId = body?.recordId;
-
-  if (!data || !typeName || !recordId) {
-    throw createServiceError(400, 'BAD_REQUEST', 'data, typeName or recordId missing in request');
-  }
-
-  requireSupportedType(typeName, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  try {
-    await updateEnvelope(recordId, buildEnvelopePayload(data));
-    return { success: true };
-  } catch (error) {
-    throw normalizeEnvelopeWriteError(error);
-  }
-}
-
-async function searchRecords(body) {
-  const { query, pagination } = normalizeSearchRequest(body);
-
-  if (!query) {
-    throw createServiceError(400, 'BAD_REQUEST', 'Query missing in request');
-  }
-
-  requireSupportedType(query.from || envelopeTypeDefs.TYPE_NAME, envelopeTypeDefs.TYPE_ALIASES, envelopeTypeDefs.TYPE_NAME);
-  const envelopes = await listEnvelopesForQuery(query);
-  const results = envelopes
-    .map(mapEnvelopeToDataRecord)
-    .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
-    .slice(pagination.skip, pagination.skip + pagination.limit)
-    .map((record) => {
-      const filtered = filterAttributes(record, query.attributesToSelect);
-      if (!Object.prototype.hasOwnProperty.call(filtered, 'EnvelopeId') && record.EnvelopeId) {
-        filtered.EnvelopeId = record.EnvelopeId;
-      }
-      return filtered;
-    });
-
-  return { records: results };
-}
-
-module.exports = {
-  createRecord,
-  patchRecord,
-  searchRecords
-};
+module.exports = createDataIoService({
+  typeName: TYPE_NAME,
+  typeAliases: TYPE_ALIASES,
+  createBackendRecord: createEnvelope,
+  updateBackendRecord: updateEnvelope,
+  listRecords: (query) => listEnvelopes(query),
+  buildPayload: buildEnvelopePayload,
+  buildSearchFilters: buildEnvelopeSearchFilters,
+  idField: 'EnvelopeId',
+  mapRecordToDataRecord: mapEnvelopeToDataRecord,
+  normalizeWriteError: normalizeEnvelopeWriteError
+});

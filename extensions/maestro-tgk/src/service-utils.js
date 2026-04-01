@@ -2,6 +2,35 @@ function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
 }
 
+function normalizeOptionalText(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  return normalized || undefined;
+}
+
+function normalizePhone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object') {
+    return value.number || value.normalizedNumber || value.phone || null;
+  }
+
+  return String(value);
+}
+
 function parseDataValue(value) {
   if (!value) {
     return {};
@@ -25,6 +54,17 @@ function createServiceError(statusCode, code, message) {
   return error;
 }
 
+function collectExtensionFields(input, consumedKeys) {
+  const fields = {};
+  for (const [key, value] of Object.entries(input || {})) {
+    if (consumedKeys.has(key) || value === undefined) {
+      continue;
+    }
+    fields[key] = value;
+  }
+  return fields;
+}
+
 function pickFirstDefined(input, keys) {
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(input, key)) {
@@ -40,6 +80,30 @@ function pickFirstDefined(input, keys) {
   return undefined;
 }
 
+function hasOwnField(input, aliases) {
+  return aliases.some((alias) => Object.prototype.hasOwnProperty.call(input || {}, alias));
+}
+
+function readOptionalTextField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return normalizeOptionalText(pickFirstDefined(input, aliases)) || null;
+}
+
+function readOptionalDataField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return parseDataValue(pickFirstDefined(input, aliases));
+}
+
+function serializeData(value) {
+  return JSON.stringify(asObject(value));
+}
+
 function requireSupportedType(typeName, aliases, canonicalTypeName) {
   if (aliases.has(String(typeName || '').toLowerCase())) {
     return;
@@ -50,8 +114,15 @@ function requireSupportedType(typeName, aliases, canonicalTypeName) {
 
 module.exports = {
   asObject,
+  collectExtensionFields,
   createServiceError,
+  hasOwnField,
+  normalizeOptionalText,
+  normalizePhone,
   parseDataValue,
   pickFirstDefined,
-  requireSupportedType
+  readOptionalDataField,
+  readOptionalTextField,
+  requireSupportedType,
+  serializeData
 };

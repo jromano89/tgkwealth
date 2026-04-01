@@ -178,7 +178,10 @@ function createEnvelopeModalHelpers() {
             (event.eventFields || []).forEach((field) => {
               fields[field.name] = field.value;
             });
-            return fields;
+            return {
+              ...fields,
+              LogTime: fields.LogTime || fields.logTime || ''
+            };
           })
           .filter((fields) => fields.Action);
 

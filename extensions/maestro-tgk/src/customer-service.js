@@ -1,7 +1,15 @@
 const { createCustomer, getCustomer, listCustomers, updateCustomer } = require('./backend-client');
-const { TYPE_ALIASES, TYPE_NAME } = require('./contact-type-definitions');
-const { evaluateOperation, filterAttributes, normalizeSearchRequest } = require('./query-utils');
-const { asObject, createServiceError, parseDataValue, pickFirstDefined, requireSupportedType } = require('./service-utils');
+const { createDataIoService } = require('./dataio-service');
+const { TYPE_ALIASES, TYPE_NAME } = require('./customer-type-definitions');
+const {
+  asObject,
+  collectExtensionFields,
+  normalizeOptionalText,
+  normalizePhone,
+  parseDataValue,
+  pickFirstDefined,
+  serializeData
+} = require('./service-utils');
 
 const STRUCTURED_DATA_KEYS = ['Data', 'data', 'CustomerData', 'customerData', 'Metadata', 'metadata', 'DataJson', 'dataJson'];
 const CONSUMED_INPUT_KEYS = new Set([
@@ -16,46 +24,6 @@ const CONSUMED_INPUT_KEYS = new Set([
   'Status', 'status',
   'Data', 'data', 'CustomerData', 'customerData', 'Metadata', 'metadata', 'DataJson', 'dataJson'
 ]);
-
-function normalizeOptionalText(value) {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  const normalized = String(value).trim();
-  return normalized || undefined;
-}
-
-function normalizePhone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (value === null || value === '') {
-    return null;
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'object') {
-    return value.number || value.normalizedNumber || value.phone || null;
-  }
-
-  return String(value);
-}
-
-function collectExtensionFields(input) {
-  const fields = {};
-  for (const [key, value] of Object.entries(input || {})) {
-    if (CONSUMED_INPUT_KEYS.has(key) || value === undefined) {
-      continue;
-    }
-    fields[key] = value;
-  }
-  return fields;
-}
 
 function buildDisplayName(input, existingCustomer) {
   const explicitDisplayName = normalizeOptionalText(pickFirstDefined(input, ['DisplayName', 'displayName']));
@@ -95,7 +63,7 @@ function buildCustomerData(input, existingData) {
     nextData.lastName = lastName;
   }
 
-  const extensionFields = collectExtensionFields(input);
+  const extensionFields = collectExtensionFields(input, CONSUMED_INPUT_KEYS);
   if (Object.keys(extensionFields).length > 0) {
     nextData.extensionFields = {
       ...asObject(nextData.extensionFields),
@@ -106,18 +74,18 @@ function buildCustomerData(input, existingData) {
   return nextData;
 }
 
-function buildCustomerPayload(rawInput, existingCustomer, requestedId) {
+function buildCustomerPayload(rawInput, { existingRecord, recordId } = {}) {
   const input = asObject(rawInput);
   const payload = {
-    data: buildCustomerData(input, existingCustomer?.data)
+    data: buildCustomerData(input, existingRecord?.data)
   };
 
-  const displayName = buildDisplayName({ ...payload.data, ...input }, existingCustomer);
+  const displayName = buildDisplayName({ ...payload.data, ...input }, existingRecord);
   if (displayName !== undefined) {
     payload.displayName = displayName;
   }
 
-  const id = requestedId || pickFirstDefined(input, ['Id', 'id']);
+  const id = recordId || pickFirstDefined(input, ['Id', 'id']);
   const employeeId = pickFirstDefined(input, ['EmployeeId', 'employeeId']);
   const email = pickFirstDefined(input, ['Email', 'email']);
   const phone = pickFirstDefined(input, ['Phone', 'phone']);
@@ -149,7 +117,6 @@ function buildCustomerPayload(rawInput, existingCustomer, requestedId) {
 function mapCustomerToDataRecord(customer) {
   const data = asObject(customer?.data);
   const extensionFields = asObject(data.extensionFields);
-  const fullName = customer?.display_name || [data.firstName, data.lastName].filter(Boolean).join(' ').trim();
 
   return {
     ...extensionFields,
@@ -162,68 +129,19 @@ function mapCustomerToDataRecord(customer) {
     Phone: customer.phone || '',
     Organization: customer.organization || '',
     Status: customer.status || '',
-    DataJson: JSON.stringify(data || {}),
+    DataJson: serializeData(data),
     CreatedAt: customer.created_at || '',
     UpdatedAt: customer.updated_at || ''
   };
 }
 
-async function createRecord(body) {
-  const data = body?.data;
-  const requestedId = body?.recordId;
-  const typeName = body?.typeName;
-
-  if (!data || !typeName) {
-    throw createServiceError(400, 'BAD_REQUEST', 'data or typeName missing in request');
-  }
-
-  requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
-  const created = await createCustomer(buildCustomerPayload(data, null, requestedId));
-  return { recordId: created.id };
-}
-
-async function patchRecord(body) {
-  const data = body?.data;
-  const typeName = body?.typeName;
-  const recordId = body?.recordId;
-
-  if (!data || !typeName || !recordId) {
-    throw createServiceError(400, 'BAD_REQUEST', 'data, typeName or recordId missing in request');
-  }
-
-  requireSupportedType(typeName, TYPE_ALIASES, TYPE_NAME);
-
-  let existing;
-  try {
-    existing = await getCustomer(recordId);
-  } catch (error) {
-    throw createServiceError(error.statusCode === 404 ? 404 : 500, error.statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR', error.message);
-  }
-
-  await updateCustomer(recordId, buildCustomerPayload(data, existing));
-  return { success: true };
-}
-
-async function searchRecords(body) {
-  const { query, pagination } = normalizeSearchRequest(body);
-
-  if (!query) {
-    throw createServiceError(400, 'BAD_REQUEST', 'Query missing in request');
-  }
-
-  requireSupportedType(query.from || TYPE_NAME, TYPE_ALIASES, TYPE_NAME);
-  const customers = await listCustomers();
-  const results = customers
-    .map(mapCustomerToDataRecord)
-    .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
-    .slice(pagination.skip, pagination.skip + pagination.limit)
-    .map((record) => filterAttributes(record, query.attributesToSelect));
-
-  return { records: results };
-}
-
-module.exports = {
-  createRecord,
-  patchRecord,
-  searchRecords
-};
+module.exports = createDataIoService({
+  typeName: TYPE_NAME,
+  typeAliases: TYPE_ALIASES,
+  createBackendRecord: createCustomer,
+  updateBackendRecord: updateCustomer,
+  listRecords: () => listCustomers(),
+  loadExistingRecord: getCustomer,
+  buildPayload: buildCustomerPayload,
+  mapRecordToDataRecord: mapCustomerToDataRecord
+});

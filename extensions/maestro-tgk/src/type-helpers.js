@@ -45,8 +45,30 @@ function createPropertyDeclaration(field) {
   };
 }
 
+function createConceptTypeDefinitions({ typeName, term, identifiedBy, fields }) {
+  return {
+    declarations: [
+      {
+        $class: mm('ConceptDeclaration'),
+        name: typeName,
+        isAbstract: false,
+        identified: {
+          $class: mm('IdentifiedBy'),
+          name: identifiedBy
+        },
+        decorators: [
+          createDecorator('Term', term),
+          crudDecorator(false)
+        ],
+        properties: fields.map(createPropertyDeclaration)
+      }
+    ]
+  };
+}
+
 module.exports = {
   METAMODEL,
+  createConceptTypeDefinitions,
   mm,
   PROPERTY_CLASS_MAP,
   createDecorator,

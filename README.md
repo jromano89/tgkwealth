@@ -15,7 +15,7 @@ Current reference demo: `tgk-wealth` (advisor + investor portals).
 
 - `backend/src/routes/`: HTTP entrypoints only. Route files should stay thin.
 - `backend/src/database.js`: SQLite schema setup plus targeted legacy migrations.
-- `backend/src/data-store.js`: app-scoped SQLite access for users, contacts, and envelopes.
+- `backend/src/data-store.js`: app-scoped SQLite access for employees, customers, envelopes, and tasks.
 - `backend/src/services/app-data-service.js`: business rules for app data CRUD and tracked envelope updates.
 - `frontends/shared/js/api-client.js`: shared frontend HTTP client.
 - `frontends/shared/js/settings-panel.js`: shared settings state and theme persistence.
@@ -27,18 +27,19 @@ Current reference demo: `tgk-wealth` (advisor + investor portals).
 Current SQLite tables:
 
 - `apps`
-- `users`
-- `contacts`
-- `docusign_connections`
+- `employees`
+- `customers`
 - `envelopes`
+- `tasks`
 
 Canonical model:
 
-- `users`: internal operators such as advisors. Each app gets one default user, `Gordon Gecko`, the first time it is used. Advisor-only tasks can live inside `users.data.tasks`.
-- `contacts`: external people or organizations associated to a user. Frontend-specific account data lives inside `contacts.data.accounts`, and lightweight contact tasks live inside `contacts.data.tasks`.
-- `envelopes`: tracked DocuSign envelopes linked to a contact.
+- `employees`: internal operators such as advisors.
+- `customers`: external people or organizations associated to an employee. Frontend-specific account data lives inside `customers.data.accounts`.
+- `tasks`: first-class app-scoped work items linked optionally to an employee and/or customer.
+- `envelopes`: tracked Docusign envelopes linked optionally to an employee and/or customer.
 
-The backend does not seed demo contacts anymore. New workspaces start with the advisor user only.
+The backend does not auto-seed app data. Use `/api/data/*`, the Maestro extension, or `scripts/seed-demo-api.js` when you want demo employees, customers, tasks, and envelopes.
 
 ## Repository Structure
 
@@ -55,7 +56,7 @@ To add another demo:
 1. Create a new directory under `frontends/`.
 2. Pick an app slug.
 3. Point the frontend at the shared backend.
-4. Create users and contacts through `/api/data/*` or Maestro Data IO.
+4. Create employees and customers through `/api/data/*` or Maestro Data IO, then add tasks and envelopes as needed.
 5. Reuse the existing API contract before changing backend code.
 
 Use `frontends/tgk-wealth/` as the reference implementation.
@@ -141,17 +142,18 @@ Keep out of git:
 ## API Summary
 
 - `/api/auth/*` — Docusign OAuth/JWT
-- `/api/data/*` — users, contacts, tracked envelopes, plus convenience task create/delete helpers
+- `/api/data/*` — employees, customers, envelopes, and tasks
 - `/api/envelopes/*` — Docusign-backed audit history and combined document downloads
 - `/api/webhooks/*` — Docusign Connect sink (discard-only)
 - `/api/proxy` — generic POST-based CORS pass-through
 
-## Creating Contacts
+## Creating Customers
 
 Use the existing API instead of a backend seed step.
 
 ```bash
-curl --request POST 'http://localhost:3000/api/data/contacts?app=tgk-wealth' \
+curl --request POST 'http://localhost:3000/api/data/customers' \
+  --header 'X-Demo-App: tgk-wealth' \
   --header 'Content-Type: application/json' \
   --data '{
     "displayName": "Casey Investor",

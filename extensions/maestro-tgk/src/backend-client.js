@@ -79,29 +79,39 @@ function createMutationRequest(method, pathnameBuilder) {
   };
 }
 
-const createCustomer = createJsonRequest('POST', '/api/data/customers');
-const createEnvelope = createJsonRequest('POST', '/api/data/envelopes');
-const updateCustomer = createMutationRequest('PUT', (id) => `/api/data/customers/${encodeURIComponent(id)}`);
-const updateEnvelope = createMutationRequest('PUT', (id) => `/api/data/envelopes/${encodeURIComponent(id)}`);
-
-function listCustomers() {
-  return request('/api/data/customers');
+function createResourceClient(pathname) {
+  return {
+    create: createJsonRequest('POST', pathname),
+    get(id) {
+      return request(`${pathname}/${encodeURIComponent(id)}`);
+    },
+    list(query) {
+      return request(pathname, { query });
+    },
+    update: createMutationRequest('PUT', (id) => `${pathname}/${encodeURIComponent(id)}`)
+  };
 }
 
-function listEnvelopes(query) {
-  return request('/api/data/envelopes', { query });
-}
-
-function getCustomer(id) {
-  return request(`/api/data/customers/${encodeURIComponent(id)}`);
-}
+const employeeClient = createResourceClient('/api/data/employees');
+const customerClient = createResourceClient('/api/data/customers');
+const envelopeClient = createResourceClient('/api/data/envelopes');
+const taskClient = createResourceClient('/api/data/tasks');
 
 module.exports = {
-  createCustomer,
-  createEnvelope,
-  getCustomer,
-  listCustomers,
-  listEnvelopes,
-  updateCustomer,
-  updateEnvelope
+  createCustomer: customerClient.create,
+  createEmployee: employeeClient.create,
+  createEnvelope: envelopeClient.create,
+  createTask: taskClient.create,
+  getCustomer: customerClient.get,
+  getEmployee: employeeClient.get,
+  getEnvelope: envelopeClient.get,
+  getTask: taskClient.get,
+  listCustomers: customerClient.list,
+  listEmployees: employeeClient.list,
+  listEnvelopes: envelopeClient.list,
+  listTasks: taskClient.list,
+  updateCustomer: customerClient.update,
+  updateEmployee: employeeClient.update,
+  updateEnvelope: envelopeClient.update,
+  updateTask: taskClient.update
 };
