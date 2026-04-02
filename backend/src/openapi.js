@@ -1,4 +1,4 @@
-const API_TITLE = 'Vertical Demo Backend API';
+const API_TITLE = 'Docusign Demo Platform API';
 const API_VERSION = '3.0.0';
 
 function buildOrigin(req) {
@@ -76,12 +76,19 @@ function buildOpenApiDocument(req) {
     info: {
       title: API_TITLE,
       version: API_VERSION,
-      summary: 'CORS-enabled backend for slug-scoped demo data, Docusign auth, outbound proxying, and webhook intake.',
+      summary: 'Reusable CORS-enabled backend for DocuSign IAM demo portals, currently powering TGK Wealth.',
       description: [
+        'Current reference frontend:',
+        '- TGK Wealth is a FINS advisor-and-investor demo for DocuSign Solution Consultants.',
+        '',
+        'Architecture goals:',
+        '- Keep frontend demos static and lightweight.',
+        '- Keep auth, proxying, data storage, and Maestro integration reusable across future vertical demos.',
+        '',
         'Canonical client behavior:',
         '- Send `X-Demo-App` on every app-scoped `/api/auth`, `/api/data`, and `/api/proxy` request.',
         '- Use camelCase in request bodies.',
-        '- Expect persisted records to come back with snake_case field names.',
+        '- Expect persisted records to come back with camelCase field names.',
         '- Records are scoped by app slug, with flexible nullable relationships between employees, customers, envelopes, and tasks.',
         '- Envelopes use the DocuSign envelope ID directly as `id`.',
         '- Use `/api/proxy` for third-party API access that should inherit centralized auth or CORS behavior.'
@@ -93,10 +100,6 @@ function buildOpenApiDocument(req) {
         description: 'Current deployment'
       }
     ],
-    externalDocs: {
-      description: 'LLM-oriented service notes',
-      url: `${origin}/.well-known/llms.txt`
-    },
     tags: [
       { name: 'Health', description: 'Operational readiness and deployment health.' },
       { name: 'Auth', description: 'App-scoped Docusign consent, session introspection, account selection, and logout.' },
@@ -202,7 +205,7 @@ function buildOpenApiDocument(req) {
           operationId: 'listEmployees',
           parameters: [
             demoAppHeader(),
-            parameter('search', 'query', { type: 'string' }, false, 'Searches display_name, email, title, and id.')
+            parameter('search', 'query', { type: 'string' }, false, 'Searches displayName, email, title, and id.')
           ],
           responses: {
             200: arrayResponse('Employee list.', '#/components/schemas/EmployeeRecord'),
@@ -253,7 +256,7 @@ function buildOpenApiDocument(req) {
           operationId: 'listCustomers',
           parameters: [
             demoAppHeader(),
-            parameter('search', 'query', { type: 'string' }, false, 'Searches display_name, email, organization, and id.'),
+            parameter('search', 'query', { type: 'string' }, false, 'Searches displayName, email, organization, and id.'),
             parameter('status', 'query', { type: 'string' }, false, 'Optional customer status filter.'),
             parameter('employeeId', 'query', { type: 'string' }, false, 'Optional employee relationship filter.')
           ],
@@ -482,17 +485,17 @@ function buildOpenApiDocument(req) {
           properties: {
             slug: { type: 'string' },
             data: { type: 'object', additionalProperties: true },
-            docusign_scopes: { type: ['string', 'null'] },
-            docusign_user_id: { type: ['string', 'null'] },
-            docusign_account_id: { type: ['string', 'null'] },
-            docusign_account_name: { type: ['string', 'null'] },
-            docusign_user_name: { type: ['string', 'null'] },
-            docusign_email: { type: ['string', 'null'] },
-            docusign_available_accounts: { type: 'array', items: { type: 'object', additionalProperties: true } },
-            created_at: { type: ['string', 'null'], format: 'date-time' },
-            updated_at: { type: ['string', 'null'], format: 'date-time' }
+            docusignScopes: { type: ['string', 'null'] },
+            docusignUserId: { type: ['string', 'null'] },
+            docusignAccountId: { type: ['string', 'null'] },
+            docusignAccountName: { type: ['string', 'null'] },
+            docusignUserName: { type: ['string', 'null'] },
+            docusignEmail: { type: ['string', 'null'] },
+            docusignAvailableAccounts: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            createdAt: { type: ['string', 'null'], format: 'date-time' },
+            updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },
-          required: ['slug', 'data', 'docusign_available_accounts']
+          required: ['slug', 'data', 'docusignAvailableAccounts']
         },
         AuthSession: {
           type: 'object',
@@ -553,16 +556,16 @@ function buildOpenApiDocument(req) {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            app_slug: { type: 'string' },
-            display_name: { type: ['string', 'null'] },
+            appSlug: { type: 'string' },
+            displayName: { type: ['string', 'null'] },
             email: { type: ['string', 'null'] },
             phone: { type: ['string', 'null'] },
             title: { type: ['string', 'null'] },
             data: { type: 'object', additionalProperties: true },
-            created_at: { type: ['string', 'null'], format: 'date-time' },
-            updated_at: { type: ['string', 'null'], format: 'date-time' }
+            createdAt: { type: ['string', 'null'], format: 'date-time' },
+            updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },
-          required: ['id', 'app_slug', 'data']
+          required: ['id', 'appSlug', 'data']
         },
         EmployeeWriteRequest: {
           type: 'object',
@@ -580,18 +583,18 @@ function buildOpenApiDocument(req) {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            app_slug: { type: 'string' },
-            employee_id: { type: ['string', 'null'] },
-            display_name: { type: ['string', 'null'] },
+            appSlug: { type: 'string' },
+            employeeId: { type: ['string', 'null'] },
+            displayName: { type: ['string', 'null'] },
             email: { type: ['string', 'null'] },
             phone: { type: ['string', 'null'] },
             organization: { type: ['string', 'null'] },
             status: { type: ['string', 'null'] },
             data: { type: 'object', additionalProperties: true },
-            created_at: { type: ['string', 'null'], format: 'date-time' },
-            updated_at: { type: ['string', 'null'], format: 'date-time' }
+            createdAt: { type: ['string', 'null'], format: 'date-time' },
+            updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },
-          required: ['id', 'app_slug', 'data']
+          required: ['id', 'appSlug', 'data']
         },
         CustomerWriteRequest: {
           type: 'object',
@@ -611,16 +614,16 @@ function buildOpenApiDocument(req) {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            app_slug: { type: 'string' },
-            employee_id: { type: ['string', 'null'] },
-            customer_id: { type: ['string', 'null'] },
+            appSlug: { type: 'string' },
+            employeeId: { type: ['string', 'null'] },
+            customerId: { type: ['string', 'null'] },
             status: { type: ['string', 'null'] },
             name: { type: ['string', 'null'] },
             data: { type: 'object', additionalProperties: true },
-            created_at: { type: ['string', 'null'], format: 'date-time' },
-            updated_at: { type: ['string', 'null'], format: 'date-time' }
+            createdAt: { type: ['string', 'null'], format: 'date-time' },
+            updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },
-          required: ['id', 'app_slug', 'data']
+          required: ['id', 'appSlug', 'data']
         },
         EnvelopeWriteRequest: {
           type: 'object',
@@ -638,18 +641,18 @@ function buildOpenApiDocument(req) {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            app_slug: { type: 'string' },
-            employee_id: { type: ['string', 'null'] },
-            customer_id: { type: ['string', 'null'] },
+            appSlug: { type: 'string' },
+            employeeId: { type: ['string', 'null'] },
+            customerId: { type: ['string', 'null'] },
             title: { type: ['string', 'null'] },
             description: { type: ['string', 'null'] },
             status: { type: ['string', 'null'] },
-            due_at: { type: ['string', 'null'], format: 'date-time' },
+            dueAt: { type: ['string', 'null'], format: 'date-time' },
             data: { type: 'object', additionalProperties: true },
-            created_at: { type: ['string', 'null'], format: 'date-time' },
-            updated_at: { type: ['string', 'null'], format: 'date-time' }
+            createdAt: { type: ['string', 'null'], format: 'date-time' },
+            updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },
-          required: ['id', 'app_slug', 'data']
+          required: ['id', 'appSlug', 'data']
         },
         TaskWriteRequest: {
           type: 'object',
@@ -684,112 +687,8 @@ function buildOpenApiDocument(req) {
   };
 }
 
-function buildDocsHtml(req) {
-  const origin = buildOrigin(req);
-  return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>${API_TITLE}</title>
-    <style>
-      :root { color-scheme: light; }
-      * { box-sizing: border-box; }
-      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
-      main { max-width: 960px; margin: 0 auto; padding: 48px 24px 72px; }
-      h1 { margin: 0 0 12px; font-size: 34px; }
-      h2 { margin: 36px 0 12px; font-size: 22px; }
-      p, li { line-height: 1.6; color: #334155; }
-      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-      pre { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 14px; overflow: auto; }
-      .card { background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 20px 22px; margin-top: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
-      .links { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 28px; }
-      .button { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 999px; background: #0f172a; color: white; text-decoration: none; font-weight: 600; }
-      .muted { color: #64748b; }
-      ul { padding-left: 20px; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>${API_TITLE}</h1>
-      <p class="muted">Version ${API_VERSION}</p>
-      <p>Slug-scoped backend for demo records, Docusign auth, outbound proxying, and webhook intake.</p>
-
-      <div class="links">
-        <a class="button" href="/api/openapi.json">OpenAPI JSON</a>
-        <a class="button" href="/.well-known/llms.txt">LLMs.txt</a>
-        <a class="button" href="/api/health">Health</a>
-      </div>
-
-      <div class="card">
-        <h2>Model</h2>
-        <ul>
-          <li><code>apps</code> is keyed by slug and holds both app metadata and DocuSign connection state.</li>
-          <li><code>employees</code>, <code>customers</code>, <code>envelopes</code>, and <code>tasks</code> are first-class app-scoped tables.</li>
-          <li>Relationships are optional. If <code>employeeId</code> or <code>customerId</code> is supplied, it must belong to the same app.</li>
-          <li>Envelope IDs are not generated by the backend. Use the DocuSign envelope ID as <code>envelopes.id</code>.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>Data Endpoints</h2>
-        <pre>curl -s ${origin}/api/data/customers \\
-  -H 'X-Demo-App: tgk-wealth'
-
-curl -s ${origin}/api/data/tasks?customerId=customer-123 \\
-  -H 'X-Demo-App: tgk-wealth'
-
-curl -s ${origin}/api/data/envelopes \\
-  -H 'X-Demo-App: tgk-wealth' \\
-  -H 'Content-Type: application/json' \\
-  -d '{"id":"9f3...","name":"Account Opening Packet","customerId":"customer-123"}'</pre>
-      </div>
-
-      <div class="card">
-        <h2>Auth and Proxy</h2>
-        <p>Docusign consent and account selection are app-scoped under <code>/api/auth/*</code>. Use <code>/api/proxy</code> to call third-party APIs with either a caller-supplied bearer token or the app's saved DocuSign connection.</p>
-      </div>
-    </main>
-  </body>
-</html>`;
-}
-
-function buildLlmsTxt(req) {
-  const origin = buildOrigin(req);
-  return [
-    `# ${API_TITLE}`,
-    '',
-    `Version: ${API_VERSION}`,
-    `Origin: ${origin}`,
-    '',
-    'This service exposes app-scoped demo CRUD plus Docusign auth and proxying.',
-    '',
-    'Core rules:',
-    '- Send X-Demo-App on every app-scoped request.',
-    '- Use camelCase in request bodies and expect snake_case in responses.',
-    '- Data tables: apps, employees, customers, envelopes, tasks.',
-    '- Envelope IDs are the DocuSign envelope IDs.',
-    '- Relationships are optional and nullable.',
-    '',
-    'Endpoints:',
-    `- Health: ${origin}/api/health`,
-    `- Docs: ${origin}/api/docs`,
-    `- OpenAPI: ${origin}/api/openapi.json`,
-    `- Auth: ${origin}/api/auth/*`,
-    `- Data: ${origin}/api/data/*`,
-    `- Proxy: ${origin}/api/proxy`,
-    '',
-    'Data collections:',
-    '- /api/data/employees',
-    '- /api/data/customers',
-    '- /api/data/envelopes',
-    '- /api/data/tasks'
-  ].join('\n');
-}
-
 module.exports = {
   API_TITLE,
   API_VERSION,
-  buildDocsHtml,
-  buildLlmsTxt,
   buildOpenApiDocument
 };

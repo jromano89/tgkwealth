@@ -7,7 +7,7 @@ const {
   getUserInfoFromCode,
   normalizeScopeString,
   readConsentState
-} = require('../services/docusign-auth');
+} = require('../docusign-auth');
 const {
   clearAppConnection,
   createError,

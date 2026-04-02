@@ -2,9 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DB_PATH = process.env.TGK_DB_PATH || path.join(__dirname, '..', 'data', 'demo.db');
-const DB_DIR = path.dirname(DB_PATH);
-
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS apps (
     slug TEXT PRIMARY KEY,
@@ -86,21 +83,51 @@ const SCHEMA = `
 `;
 
 let db;
+let activeDbPath = null;
+
+function getDbPath() {
+  return process.env.TGK_DB_PATH || path.join(__dirname, '..', 'data', 'demo.db');
+}
+
+function initializeDb(dbPath) {
+  const dbDir = path.dirname(dbPath);
+  fs.mkdirSync(dbDir, { recursive: true });
+
+  const nextDb = new Database(dbPath);
+  nextDb.pragma('journal_mode = WAL');
+  nextDb.pragma('foreign_keys = ON');
+  nextDb.exec(SCHEMA);
+
+  return nextDb;
+}
 
 function getDb() {
-  if (db) {
+  const dbPath = getDbPath();
+  if (db && activeDbPath === dbPath) {
     return db;
   }
 
-  fs.mkdirSync(DB_DIR, { recursive: true });
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  db.exec(SCHEMA);
+  if (db) {
+    db.close();
+  }
+
+  db = initializeDb(dbPath);
+  activeDbPath = dbPath;
   return db;
 }
 
+function closeDb() {
+  if (!db) {
+    return;
+  }
+
+  db.close();
+  db = null;
+  activeDbPath = null;
+}
+
 module.exports = {
-  DB_PATH,
-  getDb
+  closeDb,
+  getDb,
+  getDbPath
 };

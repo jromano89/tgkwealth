@@ -1,69 +1,67 @@
 # TGK Demo Platform
 
-Reusable Docusign Intelligent Agreement Management demo platform for Solution Consultants at Docusign.
+TGK Wealth is a financial services demo portal for DocuSign Solution Consultants. It shows how DocuSign IAM can appear in realistic advisor and investor workflows without turning every new demo into another full-stack build.
 
-## Core Ideas
+The current frontend is specific to wealth management. The backend is not. It is intentionally modular, CORS-enabled, and app-scoped so future demo frontends can reuse the same auth, proxying, data, webhook, and Maestro surfaces from their own static sites.
 
-- The backend is shared and app-scoped by slug. One deployed service can support multiple static frontends.
-- Frontends are static HTML with Alpine.js plus project-owned utility and component CSS. There is no build step.
-- The Maestro extension is optional and only needed for realistic writeback demos.
-- This is a demo platform, not a production service. Open cross-origin access, SQLite, and simplified auth are intentional trade-offs.
+## What This Repo Contains
 
-Current reference demo: `tgk-wealth` (advisor + investor portals).
+- `frontend/`: the single static TGK Wealth frontend in this repo
+- `backend/`: the reusable demo backend and SQLite store
+- `scripts/seed-demo-api.js`: optional public-API seed script
+
+This repo intentionally carries one frontend. If a future vertical needs its own experience, it can live in a different repo and still target the same backend contract.
+
+## Current Demo
+
+- Vertical: financial services
+- Scenario: advisor and investor experiences around a private wealth relationship
+- Frontend: two static portals, one for the advisor and one for the investor
+- App slug: `tgk-wealth`
+
+The point of TGK Wealth is not just to demo one workflow. It is to show a believable operating context for IAM: customer onboarding, transfer-related work, documents, tasks, and external data enrichment from both sides of the relationship.
+
+## Why The Project Is Shaped This Way
+
+- The frontend stays static. There is no frontend build step.
+- The backend stays reusable. App state is scoped by slug.
+- The generic services are what matter long term: auth, proxying, CRUD, webhooks, and Maestro.
+- The vertical-specific storytelling belongs in the frontend, seed data, and configuration.
+
+The long-term ambition is simple: if an SC wants a new demo for another vertical, they should mostly need a small static website and some tailored data, not a fresh full-stack app.
 
 ## Architecture
 
-- `backend/src/routes/`: HTTP entrypoints only. Route files should stay thin.
-- `backend/src/database.js`: SQLite schema setup plus targeted legacy migrations.
-- `backend/src/data-store.js`: app-scoped SQLite access for employees, customers, envelopes, and tasks.
-- `backend/src/services/app-data-service.js`: business rules for app data CRUD and tracked envelope updates.
-- `frontends/shared/js/api-client.js`: shared frontend HTTP client.
-- `frontends/shared/js/settings-panel.js`: shared settings state and theme persistence.
-- `frontends/shared/js/shared-ui.js`: shared settings layout and envelope modal UI.
-- `extensions/maestro-tgk/src/backend-client.js`: TGK backend client for the Maestro extension.
+- `frontend/config.js`: the only frontend config file in this repo
+- `frontend/advisor/` and `frontend/investor/`: the two portal entrypoints
+- `frontend/shared/`: shared client code, styles, and UI pieces
+- `backend/src/routes/`: thin HTTP entrypoints
+- `backend/src/resources/`: generic app-scoped resource CRUD and serialization
+- `backend/src/docusign-auth.js`: shared DocuSign auth helpers
+- `backend/src/maestro/`: backend-hosted Maestro manifest and Data IO integration
 
-## Data Model
+Canonical backend rules:
 
-Current SQLite tables:
+- Send `X-Demo-App` on app-scoped requests, or use `?app=<slug>`
+- Use camelCase in API requests and expect camelCase in API responses
+- Treat `employees`, `customers`, `tasks`, and `envelopes` as the reusable platform records
+- Keep vertical-specific details inside `data`
 
-- `apps`
-- `employees`
-- `customers`
-- `envelopes`
-- `tasks`
+Internally, SQL stays snake_case. The API and frontend stay camelCase.
 
-Canonical model:
+## Runtime Model
 
-- `employees`: internal operators such as advisors.
-- `customers`: external people or organizations associated to an employee. Frontend-specific account data lives inside `customers.data.accounts`.
-- `tasks`: first-class app-scoped work items linked optionally to an employee and/or customer.
-- `envelopes`: tracked Docusign envelopes linked optionally to an employee and/or customer.
+- Frontend: static HTML, CSS, and JavaScript
+- Backend: Express + SQLite
+- Auth: DocuSign connection state is stored per app slug
+- Proxy: `/api/proxy` is the generic outbound pass-through
+- Maestro: mounted directly by the backend under `/maestro/*`
 
-The backend does not auto-seed app data. Use `/api/data/*`, the Maestro extension, or `scripts/seed-demo-api.js` when you want demo employees, customers, tasks, and envelopes.
+This is demo infrastructure, not production infrastructure. Open CORS, SQLite, and simplified auth handling are intentional trade-offs.
 
-## Repository Structure
+## Local Development
 
-- `frontends/`: static demo portals
-- `frontends/shared/`: shared scripts, styles, and UI templates
-- `backend/`: shared demo API and SQLite store
-- `extensions/maestro-tgk/`: optional Maestro Data IO service
-- `scripts/`: local utilities for runtime config generation and static serving
-
-## Build a New Frontend
-
-To add another demo:
-
-1. Create a new directory under `frontends/`.
-2. Pick an app slug.
-3. Point the frontend at the shared backend.
-4. Create employees and customers through `/api/data/*` or Maestro Data IO, then add tasks and envelopes as needed.
-5. Reuse the existing API contract before changing backend code.
-
-Use `frontends/tgk-wealth/` as the reference implementation.
-
-## Local Run
-
-1. Install backend deps and create `backend/.env`.
+1. Install backend dependencies and create `backend/.env`.
 
 ```bash
 cd backend
@@ -72,113 +70,106 @@ npm install
 cd ..
 ```
 
-Required backend envs:
+2. Fill in the required DocuSign values in `backend/.env`.
+
+Required:
 
 - `DOCUSIGN_INTEGRATION_KEY`
 - `DOCUSIGN_RSA_PRIVATE_KEY`
 - `DOCUSIGN_SECRET_KEY`
 
-No session secret or cookie config is required. The backend is stateless.
+Common optional values:
 
-2. Start the backend.
+- `TGK_DB_PATH`
+- `DOCUSIGN_OAUTH_BASE`
+- `DOCUSIGN_API_BASE`
+- `MAESTRO_PUBLIC_BASE_URL`
+- `MAESTRO_APP_SLUG`
+- `MAESTRO_CLIENT_ID`
+- `MAESTRO_CLIENT_SECRET`
+- `MAESTRO_ACCESS_TOKEN`
+
+3. Start the backend.
 
 ```bash
 npm run dev:backend
 ```
 
-3. Serve `frontends/`.
+4. Serve the static frontend with any simple file server.
 
 ```bash
-npm run start:frontend
+python3 -m http.server 8080 --directory frontend
 ```
 
-4. Start the Maestro service only when needed.
+5. Open the demo:
+
+- [http://localhost:8080/](http://localhost:8080/)
+- [http://localhost:8080/advisor/](http://localhost:8080/advisor/)
+- [http://localhost:8080/investor/](http://localhost:8080/investor/)
+- [http://localhost:3000/api/health](http://localhost:3000/api/health)
+- [http://localhost:3000/api/openapi.json](http://localhost:3000/api/openapi.json)
+- [http://localhost:3000/maestro/health](http://localhost:3000/maestro/health)
+
+## Frontend Configuration
+
+`frontend/config.js` is the single config surface for the frontend.
+
+It controls:
+
+- `appSlug`
+- `backendUrl`
+- optional `advisorId`
+- workflow IDs
+- role-specific labels and portal names
+
+The file already switches between local and deployed backend URLs based on hostname. Before deployment, replace the placeholder Railway backend URL in `frontend/config.js`.
+
+Advisor details should come from the backend. `advisorId` is only a preferred selector so the UI can pick a known seeded advisor when one exists.
+
+## Backend API Surface
+
+Primary routes:
+
+- `/api/health`
+- `/api/openapi.json`
+- `/api/auth/*`
+- `/api/data/*`
+- `/api/proxy`
+- `/api/webhooks/*`
+- `/maestro/*`
+
+The backend is designed so a future demo frontend can reuse these routes with a new static UI and a different app slug.
+
+## Demo Data And Seeding
+
+The backend does not auto-seed data.
+
+If you want a populated TGK Wealth environment, use the optional seed script:
 
 ```bash
-npm run start:maestro-extension
+node scripts/seed-demo-api.js
 ```
 
-5. Run the shared JavaScript syntax check when you change backend, frontend, or extension code.
+Optional envs:
 
-```bash
-npm run check
-```
+- `TGK_SEED_BASE_URL`
+- `TGK_SEED_APP_SLUG`
 
-Local URLs:
+The seed script only uses public backend APIs. It does not write to the database directly.
 
-- backend: [http://localhost:3000](http://localhost:3000)
-- advisor: [http://localhost:5500/tgk-wealth/advisor/](http://localhost:5500/tgk-wealth/advisor/)
-- investor: [http://localhost:5500/tgk-wealth/investor/](http://localhost:5500/tgk-wealth/investor/)
-- Maestro health: [http://localhost:3300/health](http://localhost:3300/health)
+## Working Notes
 
-## Runtime Notes
+- Keep route files thin.
+- Prefer extending shared backend behavior over adding TGK-only backend logic.
+- Keep the frontend static unless there is a strong reason not to.
+- If a future demo needs its own frontend, build it outside this repo unless it is replacing TGK Wealth here.
 
-- Frontends stay static.
-- Docusign is connected per app, not per browser.
-- The backend does not use cookie sessions.
-- Runtime frontend config is generated into `frontends/<vertical>/runtime-config.js`.
-- `npm run build:frontend-config` is for deploy-time config generation.
-- SQLite is the demo store, and the backend applies the current lean CRM schema plus a small set of targeted legacy migrations on startup.
+## Deployment Shape
 
-## Deploy Notes
-
-Recommended shape:
+The intended deployment is simple:
 
 - one static frontend host
 - one backend service
-- one Maestro service when needed
-- one persistent volume for SQLite
+- one persistent SQLite volume
 
-Useful envs:
-
-- backend: `TGK_DB_PATH`
-- frontend: `TGK_FRONTEND_BACKEND_URL`
-- Maestro: `TGK_BACKEND_URL`
-
-Keep out of git:
-
-- `backend/.env`
-
-## API Summary
-
-- `/api/auth/*` — Docusign OAuth/JWT
-- `/api/data/*` — employees, customers, envelopes, and tasks
-- `/api/envelopes/*` — Docusign-backed audit history and combined document downloads
-- `/api/webhooks/*` — Docusign Connect sink (discard-only)
-- `/api/proxy` — generic POST-based CORS pass-through
-
-## Creating Customers
-
-Use the existing API instead of a backend seed step.
-
-```bash
-curl --request POST 'http://localhost:3000/api/data/customers' \
-  --header 'X-Demo-App: tgk-wealth' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "displayName": "Casey Investor",
-    "email": "casey@example.com",
-    "phone": "(555) 555-0112",
-    "organization": "Northwind Family Office",
-    "data": {
-      "firstName": "Casey",
-      "lastName": "Investor",
-      "contactType": "investor",
-      "riskProfile": "Balanced",
-      "value": 1250000,
-      "netWorth": 3800000,
-      "accounts": [
-        {
-          "name": "Individual Brokerage",
-          "accountType": "Taxable",
-          "typeCode": "type-a",
-          "value": 1250000,
-          "allocEquity": 62,
-          "allocFixed": 24,
-          "allocAlt": 8,
-          "allocCash": 6
-        }
-      ]
-    }
-  }'
-```
+That shape is enough for the current TGK Wealth demo and keeps the path clear for future reusable demo frontends.

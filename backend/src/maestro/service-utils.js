@@ -1,0 +1,145 @@
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {};
+}
+
+function normalizeOptionalText(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  return normalized || undefined;
+}
+
+function normalizePhone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object') {
+    return value.number || value.normalizedNumber || value.phone || null;
+  }
+
+  return String(value);
+}
+
+function parseDataValue(value) {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === 'string') {
+    try {
+      return asObject(JSON.parse(value));
+    } catch (error) {
+      return {};
+    }
+  }
+
+  return asObject(value);
+}
+
+function createServiceError(statusCode, code, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
+}
+
+function collectExtensionFields(input, consumedKeys) {
+  const fields = {};
+  for (const [key, value] of Object.entries(input || {})) {
+    if (consumedKeys.has(key) || value === undefined) {
+      continue;
+    }
+    fields[key] = value;
+  }
+  return fields;
+}
+
+function pickFirstDefined(input, keys) {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(input, key)) {
+      continue;
+    }
+
+    const value = input[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function hasOwnField(input, aliases) {
+  return aliases.some((alias) => Object.prototype.hasOwnProperty.call(input || {}, alias));
+}
+
+function readOptionalTextField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return normalizeOptionalText(pickFirstDefined(input, aliases)) || null;
+}
+
+function readOptionalDataField(input, aliases) {
+  if (!hasOwnField(input, aliases)) {
+    return undefined;
+  }
+
+  return parseDataValue(pickFirstDefined(input, aliases));
+}
+
+function serializeData(value) {
+  return JSON.stringify(asObject(value));
+}
+
+function readRecordValue(record, camelKey, snakeKey) {
+  if (!record || typeof record !== 'object') {
+    return undefined;
+  }
+
+  if (camelKey && Object.prototype.hasOwnProperty.call(record, camelKey)) {
+    return record[camelKey];
+  }
+
+  if (snakeKey && Object.prototype.hasOwnProperty.call(record, snakeKey)) {
+    return record[snakeKey];
+  }
+
+  return undefined;
+}
+
+function requireSupportedType(typeName, aliases, canonicalTypeName) {
+  if (aliases.has(String(typeName || '').toLowerCase())) {
+    return;
+  }
+
+  throw createServiceError(400, 'BAD_REQUEST', `Unsupported typeName "${typeName}". Use "${canonicalTypeName}".`);
+}
+
+module.exports = {
+  asObject,
+  collectExtensionFields,
+  createServiceError,
+  hasOwnField,
+  normalizeOptionalText,
+  normalizePhone,
+  parseDataValue,
+  pickFirstDefined,
+  readOptionalDataField,
+  readRecordValue,
+  readOptionalTextField,
+  requireSupportedType,
+  serializeData
+};

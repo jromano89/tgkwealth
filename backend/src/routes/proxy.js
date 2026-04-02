@@ -1,6 +1,6 @@
 const express = require('express');
 const { getDb } = require('../database');
-const { getAccessToken } = require('../services/docusign-auth');
+const { getAccessToken } = require('../docusign-auth');
 const {
   createError,
   getRequiredApp,
