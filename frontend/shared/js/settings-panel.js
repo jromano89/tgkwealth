@@ -24,7 +24,7 @@ const TGK_DEMO_DEFAULTS = {
     brandColor: '#3b5bdb'
   },
   config: {
-    accountOpeningWorkflowId: TGK_CONFIG_DEFAULTS.accountOpeningId || '8a7bbe6b-badc-4413-818b-2e92868de402',
+    accountOpeningWorkflowId: TGK_CONFIG_DEFAULTS.accountOpeningId || 'e26e565e-fb6a-433b-b004-bd2083c8963b',
     assetTransferWorkflowId: TGK_CONFIG_DEFAULTS.assetTransferId || 'b59acbee-8052-403a-a752-c04287ad6ee1',
     accountOpeningIdVerification: false,
     assetTransferIdVerification: false

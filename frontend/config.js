@@ -12,7 +12,7 @@
     docusignIamBaseUrl: 'https://api-d.docusign.com',
     advisorId: '4871abfa-8868-4501-b068-5936c6363e6b',
     workflows: {
-      accountOpeningId: '8a7bbe6b-badc-4413-818b-2e92868de402',
+      accountOpeningId: 'e26e565e-fb6a-433b-b004-bd2083c8963b',
       assetTransferId: 'b59acbee-8052-403a-a752-c04287ad6ee1'
     }
   };
