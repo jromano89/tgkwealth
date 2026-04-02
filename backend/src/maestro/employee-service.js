@@ -1,4 +1,4 @@
-const { createEmployee, getEmployee, listEmployees, updateEmployee } = require('./resource-client');
+const { createEmployee, getEmployee, getEmployeeById, listEmployees, updateEmployee } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./employee-type-definitions');
 const {
@@ -15,6 +15,7 @@ const {
 const STRUCTURED_DATA_KEYS = ['Data', 'data', 'EmployeeData', 'employeeData', 'Metadata', 'metadata', 'DataJson', 'dataJson'];
 const CONSUMED_INPUT_KEYS = new Set([
   'Id', 'id',
+  'AppSlug', 'appSlug',
   'DisplayName', 'displayName',
   'FirstName', 'firstName',
   'LastName', 'lastName',
@@ -112,6 +113,7 @@ function mapEmployeeToDataRecord(employee) {
   return {
     ...extensionFields,
     Id: employee.id,
+    AppSlug: readRecordValue(employee, 'appSlug', 'app_slug') || '',
     DisplayName: readRecordValue(employee, 'displayName', 'display_name') || '',
     FirstName: data.firstName || '',
     LastName: data.lastName || '',
@@ -127,10 +129,11 @@ function mapEmployeeToDataRecord(employee) {
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: createEmployee,
-  updateBackendRecord: updateEmployee,
-  listRecords: (query) => listEmployees(query),
-  loadExistingRecord: getEmployee,
+  createBackendRecord: (appSlug, payload) => createEmployee(appSlug, payload),
+  updateBackendRecord: (appSlug, recordId, payload) => updateEmployee(appSlug, recordId, payload),
+  listRecords: (appSlug, query) => listEmployees(appSlug, query),
+  loadExistingRecord: (appSlug, recordId) => getEmployee(appSlug, recordId),
+  loadExistingRecordById: (recordId) => getEmployeeById(recordId),
   buildPayload: buildEmployeePayload,
   mapRecordToDataRecord: mapEmployeeToDataRecord
 });

@@ -13,6 +13,7 @@ const TYPE_NAMES = [
 
 const FIELD_DEFINITIONS = [
   { name: 'Id', label: 'Task ID', type: 'String', optional: false, readableOnly: true },
+  { name: 'AppSlug', label: 'App Slug', type: 'String', optional: false },
   { name: 'EmployeeId', label: 'Employee ID', type: 'String', optional: true },
   { name: 'CustomerId', label: 'Customer ID', type: 'String', optional: true },
   { name: 'Title', label: 'Title', type: 'String', optional: true },

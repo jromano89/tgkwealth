@@ -1,7 +1,7 @@
-const { createTask, listTasks, updateTask } = require('./resource-client');
+const { createTask, getTaskById, listTasks, updateTask } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./task-type-definitions');
-const { getLiteralComparisonValue } = require('./query-utils');
+const { getLiteralComparisonValue, getQueryOperation } = require('./query-utils');
 const {
   asObject,
   createServiceError,
@@ -36,6 +36,7 @@ function buildTaskPayload(rawInput, { recordId } = {}) {
 function mapTaskToDataRecord(task) {
   return {
     Id: task.id,
+    AppSlug: readRecordValue(task, 'appSlug', 'app_slug') || '',
     EmployeeId: readRecordValue(task, 'employeeId', 'employee_id') || '',
     CustomerId: readRecordValue(task, 'customerId', 'customer_id') || '',
     Title: task.title || '',
@@ -49,7 +50,7 @@ function mapTaskToDataRecord(task) {
 }
 
 function buildTaskSearchFilters(query) {
-  const operation = query?.queryFilter?.operation;
+  const operation = getQueryOperation(query);
   const filters = {
     id: getLiteralComparisonValue(operation, 'Id') || getLiteralComparisonValue(operation, 'TaskId'),
     customerId: getLiteralComparisonValue(operation, 'CustomerId'),
@@ -87,11 +88,13 @@ function normalizeTaskWriteError(error) {
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: createTask,
-  updateBackendRecord: updateTask,
-  listRecords: (query) => listTasks(query),
+  createBackendRecord: (appSlug, payload) => createTask(appSlug, payload),
+  updateBackendRecord: (appSlug, recordId, payload) => updateTask(appSlug, recordId, payload),
+  listRecords: (appSlug, query) => listTasks(appSlug, query),
   buildPayload: buildTaskPayload,
   buildSearchFilters: buildTaskSearchFilters,
+  searchIdFields: ['Id', 'TaskId'],
+  loadExistingRecordById: (recordId) => getTaskById(recordId),
   mapRecordToDataRecord: mapTaskToDataRecord,
   normalizeWriteError: normalizeTaskWriteError
 });

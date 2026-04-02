@@ -337,6 +337,16 @@ function getRecordForApp(db, appSlug, resourceKey, recordId) {
   return serializeRecord(store.requireRecord(db, resource.table, appSlug, recordId, resource.label));
 }
 
+function getRecordById(db, resourceKey, recordId) {
+  const resource = getResourceDefinition(resourceKey);
+  const record = store.getRecordById(db, resource.table, recordId);
+  if (!record) {
+    throw createError(404, `${resource.label} not found`);
+  }
+
+  return serializeRecord(record);
+}
+
 function createRecordForApp(db, appSlug, resourceKey, input = {}) {
   const resource = getResourceDefinition(resourceKey);
   const record = resource.normalizeWrite({ db, appSlug, existingRecord: null, input });
@@ -377,6 +387,7 @@ module.exports = {
   RESOURCE_DEFINITIONS,
   createRecordForApp,
   deleteRecordForApp,
+  getRecordById,
   getRecordForApp,
   getResourceDefinition,
   listRecordsForApp,

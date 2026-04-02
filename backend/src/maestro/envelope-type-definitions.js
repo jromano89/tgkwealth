@@ -13,6 +13,7 @@ const TYPE_NAMES = [
 
 const FIELD_DEFINITIONS = [
   { name: 'EnvelopeId', label: 'Envelope ID', type: 'String', optional: false },
+  { name: 'AppSlug', label: 'App Slug', type: 'String', optional: false },
   { name: 'Name', label: 'Envelope Name', type: 'String', optional: true },
   { name: 'Status', label: 'Status', type: 'String', optional: true },
   { name: 'CustomerId', label: 'Customer ID', type: 'String', optional: true },

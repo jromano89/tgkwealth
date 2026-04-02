@@ -1,7 +1,7 @@
-const { createEnvelope, listEnvelopes, updateEnvelope } = require('./resource-client');
+const { createEnvelope, getEnvelopeById, listEnvelopes, updateEnvelope } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./envelope-type-definitions');
-const { getLiteralComparisonValue } = require('./query-utils');
+const { getLiteralComparisonValue, getQueryOperation } = require('./query-utils');
 const {
   asObject,
   createServiceError,
@@ -38,6 +38,7 @@ function buildEnvelopePayload(rawInput, { recordId } = {}) {
 function mapEnvelopeToDataRecord(envelope) {
   return {
     EnvelopeId: envelope.id,
+    AppSlug: readRecordValue(envelope, 'appSlug', 'app_slug') || '',
     Name: envelope.name || '',
     Status: envelope.status || '',
     CustomerId: readRecordValue(envelope, 'customerId', 'customer_id') || '',
@@ -49,7 +50,7 @@ function mapEnvelopeToDataRecord(envelope) {
 }
 
 function buildEnvelopeSearchFilters(query) {
-  const operation = query?.queryFilter?.operation;
+  const operation = getQueryOperation(query);
   const filters = {
     id: getLiteralComparisonValue(operation, 'EnvelopeId') || getLiteralComparisonValue(operation, 'Id'),
     customerId: getLiteralComparisonValue(operation, 'CustomerId'),
@@ -87,12 +88,14 @@ function normalizeEnvelopeWriteError(error) {
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: createEnvelope,
-  updateBackendRecord: updateEnvelope,
-  listRecords: (query) => listEnvelopes(query),
+  createBackendRecord: (appSlug, payload) => createEnvelope(appSlug, payload),
+  updateBackendRecord: (appSlug, recordId, payload) => updateEnvelope(appSlug, recordId, payload),
+  listRecords: (appSlug, query) => listEnvelopes(appSlug, query),
   buildPayload: buildEnvelopePayload,
   buildSearchFilters: buildEnvelopeSearchFilters,
   idField: 'EnvelopeId',
+  searchIdFields: ['EnvelopeId', 'Id'],
+  loadExistingRecordById: (recordId) => getEnvelopeById(recordId),
   mapRecordToDataRecord: mapEnvelopeToDataRecord,
   normalizeWriteError: normalizeEnvelopeWriteError
 });

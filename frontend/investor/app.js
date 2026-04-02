@@ -206,6 +206,7 @@ function investorApp() {
         payload.customerEmail = customerEmail;
       }
 
+      payload.appSlug = window.TGK_CONFIG?.appSlug;
       payload.idv = window.TGK_DEMO?.config?.assetTransferIdVerification ? 'true' : 'false';
 
       return payload;

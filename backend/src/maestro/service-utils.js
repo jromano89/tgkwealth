@@ -120,6 +120,32 @@ function readRecordValue(record, camelKey, snakeKey) {
   return undefined;
 }
 
+function requireAppSlug(value) {
+  const appSlug = normalizeOptionalText(value);
+  if (!appSlug) {
+    throw createServiceError(400, 'BAD_REQUEST', 'AppSlug is required.');
+  }
+
+  return appSlug;
+}
+
+function resolveRequestAppSlug(body, data, operation) {
+  const requestedFromData = pickFirstDefined(data, ['AppSlug', 'appSlug']);
+  const requestedFromBody = pickFirstDefined(body, ['appSlug', 'AppSlug']);
+  const requestedFromQuery = pickFirstDefined(body?.query || {}, ['appSlug', 'AppSlug']);
+
+  const appSlug = requestedFromData || requestedFromBody || requestedFromQuery;
+  if (!appSlug) {
+    throw createServiceError(
+      400,
+      'BAD_REQUEST',
+      `${operation} requires AppSlug in the Maestro payload.`
+    );
+  }
+
+  return requireAppSlug(appSlug);
+}
+
 function requireSupportedType(typeName, aliases, canonicalTypeName) {
   if (aliases.has(String(typeName || '').toLowerCase())) {
     return;
@@ -137,9 +163,11 @@ module.exports = {
   normalizePhone,
   parseDataValue,
   pickFirstDefined,
+  requireAppSlug,
   readOptionalDataField,
   readRecordValue,
   readOptionalTextField,
+  resolveRequestAppSlug,
   requireSupportedType,
   serializeData
 };

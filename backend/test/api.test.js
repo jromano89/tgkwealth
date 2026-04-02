@@ -219,7 +219,6 @@ test('maestro endpoints are served from the backend', async () => {
     assert.equal(health.response.status, 200);
     assert.equal(health.payload.status, 'ok');
     assert.equal(health.payload.mode, 'in-process');
-    assert.equal(health.payload.appSlug, 'tgk-wealth');
 
     const token = await server.request('/maestro/oauth/token', {
       method: 'POST',
@@ -240,7 +239,7 @@ test('maestro endpoints are served from the backend', async () => {
   }
 });
 
-test('maestro dataio uses direct in-process record operations', async () => {
+test('maestro dataio requires AppSlug in the payload', async () => {
   const server = await startServer();
 
   try {
@@ -255,16 +254,104 @@ test('maestro dataio uses direct in-process record operations', async () => {
         recordId: 'emp-maestro',
         data: {
           FirstName: 'Gordon',
+          LastName: 'Gecko'
+        }
+      })
+    });
+
+    assert.equal(created.response.status, 400);
+    assert.match(String(created.payload.message || created.payload.error || ''), /AppSlug/i);
+  } finally {
+    await server.cleanup();
+  }
+});
+
+test('maestro dataio uses direct in-process record operations with request-scoped app slugs', async () => {
+  const server = await startServer();
+
+  try {
+    const createdAlpha = await server.request('/maestro/api/dataio/createRecord', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAESTRO_BEARER_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        typeName: 'Employee',
+        recordId: 'emp-alpha',
+        data: {
+          AppSlug: 'alpha',
+          FirstName: 'Gordon',
           LastName: 'Gecko',
           Email: 'g.gecko@tgkwealth.com'
         }
       })
     });
 
-    assert.equal(created.response.status, 200);
-    assert.equal(created.payload.recordId, 'emp-maestro');
+    const createdBeta = await server.request('/maestro/api/dataio/createRecord', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAESTRO_BEARER_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        typeName: 'Employee',
+        recordId: 'emp-beta',
+        data: {
+          AppSlug: 'beta',
+          FirstName: 'Serena',
+          LastName: 'Blake',
+          Email: 's.blake@tgkwealth.com'
+        }
+      })
+    });
 
-    const search = await server.request('/maestro/api/dataio/searchRecords', {
+    assert.equal(createdAlpha.response.status, 200);
+    assert.equal(createdAlpha.payload.recordId, 'emp-alpha');
+    assert.equal(createdBeta.response.status, 200);
+    assert.equal(createdBeta.payload.recordId, 'emp-beta');
+
+    const searchAlpha = await server.request('/maestro/api/dataio/searchRecords', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAESTRO_BEARER_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        appSlug: 'alpha',
+        query: {
+          from: 'Employee'
+        }
+      })
+    });
+
+    const searchBeta = await server.request('/maestro/api/dataio/searchRecords', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAESTRO_BEARER_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        appSlug: 'beta',
+        query: {
+          from: 'Employee'
+        }
+      })
+    });
+
+    assert.equal(searchAlpha.response.status, 200);
+    assert.equal(searchAlpha.payload.records.length, 1);
+    assert.equal(searchAlpha.payload.records[0].Id, 'emp-alpha');
+    assert.equal(searchAlpha.payload.records[0].DisplayName, 'Gordon Gecko');
+    assert.equal(searchAlpha.payload.records[0].AppSlug, 'alpha');
+
+    assert.equal(searchBeta.response.status, 200);
+    assert.equal(searchBeta.payload.records.length, 1);
+    assert.equal(searchBeta.payload.records[0].Id, 'emp-beta');
+    assert.equal(searchBeta.payload.records[0].DisplayName, 'Serena Blake');
+    assert.equal(searchBeta.payload.records[0].AppSlug, 'beta');
+
+    const exactSearch = await server.request('/maestro/api/dataio/searchRecords', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${MAESTRO_BEARER_TOKEN}`,
@@ -276,16 +363,16 @@ test('maestro dataio uses direct in-process record operations', async () => {
           queryFilter: {
             operator: 'EQUALS',
             leftOperand: { name: 'Id', isLiteral: false },
-            rightOperand: { name: 'emp-maestro', isLiteral: true }
+            rightOperand: { name: 'emp-beta', isLiteral: true }
           }
         }
       })
     });
 
-    assert.equal(search.response.status, 200);
-    assert.equal(search.payload.records.length, 1);
-    assert.equal(search.payload.records[0].Id, 'emp-maestro');
-    assert.equal(search.payload.records[0].DisplayName, 'Gordon Gecko');
+    assert.equal(exactSearch.response.status, 200);
+    assert.equal(exactSearch.payload.records.length, 1);
+    assert.equal(exactSearch.payload.records[0].Id, 'emp-beta');
+    assert.equal(exactSearch.payload.records[0].AppSlug, 'beta');
   } finally {
     await server.cleanup();
   }

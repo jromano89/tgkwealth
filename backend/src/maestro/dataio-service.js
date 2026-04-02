@@ -1,5 +1,5 @@
-const { evaluateOperation, filterAttributes, normalizeSearchRequest } = require('./query-utils');
-const { createServiceError, requireSupportedType } = require('./service-utils');
+const { evaluateOperation, filterAttributes, getLiteralComparisonValue, getQueryOperation, normalizeSearchRequest } = require('./query-utils');
+const { createServiceError, pickFirstDefined, requireSupportedType, resolveRequestAppSlug } = require('./service-utils');
 
 function wrapLookupError(error) {
   return createServiceError(
@@ -19,13 +19,16 @@ function createDataIoService({
   buildPayload,
   buildSearchFilters,
   idField = 'Id',
+  searchIdFields = [idField],
   loadExistingRecord,
+  loadExistingRecordById,
   normalizeWriteError = (error) => error
 }) {
   async function createRecord(body) {
     const data = body?.data;
     const requestedId = body?.recordId;
     const requestedTypeName = body?.typeName;
+    const appSlug = resolveRequestAppSlug(body, data, 'createRecord');
 
     if (!data || !requestedTypeName) {
       throw createServiceError(400, 'BAD_REQUEST', 'data or typeName missing in request');
@@ -38,7 +41,7 @@ function createDataIoService({
       if (requestedId && payload.id === undefined) {
         payload.id = requestedId;
       }
-      const created = await createBackendRecord(payload);
+      const created = await createBackendRecord(appSlug, payload);
       return { recordId: created.id };
     } catch (error) {
       throw normalizeWriteError(error);
@@ -57,16 +60,30 @@ function createDataIoService({
     requireSupportedType(requestedTypeName, typeAliases, typeName);
 
     let existingRecord = null;
-    if (loadExistingRecord) {
+    let appSlug = null;
+    if (loadExistingRecordById) {
       try {
-        existingRecord = await loadExistingRecord(recordId);
-      } catch (error) {
-        throw wrapLookupError(error);
+        existingRecord = await loadExistingRecordById(recordId);
+        appSlug = existingRecord?.appSlug || null;
+      } catch (lookupError) {
+        throw wrapLookupError(lookupError);
+      }
+    } else {
+      appSlug = resolveRequestAppSlug(body, data, 'patchRecord');
+    }
+
+    if (loadExistingRecord) {
+      if (!existingRecord) {
+        try {
+          existingRecord = await loadExistingRecord(appSlug, recordId);
+        } catch (error) {
+          throw wrapLookupError(error);
+        }
       }
     }
 
     try {
-      await updateBackendRecord(recordId, buildPayload(data, { existingRecord, recordId }));
+      await updateBackendRecord(appSlug, recordId, buildPayload(data, { existingRecord, recordId }));
       return { success: true };
     } catch (error) {
       throw normalizeWriteError(error);
@@ -81,12 +98,16 @@ function createDataIoService({
     }
 
     requireSupportedType(query.from || typeName, typeAliases, typeName);
-
-    const records = await listRecords(buildSearchFilters ? buildSearchFilters(query) : undefined);
+    const appSlug = resolveSearchAppSlug(body, query);
+    const operation = getQueryOperation(query);
+    const exactRecordId = getExactRecordId(operation, searchIdFields);
+    const records = appSlug
+      ? await listRecords(appSlug, buildSearchFilters ? buildSearchFilters(query) : undefined)
+      : await loadRecordsById(exactRecordId);
     return {
       records: records
         .map(mapRecordToDataRecord)
-        .filter((record) => evaluateOperation(record, query.queryFilter?.operation))
+        .filter((record) => evaluateOperation(record, operation))
         .slice(pagination.skip, pagination.skip + pagination.limit)
         .map((record) => {
           const filtered = filterAttributes(record, query.attributesToSelect);
@@ -98,11 +119,45 @@ function createDataIoService({
     };
   }
 
+  async function loadRecordsById(recordId) {
+    if (!recordId || !loadExistingRecordById) {
+      throw createServiceError(400, 'BAD_REQUEST', 'searchRecords requires AppSlug unless the query matches an exact record id.');
+    }
+
+    try {
+      const record = await loadExistingRecordById(recordId);
+      return record ? [record] : [];
+    } catch (error) {
+      if (error?.statusCode === 404) {
+        return [];
+      }
+      throw wrapLookupError(error);
+    }
+  }
+
   return {
     createRecord,
     patchRecord,
     searchRecords
   };
+}
+
+function resolveSearchAppSlug(body, query) {
+  const fromBody = pickFirstDefined(body || {}, ['appSlug', 'AppSlug'])
+    || pickFirstDefined(body?.query || {}, ['appSlug', 'AppSlug']);
+  const appSlugFromFilter = getLiteralComparisonValue(getQueryOperation(query), 'AppSlug');
+  return fromBody || appSlugFromFilter || null;
+}
+
+function getExactRecordId(operation, searchIdFields) {
+  for (const fieldName of searchIdFields) {
+    const value = getLiteralComparisonValue(operation, fieldName);
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 module.exports = {

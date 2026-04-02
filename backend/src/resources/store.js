@@ -80,6 +80,12 @@ function getRecord(db, table, appSlug, recordId, parser = parseRecord) {
   );
 }
 
+function getRecordById(db, table, recordId, parser = parseRecord) {
+  return parser(
+    db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(recordId)
+  );
+}
+
 function requireRecord(db, table, appSlug, recordId, label, parser = parseRecord) {
   const record = getRecord(db, table, appSlug, recordId, parser);
   if (!record) {
@@ -156,6 +162,7 @@ module.exports = {
   ensureAppBelongsToDb,
   ensureRecordBelongsToApp,
   getRecord,
+  getRecordById,
   listRecords,
   parseRecord,
   requireRecord,

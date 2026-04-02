@@ -23,35 +23,48 @@ function trimTrailingSlash(value) {
   return String(value || '').replace(/\/+$/, '');
 }
 
-function getMaestroAppSlug() {
-  return String(config.tgkAppSlug || 'tgk-wealth').trim() || 'tgk-wealth';
+function requireAppSlug(appSlug) {
+  const normalized = String(appSlug || '').trim();
+  if (!normalized) {
+    const error = new Error('Maestro requests must include appSlug.');
+    error.statusCode = 400;
+    error.code = 'BAD_REQUEST';
+    throw error;
+  }
+
+  return normalized;
 }
 
-function ensureMaestroApp(db) {
-  return upsertApp(db, { slug: getMaestroAppSlug() });
+function ensureMaestroApp(db, appSlug) {
+  return upsertApp(db, { slug: requireAppSlug(appSlug) });
 }
 
 function createResourceAccess(resourceKey) {
   return {
-    create(payload) {
+    create(appSlug, payload) {
       const db = getDb();
-      ensureMaestroApp(db);
-      return resourceService.createRecordForApp(db, getMaestroAppSlug(), resourceKey, payload);
+      const resolvedAppSlug = requireAppSlug(appSlug);
+      ensureMaestroApp(db, resolvedAppSlug);
+      return resourceService.createRecordForApp(db, resolvedAppSlug, resourceKey, payload);
     },
-    get(recordId) {
+    get(appSlug, recordId) {
       const db = getDb();
-      ensureMaestroApp(db);
-      return resourceService.getRecordForApp(db, getMaestroAppSlug(), resourceKey, recordId);
+      if (appSlug) {
+        return resourceService.getRecordForApp(db, requireAppSlug(appSlug), resourceKey, recordId);
+      }
+
+      return resourceService.getRecordById(db, resourceKey, recordId);
     },
-    list(filters) {
+    list(appSlug, filters) {
       const db = getDb();
-      ensureMaestroApp(db);
-      return resourceService.listRecordsForApp(db, getMaestroAppSlug(), resourceKey, filters || {});
+      return resourceService.listRecordsForApp(db, requireAppSlug(appSlug), resourceKey, filters || {});
     },
-    update(recordId, payload) {
+    update(appSlug, recordId, payload) {
       const db = getDb();
-      ensureMaestroApp(db);
-      return resourceService.updateRecordForApp(db, getMaestroAppSlug(), resourceKey, recordId, payload);
+      const resolvedAppSlug = appSlug
+        ? requireAppSlug(appSlug)
+        : resourceService.getRecordById(db, resourceKey, recordId).appSlug;
+      return resourceService.updateRecordForApp(db, resolvedAppSlug, resourceKey, recordId, payload);
     }
   };
 }
@@ -181,8 +194,7 @@ router.get('/', route((req, res) => {
 router.get('/health', route((req, res) => {
   res.json({
     status: 'ok',
-    mode: 'in-process',
-    appSlug: getMaestroAppSlug()
+    mode: 'in-process'
   });
 }));
 

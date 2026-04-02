@@ -4,7 +4,6 @@ function trimTrailingSlash(value) {
 
 const config = {
   publicBaseUrl: trimTrailingSlash(process.env.MAESTRO_PUBLIC_BASE_URL || process.env.MAESTRO_EXTENSION_PUBLIC_URL || ''),
-  tgkAppSlug: process.env.MAESTRO_APP_SLUG || process.env.TGK_APP_SLUG || 'tgk-wealth',
   oauthClientId: process.env.MAESTRO_CLIENT_ID || process.env.MAESTRO_EXTENSION_CLIENT_ID || 'tgk-maestro-demo-client',
   oauthClientSecret: process.env.MAESTRO_CLIENT_SECRET || process.env.MAESTRO_EXTENSION_CLIENT_SECRET || 'tgk-maestro-demo-secret',
   oauthAccessToken: process.env.MAESTRO_ACCESS_TOKEN || process.env.MAESTRO_EXTENSION_ACCESS_TOKEN || 'tgk-maestro-demo-token',

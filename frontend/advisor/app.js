@@ -328,6 +328,7 @@ function advisorApp() {
         const result = await TGK_API.triggerMaestroWorkflow(this.maestroWorkflowId, {
           instance_name: `TGK Wealth Account Opening ${new Date().toISOString()}`,
           trigger_inputs: {
+            appSlug: window.TGK_CONFIG?.appSlug,
             idv: this.getAccountOpeningIdvValue()
           }
         });

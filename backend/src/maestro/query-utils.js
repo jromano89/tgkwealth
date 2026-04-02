@@ -50,6 +50,10 @@ function normalizeSearchRequest(body) {
   };
 }
 
+function getQueryOperation(query) {
+  return query?.queryFilter?.operation || query?.queryFilter || null;
+}
+
 function getLiteralComparisonValue(operation, fieldName, allowedOperators = ['EQUALS']) {
   if (!operation || !fieldName) {
     return null;
@@ -177,6 +181,7 @@ module.exports = {
   DEFAULT_PAGINATION,
   evaluateOperation,
   filterAttributes,
+  getQueryOperation,
   getLiteralComparisonValue,
   normalizeSearchRequest,
   normalizePagination

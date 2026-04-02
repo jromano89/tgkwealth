@@ -1,4 +1,4 @@
-const { createCustomer, getCustomer, listCustomers, updateCustomer } = require('./resource-client');
+const { createCustomer, getCustomer, getCustomerById, listCustomers, updateCustomer } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./customer-type-definitions');
 const {
@@ -15,6 +15,7 @@ const {
 const STRUCTURED_DATA_KEYS = ['Data', 'data', 'CustomerData', 'customerData', 'Metadata', 'metadata', 'DataJson', 'dataJson'];
 const CONSUMED_INPUT_KEYS = new Set([
   'Id', 'id',
+  'AppSlug', 'appSlug',
   'EmployeeId', 'employeeId',
   'DisplayName', 'displayName',
   'FirstName', 'firstName',
@@ -122,6 +123,7 @@ function mapCustomerToDataRecord(customer) {
   return {
     ...extensionFields,
     Id: customer.id,
+    AppSlug: readRecordValue(customer, 'appSlug', 'app_slug') || '',
     EmployeeId: readRecordValue(customer, 'employeeId', 'employee_id') || '',
     DisplayName: readRecordValue(customer, 'displayName', 'display_name') || '',
     FirstName: data.firstName || '',
@@ -139,10 +141,11 @@ function mapCustomerToDataRecord(customer) {
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: createCustomer,
-  updateBackendRecord: updateCustomer,
-  listRecords: () => listCustomers(),
-  loadExistingRecord: getCustomer,
+  createBackendRecord: (appSlug, payload) => createCustomer(appSlug, payload),
+  updateBackendRecord: (appSlug, recordId, payload) => updateCustomer(appSlug, recordId, payload),
+  listRecords: (appSlug) => listCustomers(appSlug),
+  loadExistingRecord: (appSlug, recordId) => getCustomer(appSlug, recordId),
+  loadExistingRecordById: (recordId) => getCustomerById(recordId),
   buildPayload: buildCustomerPayload,
   mapRecordToDataRecord: mapCustomerToDataRecord
 });

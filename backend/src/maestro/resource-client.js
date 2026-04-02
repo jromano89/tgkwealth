@@ -15,17 +15,20 @@ function setResourceAccess(nextAccess) {
 
 function createResourceClient(resourceName) {
   return {
-    create(payload) {
-      return requireResource(resourceName).create(payload);
+    create(appSlug, payload) {
+      return requireResource(resourceName).create(appSlug, payload);
     },
-    get(id) {
-      return requireResource(resourceName).get(id);
+    get(appSlug, id) {
+      return requireResource(resourceName).get(appSlug, id);
     },
-    list(query) {
-      return requireResource(resourceName).list(query);
+    getById(id) {
+      return requireResource(resourceName).get(null, id);
     },
-    update(id, payload) {
-      return requireResource(resourceName).update(id, payload);
+    list(appSlug, query) {
+      return requireResource(resourceName).list(appSlug, query);
+    },
+    update(appSlug, id, payload) {
+      return requireResource(resourceName).update(appSlug, id, payload);
     }
   };
 }
@@ -41,9 +44,13 @@ module.exports = {
   createEnvelope: envelopeClient.create,
   createTask: taskClient.create,
   getCustomer: customerClient.get,
+  getCustomerById: customerClient.getById,
   getEmployee: employeeClient.get,
+  getEmployeeById: employeeClient.getById,
   getEnvelope: envelopeClient.get,
+  getEnvelopeById: envelopeClient.getById,
   getTask: taskClient.get,
+  getTaskById: taskClient.getById,
   listCustomers: customerClient.list,
   listEmployees: employeeClient.list,
   listEnvelopes: envelopeClient.list,
