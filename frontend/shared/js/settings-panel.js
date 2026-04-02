@@ -287,7 +287,6 @@ function settingsPanelState() {
     },
 
     save() {
-      const existing = readStoredSettings();
       const nextBrandColor = normalizeHexColor(this.brandColor);
       const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
       const nextConfig = this.currentConfig();

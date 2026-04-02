@@ -33,31 +33,4 @@ function createResourceClient(resourceName) {
   };
 }
 
-const employeeClient = createResourceClient('employees');
-const customerClient = createResourceClient('customers');
-const envelopeClient = createResourceClient('envelopes');
-const taskClient = createResourceClient('tasks');
-
-module.exports = {
-  createCustomer: customerClient.create,
-  createEmployee: employeeClient.create,
-  createEnvelope: envelopeClient.create,
-  createTask: taskClient.create,
-  getCustomer: customerClient.get,
-  getCustomerById: customerClient.getById,
-  getEmployee: employeeClient.get,
-  getEmployeeById: employeeClient.getById,
-  getEnvelope: envelopeClient.get,
-  getEnvelopeById: envelopeClient.getById,
-  getTask: taskClient.get,
-  getTaskById: taskClient.getById,
-  listCustomers: customerClient.list,
-  listEmployees: employeeClient.list,
-  listEnvelopes: envelopeClient.list,
-  listTasks: taskClient.list,
-  setResourceAccess,
-  updateCustomer: customerClient.update,
-  updateEmployee: employeeClient.update,
-  updateEnvelope: envelopeClient.update,
-  updateTask: taskClient.update
-};
+module.exports = { createResourceClient, setResourceAccess };

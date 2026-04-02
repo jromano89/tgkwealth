@@ -1,4 +1,4 @@
-const { createEnvelope, getEnvelopeById, listEnvelopes, updateEnvelope } = require('./resource-client');
+const { createResourceClient } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./envelope-type-definitions');
 const { getLiteralComparisonValue, getQueryOperation } = require('./query-utils');
@@ -7,12 +7,15 @@ const {
   createServiceError,
   hasOwnField,
   normalizeOptionalText,
+  normalizeReferenceWriteError,
   pickFirstDefined,
   readOptionalDataField,
   readRecordValue,
   readOptionalTextField,
   serializeData
 } = require('./service-utils');
+
+const client = createResourceClient('envelopes');
 
 function buildEnvelopePayload(rawInput, { recordId } = {}) {
   const input = asObject(rawInput);
@@ -61,41 +64,17 @@ function buildEnvelopeSearchFilters(query) {
   return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== ''));
 }
 
-function normalizeEnvelopeWriteError(error) {
-  if (error?.statusCode !== 400) {
-    return error;
-  }
-
-  if (error.message === 'customerId must belong to the current app') {
-    return createServiceError(
-      400,
-      'BAD_REQUEST',
-      'Envelope CustomerId must be the TGK customer Id for this app.'
-    );
-  }
-
-  if (error.message === 'employeeId must belong to the current app') {
-    return createServiceError(
-      400,
-      'BAD_REQUEST',
-      'Envelope EmployeeId must be the TGK employee Id for this app.'
-    );
-  }
-
-  return error;
-}
-
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: (appSlug, payload) => createEnvelope(appSlug, payload),
-  updateBackendRecord: (appSlug, recordId, payload) => updateEnvelope(appSlug, recordId, payload),
-  listRecords: (appSlug, query) => listEnvelopes(appSlug, query),
+  createBackendRecord: client.create,
+  updateBackendRecord: client.update,
+  listRecords: client.list,
   buildPayload: buildEnvelopePayload,
   buildSearchFilters: buildEnvelopeSearchFilters,
   idField: 'EnvelopeId',
   searchIdFields: ['EnvelopeId', 'Id'],
-  loadExistingRecordById: (recordId) => getEnvelopeById(recordId),
+  loadExistingRecordById: client.getById,
   mapRecordToDataRecord: mapEnvelopeToDataRecord,
-  normalizeWriteError: normalizeEnvelopeWriteError
+  normalizeWriteError: (error) => normalizeReferenceWriteError(error, 'Envelope')
 });

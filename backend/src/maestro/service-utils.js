@@ -154,13 +154,79 @@ function requireSupportedType(typeName, aliases, canonicalTypeName) {
   throw createServiceError(400, 'BAD_REQUEST', `Unsupported typeName "${typeName}". Use "${canonicalTypeName}".`);
 }
 
+function buildPersonDisplayName(input, existingRecord, fallbackKeyAliases) {
+  const explicitDisplayName = normalizeOptionalText(pickFirstDefined(input, ['DisplayName', 'displayName']));
+  if (explicitDisplayName) {
+    return explicitDisplayName;
+  }
+
+  const firstName = normalizeOptionalText(pickFirstDefined(input, ['FirstName', 'firstName']));
+  const lastName = normalizeOptionalText(pickFirstDefined(input, ['LastName', 'lastName']));
+  const combined = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  return combined
+    || normalizeOptionalText(readRecordValue(existingRecord, 'displayName', 'display_name'))
+    || normalizeOptionalText(pickFirstDefined(input, ['Email', 'email']))
+    || normalizeOptionalText(pickFirstDefined(input, fallbackKeyAliases))
+    || undefined;
+}
+
+function buildPersonData(input, existingData, structuredDataKeys, consumedInputKeys) {
+  const structuredData = parseDataValue(pickFirstDefined(input, structuredDataKeys));
+  const mergedInput = {
+    ...structuredData,
+    ...input
+  };
+  const nextData = {
+    ...asObject(existingData),
+    ...structuredData
+  };
+
+  const firstName = normalizeOptionalText(pickFirstDefined(mergedInput, ['FirstName', 'firstName']));
+  const lastName = normalizeOptionalText(pickFirstDefined(mergedInput, ['LastName', 'lastName']));
+
+  if (firstName !== undefined) {
+    nextData.firstName = firstName;
+  }
+  if (lastName !== undefined) {
+    nextData.lastName = lastName;
+  }
+
+  const extensionFields = collectExtensionFields(input, consumedInputKeys);
+  if (Object.keys(extensionFields).length > 0) {
+    nextData.extensionFields = {
+      ...asObject(nextData.extensionFields),
+      ...extensionFields
+    };
+  }
+
+  return nextData;
+}
+
+function normalizeReferenceWriteError(error, resourceLabel) {
+  if (error?.statusCode !== 400) {
+    return error;
+  }
+
+  const REFERENCE_MESSAGES = {
+    'customerId must belong to the current app': `${resourceLabel} CustomerId must be the TGK customer Id for this app.`,
+    'employeeId must belong to the current app': `${resourceLabel} EmployeeId must be the TGK employee Id for this app.`
+  };
+
+  const mapped = REFERENCE_MESSAGES[error.message];
+  return mapped ? createServiceError(400, 'BAD_REQUEST', mapped) : error;
+}
+
 module.exports = {
   asObject,
+  buildPersonData,
+  buildPersonDisplayName,
   collectExtensionFields,
   createServiceError,
   hasOwnField,
   normalizeOptionalText,
   normalizePhone,
+  normalizeReferenceWriteError,
   parseDataValue,
   pickFirstDefined,
   requireAppSlug,

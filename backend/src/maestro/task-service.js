@@ -1,12 +1,11 @@
-const { createTask, getTaskById, listTasks, updateTask } = require('./resource-client');
+const { createResourceClient } = require('./resource-client');
 const { createDataIoService } = require('./dataio-service');
 const { TYPE_ALIASES, TYPE_NAME } = require('./task-type-definitions');
 const { getLiteralComparisonValue, getQueryOperation } = require('./query-utils');
 const {
   asObject,
-  createServiceError,
-  hasOwnField,
   normalizeOptionalText,
+  normalizeReferenceWriteError,
   pickFirstDefined,
   readOptionalDataField,
   readRecordValue,
@@ -14,11 +13,13 @@ const {
   serializeData
 } = require('./service-utils');
 
+const client = createResourceClient('tasks');
+
 function buildTaskPayload(rawInput, { recordId } = {}) {
   const input = asObject(rawInput);
   const payload = {};
 
-  if (recordId || hasOwnField(input, ['TaskId', 'taskId', 'Id', 'id'])) {
+  if (recordId || pickFirstDefined(input, ['TaskId', 'taskId', 'Id', 'id'])) {
     payload.id = normalizeOptionalText(recordId || pickFirstDefined(input, ['TaskId', 'taskId', 'Id', 'id'])) || undefined;
   }
 
@@ -61,40 +62,16 @@ function buildTaskSearchFilters(query) {
   return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== null && value !== undefined && value !== ''));
 }
 
-function normalizeTaskWriteError(error) {
-  if (error?.statusCode !== 400) {
-    return error;
-  }
-
-  if (error.message === 'customerId must belong to the current app') {
-    return createServiceError(
-      400,
-      'BAD_REQUEST',
-      'Task CustomerId must be the TGK customer Id for this app.'
-    );
-  }
-
-  if (error.message === 'employeeId must belong to the current app') {
-    return createServiceError(
-      400,
-      'BAD_REQUEST',
-      'Task EmployeeId must be the TGK employee Id for this app.'
-    );
-  }
-
-  return error;
-}
-
 module.exports = createDataIoService({
   typeName: TYPE_NAME,
   typeAliases: TYPE_ALIASES,
-  createBackendRecord: (appSlug, payload) => createTask(appSlug, payload),
-  updateBackendRecord: (appSlug, recordId, payload) => updateTask(appSlug, recordId, payload),
-  listRecords: (appSlug, query) => listTasks(appSlug, query),
+  createBackendRecord: client.create,
+  updateBackendRecord: client.update,
+  listRecords: client.list,
   buildPayload: buildTaskPayload,
   buildSearchFilters: buildTaskSearchFilters,
   searchIdFields: ['Id', 'TaskId'],
-  loadExistingRecordById: (recordId) => getTaskById(recordId),
+  loadExistingRecordById: client.getById,
   mapRecordToDataRecord: mapTaskToDataRecord,
-  normalizeWriteError: normalizeTaskWriteError
+  normalizeWriteError: (error) => normalizeReferenceWriteError(error, 'Task')
 });
