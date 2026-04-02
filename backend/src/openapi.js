@@ -85,6 +85,10 @@ function buildOpenApiDocument(req) {
         '- Keep frontend demos static and lightweight.',
         '- Keep auth, proxying, data storage, and Maestro integration reusable across future vertical demos.',
         '',
+        'OpenAPI scope:',
+        '- This document covers the primary frontend-facing health, auth, data, and proxy routes.',
+        '- Webhook sinks and Maestro bridge routes are intentionally documented outside this spec.',
+        '',
         'Canonical client behavior:',
         '- Send `X-Demo-App` on every app-scoped `/api/auth`, `/api/data`, and `/api/proxy` request.',
         '- Use camelCase in request bodies.',
@@ -104,8 +108,7 @@ function buildOpenApiDocument(req) {
       { name: 'Health', description: 'Operational readiness and deployment health.' },
       { name: 'Auth', description: 'App-scoped Docusign consent, session introspection, account selection, and logout.' },
       { name: 'Data', description: 'Flexible app-scoped CRUD for employees, customers, envelopes, and tasks.' },
-      { name: 'Proxy', description: 'Configurable outbound HTTP proxy with optional bearer or Docusign auth.' },
-      { name: 'Webhooks', description: 'Inbound webhook sinks for demo and integration testing.' }
+      { name: 'Proxy', description: 'Configurable outbound HTTP proxy with optional bearer or Docusign auth.' }
     ],
     paths: {
       '/api/health': {

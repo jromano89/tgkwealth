@@ -1,6 +1,6 @@
 (function () {
   const LOCAL_BACKEND_URL = 'http://localhost:3000';
-  const DEPLOYED_BACKEND_URL = 'https://replace-with-your-railway-backend.up.railway.app';
+  const DEPLOYED_BACKEND_URL = 'https://tgk-dev.up.railway.app';
   const hostname = window.location.hostname || '';
   const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
   const role = document.body?.dataset?.portal || document.documentElement?.dataset?.portal || 'advisor';
