@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
-    "start:backend": "npm --prefix backend run start"
+    "start:backend": "npm --prefix backend run start",
+    "start": "npm --prefix backend run start",
+    "postinstall": "npm --prefix backend install --omit=dev"
   }
 }
