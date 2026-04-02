@@ -323,6 +323,22 @@ function getResourceDefinition(resourceKey) {
   return resource;
 }
 
+function isTruthyQueryValue(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+}
+
+function attachCustomerIncludes(db, appSlug, recordId, record, query = {}) {
+  if (isTruthyQueryValue(query.includeEnvelopes)) {
+    record.envelopes = listRecordsForApp(db, appSlug, 'envelopes', { customerId: recordId });
+  }
+
+  if (isTruthyQueryValue(query.includeTasks)) {
+    record.tasks = listRecordsForApp(db, appSlug, 'tasks', { customerId: recordId });
+  }
+
+  return record;
+}
+
 function listRecordsForApp(db, appSlug, resourceKey, filters) {
   const resource = getResourceDefinition(resourceKey);
   const listOptions = resource.buildListOptions(filters);
@@ -332,9 +348,15 @@ function listRecordsForApp(db, appSlug, resourceKey, filters) {
   }));
 }
 
-function getRecordForApp(db, appSlug, resourceKey, recordId) {
+function getRecordForApp(db, appSlug, resourceKey, recordId, query) {
   const resource = getResourceDefinition(resourceKey);
-  return serializeRecord(store.requireRecord(db, resource.table, appSlug, recordId, resource.label));
+  const record = serializeRecord(store.requireRecord(db, resource.table, appSlug, recordId, resource.label));
+
+  if (resourceKey === 'customers') {
+    return attachCustomerIncludes(db, appSlug, recordId, record, query);
+  }
+
+  return record;
 }
 
 function getRecordById(db, resourceKey, recordId) {

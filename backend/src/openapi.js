@@ -285,7 +285,12 @@ function buildOpenApiDocument(req) {
           tags: ['Data'],
           summary: 'Get customer',
           operationId: 'getCustomer',
-          parameters: [demoAppHeader(), recordIdPath()],
+          parameters: [
+            demoAppHeader(),
+            recordIdPath(),
+            parameter('includeEnvelopes', 'query', { type: 'boolean' }, false, 'Optionally include related envelopes for this customer.'),
+            parameter('includeTasks', 'query', { type: 'boolean' }, false, 'Optionally include related tasks for this customer.')
+          ],
           responses: {
             200: jsonResponse('Customer record.', '#/components/schemas/CustomerRecord'),
             400: errorResponse(),
@@ -594,6 +599,14 @@ function buildOpenApiDocument(req) {
             organization: { type: ['string', 'null'] },
             status: { type: ['string', 'null'] },
             data: { type: 'object', additionalProperties: true },
+            envelopes: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/EnvelopeRecord' }
+            },
+            tasks: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/TaskRecord' }
+            },
             createdAt: { type: ['string', 'null'], format: 'date-time' },
             updatedAt: { type: ['string', 'null'], format: 'date-time' }
           },

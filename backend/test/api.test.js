@@ -153,6 +153,84 @@ test('customer detail payload uses camelCase fields', async () => {
   }
 });
 
+test('customer detail can include related envelopes and tasks', async () => {
+  const server = await startServer();
+
+  try {
+    await server.request('/api/data/employees', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Demo-App': 'tgk-wealth'
+      },
+      body: JSON.stringify({
+        id: 'emp-1',
+        displayName: 'Gordon Gecko'
+      })
+    });
+
+    await server.request('/api/data/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Demo-App': 'tgk-wealth'
+      },
+      body: JSON.stringify({
+        id: 'cust-1',
+        employeeId: 'emp-1',
+        displayName: 'Casey Investor'
+      })
+    });
+
+    await server.request('/api/data/envelopes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Demo-App': 'tgk-wealth'
+      },
+      body: JSON.stringify({
+        id: 'env-1',
+        employeeId: 'emp-1',
+        customerId: 'cust-1',
+        status: 'sent',
+        name: 'Account Opening Packet'
+      })
+    });
+
+    await server.request('/api/data/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Demo-App': 'tgk-wealth'
+      },
+      body: JSON.stringify({
+        id: 'task-1',
+        employeeId: 'emp-1',
+        customerId: 'cust-1',
+        title: 'Review onboarding',
+        status: 'pending'
+      })
+    });
+
+    const detail = await server.request('/api/data/customers/cust-1?includeEnvelopes=true&includeTasks=true', {
+      headers: {
+        'X-Demo-App': 'tgk-wealth'
+      }
+    });
+
+    assert.equal(detail.response.status, 200);
+    assert.equal(detail.payload.id, 'cust-1');
+    assert.equal(Array.isArray(detail.payload.envelopes), true);
+    assert.equal(Array.isArray(detail.payload.tasks), true);
+    assert.equal(detail.payload.envelopes.length, 1);
+    assert.equal(detail.payload.tasks.length, 1);
+    assert.equal(detail.payload.envelopes[0].id, 'env-1');
+    assert.equal(detail.payload.tasks[0].id, 'task-1');
+  } finally {
+    await server.cleanup();
+  }
+});
+
 test('tasks cannot reference customers from another app', async () => {
   const server = await startServer();
 

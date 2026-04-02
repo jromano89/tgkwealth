@@ -27,9 +27,13 @@ function investorApp() {
     async init() {
       this.initializeBrandingState();
       try {
-        this.advisors = await TGK_API.getEmployees();
+        const [advisors, customers] = await Promise.all([
+          TGK_API.getEmployees(),
+          TGK_API.getCustomers()
+        ]);
+        this.advisors = advisors;
         this.assignedAdvisor = this.advisors.find((advisor) => advisor.id === preferredAdvisorId) || this.advisors[0] || null;
-        this.customers = this.sortCustomers(await TGK_API.getCustomers());
+        this.customers = this.sortCustomers(customers);
         this.setTab('overview');
         const preferredClientId = TGK_API.getPreferredCustomerId();
         const initialClient = this.customers.find((customer) => customer.id === preferredClientId) || this.customers[0];

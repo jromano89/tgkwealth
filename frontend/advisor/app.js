@@ -41,9 +41,12 @@ function advisorApp() {
     async init() {
       this.initializeBrandingState();
       try {
-        const employees = await TGK_API.getEmployees();
+        const [employees, customers] = await Promise.all([
+          TGK_API.getEmployees(),
+          TGK_API.getCustomers()
+        ]);
         this.currentUser = employees.find((employee) => employee.id === preferredAdvisorId) || employees[0] || null;
-        this.customers = await TGK_API.getCustomers();
+        this.customers = customers;
         this.setView('dashboard');
       } catch (e) {
         console.error('Failed to load customers:', e);

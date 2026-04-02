@@ -52,6 +52,19 @@
     return `${collectionPath}/${encodeURIComponent(id)}`;
   }
 
+  function buildCustomerDetailParams(options = {}) {
+    const params = {};
+
+    if (options.includeEnvelopes) {
+      params.includeEnvelopes = 'true';
+    }
+    if (options.includeTasks) {
+      params.includeTasks = 'true';
+    }
+
+    return Object.keys(params).length > 0 ? params : null;
+  }
+
   function mapEmployee(employee) {
     const data = employee?.data || {};
     const displayName = pickDisplayName(employee?.displayName, [
@@ -494,8 +507,8 @@
     getCustomersRaw(params) {
       return this.get(withSearchParams('/api/data/customers', params));
     },
-    getCustomerRaw(id) {
-      return this.get(getItemPath('/api/data/customers', id));
+    getCustomerRaw(id, options = {}) {
+      return this.get(withSearchParams(getItemPath('/api/data/customers', id), buildCustomerDetailParams(options)));
     },
     updateCustomerRaw(id, body) {
       return this.put(getItemPath('/api/data/customers', id), body);
@@ -529,19 +542,12 @@
     async getCustomer(id, options = {}) {
       const includeEnvelopes = options.includeEnvelopes !== false;
       const includeTasks = options.includeTasks !== false;
-      const requests = [this.getCustomerRaw(id)];
-
-      if (includeEnvelopes) {
-        requests.push(this.getEnvelopesRaw({ customerId: id }));
-      }
-      if (includeTasks) {
-        requests.push(this.getTasksRaw({ customerId: id }));
-      }
-
-      const responses = await Promise.all(requests);
-      const customer = responses[0];
-      const envelopes = includeEnvelopes ? responses[1] : [];
-      const tasks = includeTasks ? responses[responses.length - 1] : [];
+      const customer = await this.getCustomerRaw(id, {
+        includeEnvelopes,
+        includeTasks
+      });
+      const envelopes = includeEnvelopes ? (customer.envelopes || []) : [];
+      const tasks = includeTasks ? (customer.tasks || []) : [];
 
       return {
         ...mapCustomerToView(customer),

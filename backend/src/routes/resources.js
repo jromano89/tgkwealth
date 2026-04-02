@@ -26,7 +26,7 @@ Object.entries(service.RESOURCE_DEFINITIONS).forEach(([resourceKey, resource]) =
   }));
 
   router.get(itemPath, withApp((req, res, db, app) => {
-    res.json(service.getRecordForApp(db, app.slug, resourceKey, req.params.id));
+    res.json(service.getRecordForApp(db, app.slug, resourceKey, req.params.id, req.query));
   }));
 
   router.post(collectionPath, withApp((req, res, db, app) => {
