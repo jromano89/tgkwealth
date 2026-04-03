@@ -14,6 +14,8 @@
     </div>
 
     <nav class="flex-1 px-2 mt-2 space-y-1">
+      <div x-show="!sidebarCollapsed" class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">Core</div>
+
       <button @click="setTab('overview')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span x-show="!sidebarCollapsed">Overview</span>
@@ -28,12 +30,6 @@
           <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
         </span>
       </button>
-      <button @click="setTab('settings')"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="tab === 'settings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span x-show="!sidebarCollapsed">Settings</span>
-      </button>
 
       <div class="px-1 pt-3" x-show="!sidebarCollapsed">
         <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
@@ -42,6 +38,15 @@
           </template>
         </select>
       </div>
+
+      <div x-show="canSeeSettings()" class="mx-3 mt-4 mb-2 border-t border-white/10"></div>
+
+      <button x-show="canSeeSettings()" @click="setTab('settings')"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+        :class="tab === 'settings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span x-show="!sidebarCollapsed">Settings</span>
+      </button>
     </nav>
 
     <div class="px-4 pb-3" x-show="!sidebarCollapsed">
@@ -50,7 +55,7 @@
 
     <!-- Portal Switch -->
     <div class="px-3 pb-2">
-      <a href="../advisor/index.html" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors" :class="sidebarCollapsed ? 'justify-center' : ''">
+      <a :href="'../advisor/index.html' + window.location.search" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors" :class="sidebarCollapsed ? 'justify-center' : ''">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span x-show="!sidebarCollapsed">Switch to Advisor View</span>
       </a>
@@ -273,7 +278,7 @@
       </div>
 
       <!-- SETTINGS TAB -->
-      <div x-show="tab === 'settings'">
+      <div x-show="canSeeSettings() && tab === 'settings'">
         <div x-data="settingsPanelState()">
           <div x-init="mountSettingsPanel($el)"></div>
         </div>

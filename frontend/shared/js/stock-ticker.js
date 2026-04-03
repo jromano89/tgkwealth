@@ -5,14 +5,11 @@
 function stockTicker() {
   const refreshMs = 5 * 60 * 1000;
   const flashMs = 600;
-  const storageKey = 'tgk_stock_ticker_cache_v1';
-  let cache = null;
-  let cacheAt = 0;
   const symbols = [
     { sym: 'SPY', feed: 'spy.us', base: 655.42 },
     { sym: 'QQQ', feed: 'qqq.us', base: 588.03 },
     { sym: 'DIA', feed: 'dia.us', base: 461.97 },
-    { sym: 'IWM', feed: 'iwm.us', base: 247.44 },
+    { sym: 'DOCU', feed: 'docu.us', base: 48.37 },
     { sym: 'AAPL', feed: 'aapl.us', base: 251.49 },
     { sym: 'MSFT', feed: 'msft.us', base: 383.21 },
     { sym: 'NVDA', feed: 'nvda.us', base: 118.42 },
@@ -20,6 +17,10 @@ function stockTicker() {
     { sym: 'AMZN', feed: 'amzn.us', base: 210.25 },
     { sym: 'TSLA', feed: 'tsla.us', base: 248.71 }
   ];
+  const storageKey = 'tgk_stock_ticker_cache_v2';
+  const symbolSignature = symbols.map(symbol => symbol.sym).join(',');
+  let cache = null;
+  let cacheAt = 0;
 
   function defaultPrices() {
     return symbols.map(symbol => ({
@@ -33,9 +34,27 @@ function stockTicker() {
   function loadStoredCache() {
     try {
       const stored = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
-      if (!stored || !Array.isArray(stored.prices) || !Number.isFinite(stored.at)) {
+      if (
+        !stored ||
+        stored.symbols !== symbolSignature ||
+        !Array.isArray(stored.prices) ||
+        stored.prices.length !== symbols.length ||
+        !Number.isFinite(stored.at)
+      ) {
         return null;
       }
+
+      const validPrices = stored.prices.every((price, index) => (
+        price &&
+        price.sym === symbols[index].sym &&
+        Number.isFinite(Number(price.price)) &&
+        Number.isFinite(Number(price.change))
+      ));
+
+      if (!validPrices) {
+        return null;
+      }
+
       return stored;
     } catch {
       return null;
@@ -44,7 +63,7 @@ function stockTicker() {
 
   function saveStoredCache(prices, at) {
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify({ prices, at }));
+      sessionStorage.setItem(storageKey, JSON.stringify({ prices, at, symbols: symbolSignature }));
     } catch {}
   }
 

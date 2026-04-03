@@ -567,6 +567,10 @@
       const tasks = await this.getTasksRaw(params);
       return tasks.map(mapTask);
     },
+    async getEnvelopes(params) {
+      const envelopes = await this.getEnvelopesRaw(params);
+      return envelopes.map(mapEnvelope);
+    },
     async createTask(body) {
       return mapTask(await this.createTaskRaw(body));
     },

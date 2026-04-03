@@ -68,6 +68,7 @@ function statusClasses(status) {
     pending: 'bg-blue-100 text-blue-700',
     completed: 'bg-green-100 text-green-700',
     sent: 'bg-blue-100 text-blue-700',
+    delivered: 'bg-indigo-100 text-indigo-700',
     created: 'bg-gray-100 text-gray-600',
     declined: 'bg-red-100 text-red-700',
     voided: 'bg-gray-100 text-gray-500'
@@ -326,123 +327,125 @@ function sharedSettingsTemplate() {
     <section class="tgk-settings-shell">
       <div class="tgk-settings-grid">
         <div class="tgk-settings-stack">
-          <section class="tgk-settings-card" x-data="docusignSettings()">
-            <div class="tgk-settings-card__header tgk-settings-card__header--split">
-              <div>
-                <div class="tgk-settings-card__eyebrow">Docusign Account</div>
-                <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
+          <template x-if="canSeeDocusignSettings()">
+            <section class="tgk-settings-card" x-data="docusignSettings()">
+              <div class="tgk-settings-card__header tgk-settings-card__header--split">
+                <div>
+                  <div class="tgk-settings-card__eyebrow">Docusign Account</div>
+                  <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
+                </div>
+                <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
               </div>
-              <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
-            </div>
 
-            <div class="tgk-settings-card__body">
-              <template x-if="loading">
-                <div class="tgk-banner tgk-banner--neutral">
-                  <div class="tgk-banner__label">Checking Connection</div>
-                  <div class="tgk-banner__meta">Loading the current Docusign session.</div>
-                </div>
-              </template>
-
-              <template x-if="error">
-                <div class="tgk-banner tgk-banner--danger">
-                  <div class="tgk-banner__label">Connection Error</div>
-                  <div class="tgk-banner__meta" x-text="error"></div>
-                </div>
-              </template>
-
-              <template x-if="!loading && hasSavedAccount()">
-                <div class="tgk-settings-stack">
-                  <div class="tgk-banner tgk-banner--positive">
-                    <div>
-                      <div class="tgk-banner__label">Connected</div>
-                      <div class="tgk-banner__title" x-text="session.accountName"></div>
-                      <div class="tgk-banner__meta" x-text="session.name || session.email"></div>
-                      <div class="tgk-banner__footnote" x-text="session.accountId"></div>
-                    </div>
-                    <div class="tgk-inline-actions">
-                      <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="tgk-button tgk-button--secondary">Change Account</button>
-                      <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
-                    </div>
+              <div class="tgk-settings-card__body">
+                <template x-if="loading">
+                  <div class="tgk-banner tgk-banner--neutral">
+                    <div class="tgk-banner__label">Checking Connection</div>
+                    <div class="tgk-banner__meta">Loading the current Docusign session.</div>
                   </div>
+                </template>
 
-                  <template x-if="shouldShowAccountPicker()">
+                <template x-if="error">
+                  <div class="tgk-banner tgk-banner--danger">
+                    <div class="tgk-banner__label">Connection Error</div>
+                    <div class="tgk-banner__meta" x-text="error"></div>
+                  </div>
+                </template>
+
+                <template x-if="!loading && hasSavedAccount()">
+                  <div class="tgk-settings-stack">
+                    <div class="tgk-banner tgk-banner--positive">
+                      <div>
+                        <div class="tgk-banner__label">Connected</div>
+                        <div class="tgk-banner__title" x-text="session.accountName"></div>
+                        <div class="tgk-banner__meta" x-text="session.name || session.email"></div>
+                        <div class="tgk-banner__footnote" x-text="session.accountId"></div>
+                      </div>
+                      <div class="tgk-inline-actions">
+                        <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="tgk-button tgk-button--secondary">Change Account</button>
+                        <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
+                      </div>
+                    </div>
+
+                    <template x-if="shouldShowAccountPicker()">
+                      <div class="tgk-field-card">
+                        <label class="tgk-field-label">Change Saved Account</label>
+                        <p class="tgk-help-text">Choose the account used for live demo actions.</p>
+                        <select x-model="selectedAccountId" class="tgk-form-input tgk-form-select">
+                          <template x-for="account in availableAccounts()" :key="account.accountId">
+                            <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="account.accountName + (account.isDefault ? ' (Default)' : '')"></option>
+                          </template>
+                        </select>
+                        <div class="tgk-inline-actions tgk-inline-actions--end">
+                          <button @click="cancelAccountSelection()" class="tgk-button tgk-button--secondary">Cancel</button>
+                          <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+
+                <template x-if="!loading && needsAccountSelection()">
+                  <div class="tgk-settings-stack">
+                    <div class="tgk-banner tgk-banner--warning">
+                      <div>
+                        <div class="tgk-banner__label">Connection Ready</div>
+                        <div class="tgk-banner__title" x-text="session.name || session.email"></div>
+                        <div class="tgk-banner__meta">Choose the Docusign account the demo should use.</div>
+                      </div>
+                      <div class="tgk-inline-actions">
+                        <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
+                      </div>
+                    </div>
+
                     <div class="tgk-field-card">
-                      <label class="tgk-field-label">Change Saved Account</label>
-                      <p class="tgk-help-text">Choose the account used for live demo actions.</p>
+                      <label class="tgk-field-label">Choose Account</label>
+                      <p class="tgk-help-text">Save the account used for live workflows and previews.</p>
                       <select x-model="selectedAccountId" class="tgk-form-input tgk-form-select">
                         <template x-for="account in availableAccounts()" :key="account.accountId">
                           <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="account.accountName + (account.isDefault ? ' (Default)' : '')"></option>
                         </template>
                       </select>
-                      <div class="tgk-inline-actions tgk-inline-actions--end">
-                        <button @click="cancelAccountSelection()" class="tgk-button tgk-button--secondary">Cancel</button>
-                        <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
-                      </div>
+                      <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary tgk-button--full" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
                     </div>
-                  </template>
-                </div>
-              </template>
+                  </div>
+                </template>
 
-              <template x-if="!loading && needsAccountSelection()">
-                <div class="tgk-settings-stack">
-                  <div class="tgk-banner tgk-banner--warning">
-                    <div>
-                      <div class="tgk-banner__label">Connection Ready</div>
-                      <div class="tgk-banner__title" x-text="session.name || session.email"></div>
-                      <div class="tgk-banner__meta">Choose the Docusign account the demo should use.</div>
+                <template x-if="!loading && !hasConnection()">
+                  <div class="tgk-settings-stack">
+                    <div class="tgk-banner tgk-banner--neutral">
+                      <div class="tgk-banner__label">No Account Connected</div>
+                      <div class="tgk-banner__meta">Connect Docusign for live workflows, history, and previews.</div>
                     </div>
                     <div class="tgk-inline-actions">
-                      <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
+                      <button @click="login()" class="tgk-button tgk-button--primary" x-text="authInProgress ? 'Connecting...' : 'Connect Docusign'"></button>
                     </div>
                   </div>
+                </template>
 
-                  <div class="tgk-field-card">
-                    <label class="tgk-field-label">Choose Account</label>
-                    <p class="tgk-help-text">Save the account used for live workflows and previews.</p>
-                    <select x-model="selectedAccountId" class="tgk-form-input tgk-form-select">
-                      <template x-for="account in availableAccounts()" :key="account.accountId">
-                        <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="account.accountName + (account.isDefault ? ' (Default)' : '')"></option>
-                      </template>
-                    </select>
-                    <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary tgk-button--full" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
-                  </div>
-                </div>
-              </template>
-
-              <template x-if="!loading && !hasConnection()">
-                <div class="tgk-settings-stack">
-                  <div class="tgk-banner tgk-banner--neutral">
-                    <div class="tgk-banner__label">No Account Connected</div>
-                    <div class="tgk-banner__meta">Connect Docusign for live workflows, history, and previews.</div>
-                  </div>
-                  <div class="tgk-inline-actions">
-                    <button @click="login()" class="tgk-button tgk-button--primary" x-text="authInProgress ? 'Connecting...' : 'Connect Docusign'"></button>
-                  </div>
-                </div>
-              </template>
-
-              <div x-show="showScopesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="absolute inset-0 bg-black/40" @click="closeScopesModal()"></div>
-                <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6">
-                  <div class="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
-                      <p class="text-xs text-gray-400 mt-1">Save the app-wide scope string used for consent and backend DocuSign API tokens.</p>
+                <div x-show="showScopesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div class="absolute inset-0 bg-black/40" @click="closeScopesModal()"></div>
+                  <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6">
+                    <div class="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
+                        <p class="text-xs text-gray-400 mt-1">Save the app-wide scope string used for consent and backend DocuSign API tokens.</p>
+                      </div>
+                      <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
                     </div>
-                    <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-                  </div>
 
-                  <textarea x-model="requestedScopesText" rows="8" class="tgk-form-input tgk-form-textarea tgk-form-input--mono"></textarea>
-                  <p class="tgk-help-text mt-2">This is saved per app on the backend. If you add scopes that were not previously consented, reconnect Docusign once to grant them.</p>
+                    <textarea x-model="requestedScopesText" rows="8" class="tgk-form-input tgk-form-textarea tgk-form-input--mono"></textarea>
+                    <p class="tgk-help-text mt-2">This is saved per app on the backend. If you add scopes that were not previously consented, reconnect Docusign once to grant them.</p>
 
-                  <div class="flex items-center justify-end gap-3 mt-5">
-                    <button @click="closeScopesModal()" class="tgk-button tgk-button--secondary">Cancel</button>
-                    <button @click="saveRequestedScopes()" :disabled="savingScopes" class="tgk-button tgk-button--primary" x-text="savingScopes ? 'Saving...' : 'Save Scopes'"></button>
+                    <div class="flex items-center justify-end gap-3 mt-5">
+                      <button @click="closeScopesModal()" class="tgk-button tgk-button--secondary">Cancel</button>
+                      <button @click="saveRequestedScopes()" :disabled="savingScopes" class="tgk-button tgk-button--primary" x-text="savingScopes ? 'Saving...' : 'Save Scopes'"></button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </template>
 
           <section class="tgk-settings-card">
             <div class="tgk-settings-card__header">
@@ -454,7 +457,7 @@ function sharedSettingsTemplate() {
               <div class="tgk-settings-field-grid">
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-accountOpeningWorkflowId">Account Opening Workflow</label>
-                  <input id="tgk-accountOpeningWorkflowId" type="text" x-model="accountOpeningWorkflowId" disabled class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+                  <input id="tgk-accountOpeningWorkflowId" type="text" x-model="accountOpeningWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
 
                   <label class="tgk-settings-toggle-row mt-3">
                     <div class="tgk-settings-toggle-copy">
@@ -470,7 +473,7 @@ function sharedSettingsTemplate() {
 
                 <div class="tgk-field-card">
                   <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow</label>
-                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" disabled class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
+                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
 
                   <label class="tgk-settings-toggle-row mt-3">
                     <div class="tgk-settings-toggle-copy">

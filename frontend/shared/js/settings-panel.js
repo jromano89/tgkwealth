@@ -257,6 +257,10 @@ function settingsPanelState() {
     dirty: false,
     resettingBranding: false,
 
+    canSeeDocusignSettings() {
+      return window.TGK_ACCESS?.canSeeDocusignSettings?.() ?? true;
+    },
+
     currentConfig() {
       return resolveDemoConfig({
         ...(readStoredSettings().config || {}),

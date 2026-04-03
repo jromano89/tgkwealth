@@ -23,7 +23,6 @@ function advisorApp() {
     _clientDetailRefreshTimer: null,
     searchQuery: '',
     showOnboarding: false,
-    maestroWorkflowId: window.TGK_DEMO?.config?.accountOpeningWorkflowId || window.TGK_CONFIG?.workflows?.accountOpeningId || '',
     maestroInstanceUrl: '',
     maestroError: null,
     maestroLoading: false,
@@ -33,6 +32,20 @@ function advisorApp() {
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
     loading: true,
+    agreementVolumeSeries: [5, 6, 4, 8, 9, 11, 8, 12, 14, 15, 16, 20],
+    agreementTypeBreakdown: [
+      { label: 'Acct Opening', value: 68, color: '#3567df' },
+      { label: 'Transfers', value: 32, color: '#16a34a' },
+      { label: 'Maintenance', value: 28, color: '#ea580c' }
+    ],
+    agreementCompletionRateValue: 94,
+    agreementTurnaroundHours: 12.4,
+    allAgreements: [],
+
+    monitorAlerts: [],
+    agreementSearchQuery: '',
+    agreementsLoading: false,
+    agreementsLoaded: false,
     _maestroCreationPollTimer: null,
     _maestroRedirectTimer: null,
     _maestroTrackingStarted: false,
@@ -55,9 +68,30 @@ function advisorApp() {
       TGK_API.scheduleDocusignWarmup();
     },
 
+    canSeeSettings() {
+      return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
+    },
+
     setView(nextView) {
-      const allowedViews = new Set(['dashboard', 'documents', 'settings', 'client']);
+      const allowedViews = new Set(['dashboard', 'documents', 'monitor', 'client']);
+      if (this.canSeeSettings()) {
+        allowedViews.add('settings');
+      }
       this.view = allowedViews.has(nextView) ? nextView : 'dashboard';
+      if (this.view === 'documents') {
+        void this.ensureAgreementFeed();
+      }
+      if (this.view === 'monitor') {
+        this.ensureMonitorAlerts();
+      }
+    },
+
+    getAccountOpeningWorkflowId() {
+      return String(
+        window.TGK_DEMO?.config?.accountOpeningWorkflowId
+        || window.TGK_CONFIG?.workflows?.accountOpeningId
+        || ''
+      ).trim();
     },
 
     get filteredCustomers() {
@@ -82,6 +116,130 @@ function advisorApp() {
 
     get complianceAlerts() {
       return this.customers.filter(c => c.tags?.includes('review-needed')).length;
+    },
+
+    get totalAgreementCount() {
+      return this.agreementTypeBreakdown.reduce((sum, item) => sum + item.value, 0);
+    },
+
+    get agreementVolumePeak() {
+      return Math.max(...this.agreementVolumeSeries, 1);
+    },
+
+    get agreementTypeGradient() {
+      const total = this.totalAgreementCount || 1;
+      let offset = 0;
+
+      return `conic-gradient(${this.agreementTypeBreakdown.map((item) => {
+        const start = offset;
+        offset += (item.value / total) * 100;
+        return `${item.color} ${start}% ${offset}%`;
+      }).join(', ')})`;
+    },
+
+    agreementBarStyle(value, index) {
+      const lastIndex = this.agreementVolumeSeries.length - 1;
+      const ratio = lastIndex <= 0 ? 1 : index / lastIndex;
+      const lightness = 84 - (ratio * 14);
+      const fill = index === lastIndex
+        ? 'linear-gradient(180deg, #4e83e7 0%, #3567df 100%)'
+        : `linear-gradient(180deg, hsl(214 76% ${Math.min(lightness + 4, 88)}%) 0%, hsl(214 70% ${lightness}%) 100%)`;
+
+      return `height:${Math.max((value / this.agreementVolumePeak) * 100, 16)}%;background:${fill};`;
+    },
+
+    ensureMonitorAlerts() {
+      if (this.monitorAlerts.length) return;
+      const now = Date.now();
+      const h = 36e5;
+      const d = 864e5;
+      const inv = (i, fb) => {
+        const c = this.customers?.[i];
+        return c ? (c.name || `${c.first_name} ${c.last_name}`) : fb;
+      };
+      this.monitorAlerts = [
+        {
+          id: 'alert-1', severity: 'critical',
+          title: 'Signing activity from sanctioned region',
+          description: `Envelope signed from IP 185.143.234.17 geolocated to Tehran, Iran. Investor: ${inv(0, 'Margaret Chen')}. Document: Account Transfer Authorization.`,
+          timestamp: new Date(now - 2 * h).toISOString(),
+        },
+        {
+          id: 'alert-2', severity: 'high',
+          title: 'Repeat failed login attempts',
+          description: `14 failed authentication attempts in 6 minutes from IP 91.207.174.22 (Moscow, Russia) targeting account: ${inv(1, 'David Torres')}.`,
+          timestamp: new Date(now - 5 * h).toISOString(),
+        },
+        {
+          id: 'alert-3', severity: 'high',
+          title: 'Anomalous bulk document export',
+          description: '47 documents downloaded in 8 minutes by operations user James Whitaker. Normal baseline: 2\u20135 per hour.',
+          timestamp: new Date(now - 9 * h).toISOString(),
+        },
+        {
+          id: 'alert-4', severity: 'medium',
+          title: 'Admin permission change',
+          description: 'User Rachel Dunn\'s (Junior Associate) role was changed from "Viewer" to "Account Admin"',
+          timestamp: new Date(now - 1 * d).toISOString(),
+        },
+      ];
+    },
+
+    monitorTimeAgo(isoString) {
+      const diff = Date.now() - new Date(isoString).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return mins + 'm ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    },
+
+    async ensureAgreementFeed(force = false) {
+      if (this.agreementsLoading || (this.agreementsLoaded && !force)) {
+        return;
+      }
+
+      this.agreementsLoading = true;
+      try {
+        this.allAgreements = await TGK_API.getEnvelopes();
+        this.agreementsLoaded = true;
+      } catch (error) {
+        console.error('Failed to load agreements:', error);
+      } finally {
+        this.agreementsLoading = false;
+      }
+    },
+
+    get filteredAgreements() {
+      const query = this.agreementSearchQuery.trim().toLowerCase();
+      const agreements = [...this.allAgreements].sort((left, right) => {
+        const leftDate = new Date(left.created_at || 0).getTime();
+        const rightDate = new Date(right.created_at || 0).getTime();
+        return rightDate - leftDate;
+      });
+
+      if (!query) {
+        return agreements;
+      }
+
+      return agreements.filter((agreement) => {
+        const investor = this.getAgreementInvestorName(agreement);
+        return [
+          agreement.name,
+          agreement.id,
+          agreement.status,
+          investor
+        ].some((value) => String(value || '').toLowerCase().includes(query));
+      });
+    },
+
+    getAgreementInvestorName(agreement) {
+      const customerId = agreement?.customer_id || agreement?.customerId;
+      const matchedCustomer = this.customers.find((customer) => customer.id === customerId);
+      return matchedCustomer?.name
+        || agreement?.data?.customerName
+        || agreement?.data?.customer_name
+        || 'Unassigned investor';
     },
 
     async viewClient(contact) {
@@ -328,7 +486,12 @@ function advisorApp() {
       this.startOnboardingLoading();
 
       try {
-        const result = await TGK_API.triggerMaestroWorkflow(this.maestroWorkflowId, {
+        const workflowId = this.getAccountOpeningWorkflowId();
+        if (!workflowId) {
+          throw new Error('No account opening workflow is configured.');
+        }
+
+        const result = await TGK_API.triggerMaestroWorkflow(workflowId, {
           instance_name: `TGK Wealth Account Opening ${new Date().toISOString()}`,
           trigger_inputs: {
             appSlug: window.TGK_CONFIG?.appSlug,

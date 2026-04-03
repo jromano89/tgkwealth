@@ -14,7 +14,6 @@ function investorApp() {
     envelopes: [],
     sidebarCollapsed: false,
     loading: true,
-    assetTransferWorkflowId: window.TGK_DEMO?.config?.assetTransferWorkflowId || window.TGK_CONFIG?.workflows?.assetTransferId || '',
     tasks: [],
     showTaskWorkflow: false,
     taskWorkflowTask: null,
@@ -48,6 +47,10 @@ function investorApp() {
       TGK_API.scheduleDocusignWarmup();
     },
 
+    canSeeSettings() {
+      return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
+    },
+
     sortCustomers(customers) {
       return [...(customers || [])].sort((a, b) => {
         const left = `${a.first_name || ''} ${a.last_name || ''}`.trim();
@@ -57,8 +60,19 @@ function investorApp() {
     },
 
     setTab(nextTab) {
-      const allowedTabs = new Set(['overview', 'documents', 'tasks', 'settings']);
+      const allowedTabs = new Set(['overview', 'documents', 'tasks']);
+      if (this.canSeeSettings()) {
+        allowedTabs.add('settings');
+      }
       this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
+    },
+
+    getAssetTransferWorkflowId() {
+      return String(
+        window.TGK_DEMO?.config?.assetTransferWorkflowId
+        || window.TGK_CONFIG?.workflows?.assetTransferId
+        || ''
+      ).trim();
     },
 
     async loadClient() {
@@ -146,7 +160,7 @@ function investorApp() {
       return String(
         task?.data?.workflowId
         || task?.data?.workflow_id
-        || this.assetTransferWorkflowId
+        || this.getAssetTransferWorkflowId()
         || ''
       ).trim();
     },
