@@ -14,6 +14,7 @@ function advisorApp() {
   return {
     ...createBrandingState(),
     ...createEnvelopeModalHelpers(),
+    iamProducts: getIamProducts(),
     view: 'dashboard',
     currentUser: null,
     customers: [],
@@ -72,10 +73,25 @@ function advisorApp() {
       return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
     },
 
+    canSeeIamProducts() {
+      return this.canSeeSettings();
+    },
+
+    activateIamProduct(productKey) {
+      this.setView(productKey);
+    },
+
+    isActiveIamProduct(productKey) {
+      return this.view === productKey;
+    },
+
     setView(nextView) {
       const allowedViews = new Set(['dashboard', 'documents', 'monitor', 'client']);
       if (this.canSeeSettings()) {
         allowedViews.add('settings');
+        this.iamProducts.forEach((product) => {
+          allowedViews.add(product.key);
+        });
       }
       this.view = allowedViews.has(nextView) ? nextView : 'dashboard';
       if (this.view === 'documents') {
@@ -84,6 +100,14 @@ function advisorApp() {
       if (this.view === 'monitor') {
         this.ensureMonitorAlerts();
       }
+    },
+
+    get currentIamProduct() {
+      return getIamProduct(this.view);
+    },
+
+    get currentIamPlaceholder() {
+      return getIamProductPlaceholder(this.view, getPortalName('Advisor Portal'));
     },
 
     getAccountOpeningWorkflowId() {
@@ -150,48 +174,11 @@ function advisorApp() {
 
     ensureMonitorAlerts() {
       if (this.monitorAlerts.length) return;
-      const now = Date.now();
-      const h = 36e5;
-      const d = 864e5;
-      const inv = (i, fb) => {
-        const c = this.customers?.[i];
-        return c ? (c.name || `${c.first_name} ${c.last_name}`) : fb;
-      };
-      this.monitorAlerts = [
-        {
-          id: 'alert-1', severity: 'critical',
-          title: 'Signing activity from sanctioned region',
-          description: `Envelope signed from IP 185.143.234.17 geolocated to Tehran, Iran. Investor: ${inv(0, 'Margaret Chen')}. Document: Account Transfer Authorization.`,
-          timestamp: new Date(now - 2 * h).toISOString(),
-        },
-        {
-          id: 'alert-2', severity: 'high',
-          title: 'Repeat failed login attempts',
-          description: `14 failed authentication attempts in 6 minutes from IP 91.207.174.22 (Moscow, Russia) targeting account: ${inv(1, 'David Torres')}.`,
-          timestamp: new Date(now - 5 * h).toISOString(),
-        },
-        {
-          id: 'alert-3', severity: 'high',
-          title: 'Anomalous bulk document export',
-          description: '47 documents downloaded in 8 minutes by operations user James Whitaker. Normal baseline: 2\u20135 per hour.',
-          timestamp: new Date(now - 9 * h).toISOString(),
-        },
-        {
-          id: 'alert-4', severity: 'medium',
-          title: 'Admin permission change',
-          description: 'User Rachel Dunn\'s (Junior Associate) role was changed from "Viewer" to "Account Admin"',
-          timestamp: new Date(now - 1 * d).toISOString(),
-        },
-      ];
+      this.monitorAlerts = buildMonitorAlerts(this.customers);
     },
 
     monitorTimeAgo(isoString) {
-      const diff = Date.now() - new Date(isoString).getTime();
-      const mins = Math.floor(diff / 60000);
-      if (mins < 60) return mins + 'm ago';
-      const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return hrs + 'h ago';
-      return Math.floor(hrs / 24) + 'd ago';
+      return monitorTimeAgo(isoString);
     },
 
     async ensureAgreementFeed(force = false) {

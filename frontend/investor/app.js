@@ -4,6 +4,7 @@ function investorApp() {
   return {
     ...createBrandingState(),
     ...createEnvelopeModalHelpers(),
+    iamProducts: getIamProducts(),
     tab: 'overview',
     advisors: [],
     assignedAdvisor: null,
@@ -15,6 +16,7 @@ function investorApp() {
     sidebarCollapsed: false,
     loading: true,
     tasks: [],
+    monitorAlerts: [],
     showTaskWorkflow: false,
     taskWorkflowTask: null,
     taskWorkflowInstanceUrl: '',
@@ -51,6 +53,22 @@ function investorApp() {
       return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
     },
 
+    canSeeIamProducts() {
+      return this.canSeeSettings();
+    },
+
+    isCoreTab(tabName = this.tab) {
+      return ['overview', 'documents', 'tasks'].includes(tabName);
+    },
+
+    activateIamProduct(productKey) {
+      this.setTab(productKey);
+    },
+
+    isActiveIamProduct(productKey) {
+      return this.tab === productKey;
+    },
+
     sortCustomers(customers) {
       return [...(customers || [])].sort((a, b) => {
         const left = `${a.first_name || ''} ${a.last_name || ''}`.trim();
@@ -63,8 +81,31 @@ function investorApp() {
       const allowedTabs = new Set(['overview', 'documents', 'tasks']);
       if (this.canSeeSettings()) {
         allowedTabs.add('settings');
+        this.iamProducts.forEach((product) => {
+          allowedTabs.add(product.key);
+        });
       }
       this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
+      if (this.tab === 'monitor') {
+        this.ensureMonitorAlerts();
+      }
+    },
+
+    get currentIamProduct() {
+      return getIamProduct(this.tab);
+    },
+
+    get currentIamPlaceholder() {
+      return getIamProductPlaceholder(this.tab, getPortalName('Investor Portal'));
+    },
+
+    ensureMonitorAlerts() {
+      if (this.monitorAlerts.length) return;
+      this.monitorAlerts = buildMonitorAlerts(this.customers);
+    },
+
+    monitorTimeAgo(isoString) {
+      return monitorTimeAgo(isoString);
     },
 
     getAssetTransferWorkflowId() {

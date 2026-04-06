@@ -1,0 +1,35 @@
+@font-face {
+  font-family: 'DSIndigo';
+  src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DSIndigo';
+  src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DSIndigo';
+  src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Semibold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+:root {
+  --tgk-font-sans: 'DSIndigo', 'Helvetica Neue', Arial, sans-serif;
+  --tgk-cobalt: #4c00ff;
+  --tgk-inkwell: #130032;
+  --tgk-inkwell-soft: #251049;
+  --tgk-cobalt-soft: #d8d2ff;
+  --tgk-cobalt-bright: #8f72ff;
+  --tgk-poppy: #ff5252;
+  --tgk-salmon: #ff7269;
+  --tgk-white: #ffffff;
+}

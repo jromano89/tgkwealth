@@ -47,6 +47,87 @@ function getAccountTypeLabel(account) {
   return accountTypes[typeCode] || explicitLabel || typeCode;
 }
 
+const TGK_IAM_PRODUCTS = Object.freeze([
+  { key: 'doc-gen', label: 'Doc Gen', icon: 'doc-gen', isBuilt: false },
+  { key: 'id-verification', label: 'ID Verification', icon: 'id-verification', isBuilt: false },
+  { key: 'monitor', label: 'Monitor', icon: 'monitor', isBuilt: true },
+  { key: 'notary', label: 'Notary', icon: 'notary', isBuilt: false },
+  { key: 'web-forms', label: 'Web Forms', icon: 'web-forms', isBuilt: false },
+  { key: 'workspaces', label: 'Workspaces', icon: 'workspaces', isBuilt: false }
+]);
+
+function getIamProducts() {
+  return TGK_IAM_PRODUCTS.map((product) => ({ ...product }));
+}
+
+function getIamProduct(productKey) {
+  const key = String(productKey || '').trim().toLowerCase();
+  return TGK_IAM_PRODUCTS.find((product) => product.key === key) || null;
+}
+
+function getIamProductPlaceholder(productKey, portalName = '') {
+  const product = getIamProduct(productKey);
+  if (!product || product.isBuilt) {
+    return null;
+  }
+
+  const scope = String(portalName || 'this portal').trim();
+  const copy = {
+    'doc-gen': {
+      description: `Document generation templates are not wired into ${scope} yet.`,
+      checkpoints: [
+        'Template selection and data binding placeholder',
+        'Output preview and package assembly placeholder',
+        'Delivery into downstream agreement flows placeholder'
+      ]
+    },
+    'id-verification': {
+      description: `Identity verification is reserved in ${scope}, but the live flow is not connected yet.`,
+      checkpoints: [
+        'Identity session launch placeholder',
+        'Verification result summary placeholder',
+        'Risk signals and remediation placeholder'
+      ]
+    },
+    notary: {
+      description: `Remote online notarization is planned for ${scope}, but there is no live experience here yet.`,
+      checkpoints: [
+        'Notary session intake placeholder',
+        'Signer and witness preparation placeholder',
+        'Completion and audit handoff placeholder'
+      ]
+    },
+    'web-forms': {
+      description: `Web Forms is included in the navigation model, but the interactive form builder is not implemented yet.`,
+      checkpoints: [
+        'Form entry experience placeholder',
+        'Submission routing placeholder',
+        'Agreement creation handoff placeholder'
+      ]
+    },
+    workspaces: {
+      description: `Workspaces is staged in ${scope}, but the collaborative workspace view has not been built yet.`,
+      checkpoints: [
+        'Workspace landing view placeholder',
+        'Shared document list placeholder',
+        'Participant activity stream placeholder'
+      ]
+    }
+  };
+
+  return {
+    label: product.label,
+    eyebrow: 'Docusign IAM Product',
+    title: `${product.label} is not yet built out`,
+    description: copy[product.key]?.description || `A placeholder view exists for ${product.label}, but the live experience is not connected yet.`,
+    checkpoints: copy[product.key]?.checkpoints || [
+      'Navigation placeholder',
+      'Workflow placeholder',
+      'Detail experience placeholder'
+    ]
+  };
+}
+
 function envelopeTimestampLabel(envelope) {
   const rawTimestamp = envelope?.created_at || '';
   if (!rawTimestamp) return '';
@@ -58,6 +139,56 @@ function envelopeTimestampLabel(envelope) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(date);
+}
+
+function buildMonitorAlerts(customers = []) {
+  const now = Date.now();
+  const hour = 36e5;
+  const day = 864e5;
+  const investorName = (index, fallback) => {
+    const customer = customers[index];
+    return customer ? (customer.name || `${customer.first_name} ${customer.last_name}`) : fallback;
+  };
+
+  return [
+    {
+      id: 'alert-1',
+      severity: 'critical',
+      title: 'Signing activity from sanctioned region',
+      description: `Envelope signed from IP 185.143.234.17 geolocated to Tehran, Iran. Investor: ${investorName(0, 'Margaret Chen')}. Document: Account Transfer Authorization.`,
+      timestamp: new Date(now - 2 * hour).toISOString()
+    },
+    {
+      id: 'alert-2',
+      severity: 'high',
+      title: 'Repeat failed login attempts',
+      description: `14 failed authentication attempts in 6 minutes from IP 91.207.174.22 (Moscow, Russia) targeting account: ${investorName(1, 'David Torres')}.`,
+      timestamp: new Date(now - 5 * hour).toISOString()
+    },
+    {
+      id: 'alert-3',
+      severity: 'high',
+      title: 'Anomalous bulk document export',
+      description: '47 documents downloaded in 8 minutes by operations user James Whitaker. Normal baseline: 2-5 per hour.',
+      timestamp: new Date(now - 9 * hour).toISOString()
+    },
+    {
+      id: 'alert-4',
+      severity: 'medium',
+      title: 'Admin permission change',
+      description: `User Rachel Dunn's (Junior Associate) role was changed from "Viewer" to "Account Admin"`,
+      timestamp: new Date(now - 1 * day).toISOString()
+    }
+  ];
+}
+
+function monitorTimeAgo(isoString) {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return minutes + 'm ago';
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + 'h ago';
+  return Math.floor(hours / 24) + 'd ago';
 }
 
 // Status badge classes
