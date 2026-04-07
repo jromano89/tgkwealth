@@ -9,7 +9,7 @@
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-text="brandingInitial"></div>
       <div x-show="!sidebarCollapsed" class="overflow-hidden">
         <div class="font-bold text-sm leading-tight" x-text="brandingAppName"></div>
-        <div class="text-[10px] text-gray-400 tracking-widest uppercase" x-text="getPortalName('Investor Portal')"></div>
+        <div class="text-[10px] text-gray-400 tracking-widest uppercase">Investor Portal</div>
       </div>
     </div>
 
@@ -30,14 +30,6 @@
           <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
         </span>
       </button>
-
-      <div class="px-1 pt-3" x-show="!sidebarCollapsed">
-        <select x-model="selectedClientId" @change="switchClient()" class="w-full bg-navy-light text-white text-xs rounded-lg px-3 py-2 border border-white/10">
-          <template x-for="c in customers" :key="c.id">
-            <option :value="c.id" x-text="c.first_name + ' ' + c.last_name"></option>
-          </template>
-        </select>
-      </div>
 
       <div x-show="canSeeIamProducts()">
         <div x-show="!sidebarCollapsed" class="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">IAM Products</div>
@@ -71,7 +63,7 @@
       <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${selectedClient?.metadata?.avatar || '#3b5bdb'}`" x-text="initials(clientName)"></div>
       <div x-show="!sidebarCollapsed" class="overflow-hidden">
         <div class="text-sm font-medium leading-tight" x-text="clientName"></div>
-        <div class="text-[10px] text-gray-400" x-text="getPortalLabel('customer', 'Investor')"></div>
+        <div class="text-[10px] text-gray-400">Investor</div>
       </div>
     </div>
   </aside>
@@ -81,10 +73,47 @@
     <div class="p-6">
 
       <!-- Header -->
-      <div x-show="isCoreTab(tab)" class="flex items-center justify-between mb-2">
-        <div>
-          <h1 class="text-xl font-semibold text-navy">Good afternoon, <span x-text="selectedClient?.first_name || ''"></span></h1>
-          <p class="text-sm text-gray-400">Portfolio snapshot as of <span x-text="portfolioDateLabel"></span></p>
+      <div x-show="isCoreTab(tab)" class="tgk-investor-header">
+        <div class="min-w-0">
+          <h1 class="tgk-investor-header__title">
+            Good afternoon,
+            <span class="tgk-investor-switch" x-data="{ open: false }">
+              <button
+                @click="open = !open"
+                @keydown.escape.window="open = false"
+                type="button"
+                class="tgk-investor-switch__button"
+                aria-label="Switch investor">
+                <span x-text="clientName || 'Investor'"></span>
+                <svg
+                  class="tgk-investor-switch__chevron"
+                  :class="{ 'tgk-investor-switch__chevron--open': open }"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m7 10 5 5 5-5" />
+                </svg>
+              </button>
+
+              <div
+                x-show="open && customers.length > 0"
+                x-transition.opacity.scale.origin.top.left
+                @click.outside="open = false"
+                class="tgk-investor-switch__menu">
+                <template x-for="c in customers" :key="c.id">
+                  <button
+                    @click="selectedClientId = c.id; open = false; switchClient()"
+                    type="button"
+                    class="tgk-investor-switch__item"
+                    :class="{ 'tgk-investor-switch__item--active': selectedClientId === c.id }">
+                    <span class="tgk-investor-switch__name" x-text="c.name"></span>
+                  </button>
+                </template>
+              </div>
+            </span>
+          </h1>
+          <p class="tgk-investor-header__meta">Portfolio snapshot as of <span x-text="portfolioDateLabel"></span></p>
         </div>
         <div class="flex items-center gap-3">
           <div x-data x-init="mountSharedTemplate($el, newsPanelTemplate())"></div>
@@ -123,7 +152,7 @@
         <!-- Hero Card -->
         <div class="bg-gradient-to-r from-navy to-navy-light rounded-xl p-8 text-white mb-6 relative overflow-hidden tgk-hero-shimmer">
           <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/5"></div>
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-300 mb-2" x-text="'Total ' + getPortalLabel('contactValue', 'Portfolio Value')"></div>
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-300 mb-2">Total Portfolio Value</div>
           <div class="font-serif text-[44px] font-semibold leading-tight" x-text="fmtMoney(totalPortfolioValue)"></div>
           <div class="flex gap-8 mt-4">
             <div>
@@ -135,7 +164,7 @@
               <div class="text-lg font-semibold" x-text="accounts.length"></div>
             </div>
             <div>
-              <div class="text-[10px] uppercase tracking-wider text-gray-400" x-text="getPortalLabel('riskLevel', 'Risk Profile')"></div>
+              <div class="text-[10px] uppercase tracking-wider text-gray-400">Risk Profile</div>
               <div class="text-lg font-semibold" x-text="selectedClient?.metadata?.riskProfile || '—'"></div>
             </div>
           </div>
@@ -148,7 +177,7 @@
               <div class="flex justify-between items-start mb-2">
                 <div>
                   <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
-                  <div class="text-[11px] text-gray-400" x-text="getAccountTypeLabel(acct)"></div>
+                  <div class="text-[11px] text-gray-400" x-text="accountLabel(acct)"></div>
                 </div>
                 <template x-if="acct.metadata?.ytdReturn != null">
                   <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="acct.metadata.ytdReturn >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
@@ -173,16 +202,13 @@
 
         <!-- Advisor Contact -->
         <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-brand">
-          <h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3" x-text="'Your ' + getPortalLabel('employee', 'Advisor')"></h3>
+          <h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3">Your Advisor</h3>
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white font-bold" x-text="assignedAdvisor?.metadata?.avatar || initials(getPortalLabel('employee', 'Advisor'))"></div>
+            <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white font-bold" x-text="assignedAdvisor?.metadata?.avatar || 'A'"></div>
             <div>
-              <div class="font-medium text-navy" x-text="assignedAdvisor?.name || ('Your ' + getPortalLabel('employee', 'Advisor'))"></div>
-              <div class="text-sm text-gray-500" x-text="assignedAdvisor?.title || getPortalLabel('assignedTo', '')"></div>
+              <div class="font-medium text-navy" x-text="assignedAdvisor?.name || 'Your Advisor'"></div>
+              <div class="text-sm text-gray-500" x-text="assignedAdvisor?.title || 'Advisor'"></div>
               <div class="text-xs text-gray-400 mt-0.5" x-text="((assignedAdvisor?.email || '') + ' · ' + (assignedAdvisor?.phone || '')).replace(/^ · | · $/g, '')"></div>
-            </div>
-            <div class="ml-auto flex gap-2">
-              <button @click="setTab('tasks')" class="px-3 py-1.5 rounded-lg bg-brand text-white text-sm hover:bg-brand-light">View Tasks</button>
             </div>
           </div>
         </div>
@@ -191,12 +217,11 @@
       <!-- DOCUMENTS TAB -->
       <div x-show="tab === 'documents' && selectedClient">
         <div class="bg-white rounded-xl shadow-sm p-5">
-          <div class="flex items-center justify-between gap-4 mb-4">
+          <div class="mb-4">
             <div>
               <h3 class="font-semibold text-base text-navy">Documents</h3>
               <p class="text-xs text-gray-400 mt-1">Signed packets and live status updates in one place.</p>
             </div>
-            <div class="px-3 py-1 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600" x-text="envelopes.length + ' packet' + (envelopes.length === 1 ? '' : 's')"></div>
           </div>
           <template x-if="envelopes.length === 0">
             <div class="text-center py-8 text-gray-400">
@@ -305,7 +330,7 @@
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <div class="min-w-0 pr-4">
             <h2 class="font-serif text-lg font-semibold text-navy leading-tight" x-text="taskWorkflowTask?.title || 'Continue Asset Transfer'"></h2>
-            <p class="mt-1 text-sm text-gray-500" x-text="clientName || selectedClient?.name || (getPortalLabel('customer', 'Investor') + ' workflow')"></p>
+            <p class="mt-1 text-sm text-gray-500" x-text="clientName || selectedClient?.name || 'Investor workflow'"></p>
           </div>
           <div class="flex items-center gap-2">
             <template x-if="taskWorkflowInstanceUrl">

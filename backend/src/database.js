@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const DEFAULT_DB_PATH = path.resolve(__dirname, '..', 'data', 'demo.db');
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS apps (
@@ -85,8 +86,20 @@ const SCHEMA = `
 let db;
 let activeDbPath = null;
 
+function resolveConfiguredDbPath() {
+  const configuredPath = String(process.env.TGK_DB_PATH || '').trim();
+
+  if (!configuredPath) {
+    return DEFAULT_DB_PATH;
+  }
+
+  return path.isAbsolute(configuredPath)
+    ? configuredPath
+    : path.resolve(__dirname, '..', configuredPath);
+}
+
 function getDbPath() {
-  return process.env.TGK_DB_PATH || path.join(__dirname, '..', 'data', 'demo.db');
+  return activeDbPath || resolveConfiguredDbPath();
 }
 
 function initializeDb(dbPath) {
@@ -102,7 +115,7 @@ function initializeDb(dbPath) {
 }
 
 function getDb() {
-  const dbPath = getDbPath();
+  const dbPath = resolveConfiguredDbPath();
   if (db && activeDbPath === dbPath) {
     return db;
   }
@@ -111,8 +124,19 @@ function getDb() {
     db.close();
   }
 
-  db = initializeDb(dbPath);
-  activeDbPath = dbPath;
+  try {
+    db = initializeDb(dbPath);
+    activeDbPath = dbPath;
+  } catch (error) {
+    if (dbPath === DEFAULT_DB_PATH) {
+      throw error;
+    }
+
+    console.warn(`Unable to use TGK_DB_PATH at ${dbPath}; falling back to ${DEFAULT_DB_PATH}.`);
+    db = initializeDb(DEFAULT_DB_PATH);
+    activeDbPath = DEFAULT_DB_PATH;
+  }
+
   return db;
 }
 

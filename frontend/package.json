@@ -1,7 +1,0 @@
-{
-  "name": "tgk-demo-frontend",
-  "private": true,
-  "scripts": {
-    "start": "node server.js"
-  }
-}

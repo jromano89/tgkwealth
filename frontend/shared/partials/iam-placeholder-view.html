@@ -2,10 +2,4 @@
   <div class="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand" x-text="currentIamPlaceholder?.eyebrow"></div>
   <h2 class="mt-4 text-xl font-semibold text-navy" x-text="currentIamPlaceholder?.title"></h2>
   <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-500" x-text="currentIamPlaceholder?.description"></p>
-
-  <div class="mt-6 grid gap-3 md:grid-cols-3">
-    <template x-for="item in (currentIamPlaceholder?.checkpoints || [])" :key="item">
-      <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-gray-600" x-text="item"></div>
-    </template>
-  </div>
 </section>

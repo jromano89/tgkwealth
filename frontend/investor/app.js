@@ -54,7 +54,7 @@ function investorApp() {
     },
 
     canSeeIamProducts() {
-      return this.canSeeSettings();
+      return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
     },
 
     isCoreTab(tabName = this.tab) {
@@ -81,6 +81,8 @@ function investorApp() {
       const allowedTabs = new Set(['overview', 'documents', 'tasks']);
       if (this.canSeeSettings()) {
         allowedTabs.add('settings');
+      }
+      if (this.canSeeIamProducts()) {
         this.iamProducts.forEach((product) => {
           allowedTabs.add(product.key);
         });
@@ -96,7 +98,7 @@ function investorApp() {
     },
 
     get currentIamPlaceholder() {
-      return getIamProductPlaceholder(this.tab, getPortalName('Investor Portal'));
+      return getIamProductPlaceholder(this.tab);
     },
 
     ensureMonitorAlerts() {
@@ -109,11 +111,7 @@ function investorApp() {
     },
 
     getAssetTransferWorkflowId() {
-      return String(
-        window.TGK_DEMO?.config?.assetTransferWorkflowId
-        || window.TGK_CONFIG?.workflows?.assetTransferId
-        || ''
-      ).trim();
+      return String(window.TGK_CONFIG?.workflows?.assetTransferId || '').trim();
     },
 
     async loadClient() {
@@ -266,7 +264,9 @@ function investorApp() {
       }
 
       payload.appSlug = window.TGK_CONFIG?.appSlug;
-      payload.idv = window.TGK_DEMO?.config?.assetTransferIdVerification ? 'true' : 'false';
+      if (payload.idv === undefined) {
+        payload.idv = 'false';
+      }
 
       return payload;
     },

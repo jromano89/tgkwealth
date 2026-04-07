@@ -2,11 +2,8 @@ const path = require('path');
 const dotenv = require('dotenv');
 const express = require('express');
 const { getDb } = require('./database');
-const {
-  API_TITLE,
-  API_VERSION,
-  buildOpenApiDocument
-} = require('./openapi');
+const API_TITLE = 'TGK Demo Backend';
+const API_VERSION = '3.0.0';
 
 // Load both repo-root .env and backend/.env for local runs; existing env vars still win.
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -37,6 +34,7 @@ function createApp() {
 
   // Connect payloads can arrive outside the normal JSON parser, so mount the sink first.
   app.use('/api/webhooks', require('./routes/webhooks'));
+  app.use('/architecture', express.static(path.resolve(__dirname, '..', 'architecture')));
 
   app.use(express.json({ limit: '1mb' }));
   getDb();
@@ -64,16 +62,12 @@ a.alt:hover{background:rgba(255,255,255,.1)}
 <p>Use <code>X-Demo-App</code> to scope auth, data, and proxy requests to a logical demo app.</p>
 <div class="links">
 <a href="/api/health">Health Check</a>
-<a class="alt" href="/api/openapi.json">OpenAPI JSON</a>
+<a class="alt" href="/architecture/">Architecture</a>
 <a class="alt" href="/maestro/health">Maestro Health</a>
 <a class="alt" href="/maestro/manifest/clientCredentials.ReadWriteManifest.json">Maestro Manifest</a>
 </div>
 <div class="tag">v${API_VERSION}</div>
 </div></body></html>`);
-  });
-
-  app.get('/api/openapi.json', (req, res) => {
-    res.json(buildOpenApiDocument(req));
   });
 
   app.use('/api/auth', require('./routes/auth'));

@@ -68,7 +68,6 @@
   function mapEmployee(employee) {
     const data = employee?.data || {};
     const displayName = pickDisplayName(employee?.displayName, [
-      [data.firstName, data.lastName].filter(Boolean).join(' '),
       employee?.email,
       employee?.title,
       employee?.id
@@ -76,8 +75,8 @@
     const name = splitDisplayName(displayName);
     return {
       id: employee.id,
-      first_name: data.firstName || name.firstName,
-      last_name: data.lastName || name.lastName,
+      first_name: name.firstName,
+      last_name: name.lastName,
       name: displayName,
       email: employee.email,
       phone: employee.phone,
@@ -93,16 +92,18 @@
 
   function mapEmbeddedAccount(account, customerId) {
     const data = account && typeof account === 'object' ? account : {};
+    const accountType = data.accountType || 'Account';
     return {
       id: data.id,
       customer_id: customerId,
       customerId,
-      account_type: data.typeCode || data.accountType || data.kind || 'account',
-      accountType: data.typeCode || data.accountType || data.kind || 'account',
+      account_type: accountType,
+      accountType,
       status: data.status || 'active',
       metadata: {
         ...data,
-        name: data.name || data.title || 'Untitled Account'
+        name: data.name || data.title || 'Untitled Account',
+        accountType
       },
       created_at: data.createdAt || data.created_at || '',
       createdAt: data.createdAt || data.created_at || ''
@@ -139,7 +140,6 @@
   function mapCustomerToView(customer) {
     const data = customer?.data || {};
     const displayName = pickDisplayName(customer?.displayName, [
-      [data.firstName, data.lastName].filter(Boolean).join(' '),
       customer?.email,
       customer?.organization,
       customer?.id
@@ -147,14 +147,13 @@
     const name = splitDisplayName(displayName);
     return {
       id: customer.id,
-      first_name: data.firstName || name.firstName,
-      last_name: data.lastName || name.lastName,
+      first_name: name.firstName,
+      last_name: name.lastName,
       name: displayName,
       email: customer.email,
       phone: customer.phone,
       company: customer.organization,
-      type: data.contactType || 'investor',
-      tags: Array.isArray(data.tags) ? data.tags : [],
+      type: 'investor',
       metadata: {
         ...data,
         status: customer.status || data.status
@@ -238,7 +237,7 @@
 
   const TGK_API = {
     baseUrl: window.TGK_CONFIG?.backendUrl || 'http://localhost:3000',
-    docusignIamBaseUrl: window.TGK_CONFIG?.docusignIamBaseUrl || 'https://api-d.docusign.com',
+    docusignBaseUrl: window.TGK_CONFIG?.docusignBaseUrl || 'https://api-d.docusign.com',
     appSlug: window.TGK_CONFIG?.appSlug || '',
     appName: window.TGK_CONFIG?.appName || '',
     _sessionCache: null,
@@ -403,7 +402,7 @@
     getDocusignAppOrigin() {
       const defaultOrigin = 'https://apps-d.docusign.com';
       try {
-        const configured = this.docusignIamBaseUrl || defaultOrigin;
+        const configured = this.docusignBaseUrl || defaultOrigin;
         const url = new URL(configured, window.location.href);
         url.host = url.host.replace(/^api(?=[.-])/, 'apps');
         return url.origin;
@@ -599,7 +598,7 @@
       return this.proxy({
         method: 'POST',
         path: `/v1/accounts/{accountId}/workflows/${workflowId}/actions/trigger`,
-        baseUrl: this.docusignIamBaseUrl,
+        baseUrl: this.docusignBaseUrl,
         authMode: 'docusign',
         body
       });

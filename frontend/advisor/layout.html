@@ -10,7 +10,7 @@
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-text="brandingInitial"></div>
       <div x-show="!sidebarCollapsed" class="overflow-hidden">
         <div class="font-bold text-sm leading-tight" x-text="brandingAppName"></div>
-        <div class="text-[10px] text-gray-400 tracking-widest uppercase" x-text="getPortalName('Advisor Portal')"></div>
+        <div class="text-[10px] text-gray-400 tracking-widest uppercase">Advisor Portal</div>
       </div>
     </div>
 
@@ -75,7 +75,7 @@
     <div x-show="view === 'dashboard'" class="p-6">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-semibold text-navy" x-text="getPortalName('Advisor Portal')"></h1>
+        <h1 class="text-xl font-semibold text-navy">Advisor Portal</h1>
         <div class="flex items-center gap-3">
           <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -89,7 +89,7 @@
       <!-- Stat Cards -->
       <div class="grid grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl p-4 border-l-4 border-brand shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1" x-text="'Total ' + getPortalLabel('contactValue', 'AUM')"></div>
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Total AUM</div>
           <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(totalAum)"></div>
           <div class="text-xs text-gray-400 mt-1" x-text="customers.length + ' client relationships'"></div>
         </div>
@@ -112,16 +112,16 @@
 
       <!-- Client Book -->
       <div class="bg-white rounded-xl shadow-sm p-5">
-        <h2 class="font-semibold text-base text-navy mb-4" x-text="getPortalLabel('customer', 'Client') + ' Book'"></h2>
+        <h2 class="font-semibold text-base text-navy mb-4">Investor Book</h2>
           <div class="overflow-x-auto">
             <table class="w-full min-w-[760px]">
               <thead>
                 <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
-                  <th class="text-left pb-3" x-text="getPortalLabel('customer', 'Client')"></th>
-                  <th class="text-left pb-3" x-text="getPortalLabel('contactValue', 'AUM')"></th>
+                  <th class="text-left pb-3">Investor</th>
+                  <th class="text-left pb-3">AUM</th>
                   <th class="text-left pb-3">Net Worth</th>
                   <th class="text-left pb-3">Trend</th>
-                  <th class="text-left pb-3" x-text="getPortalLabel('riskLevel', 'Risk Profile')"></th>
+                  <th class="text-left pb-3">Risk Profile</th>
                   <th class="text-left pb-3">Status</th>
                   <th class="w-8 pb-3"></th>
                 </tr>
@@ -131,10 +131,10 @@
                   <tr @click="viewClient(c)" class="group border-b border-gray-50 even:bg-gray-50/50 hover:bg-blue-50/50 cursor-pointer transition-colors">
                     <td class="py-3">
                       <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.first_name + ' ' + c.last_name)"></div>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.name)"></div>
                         <div>
-                          <div class="font-medium text-sm text-navy" x-text="c.first_name + ' ' + c.last_name"></div>
-                          <div class="text-[11px] text-gray-400" x-text="c.metadata?.role || c.type"></div>
+                          <div class="font-medium text-sm text-navy" x-text="c.name"></div>
+                          <div class="text-[11px] text-gray-400" x-text="c.metadata?.household || c.company || 'Investor'"></div>
                         </div>
                       </div>
                     </td>
@@ -183,9 +183,9 @@
           <!-- Profile Sidebar -->
           <div class="w-[300px] flex-shrink-0 space-y-4">
             <div class="bg-white rounded-xl shadow-sm p-5 text-center">
-              <div class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white text-lg font-bold mb-3" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.first_name + ' ' + selectedContact.last_name)"></div>
-              <h2 class="font-serif text-xl font-semibold text-navy" x-text="selectedContact.first_name + ' ' + selectedContact.last_name"></h2>
-              <div class="text-sm text-gray-500 mt-1" x-text="selectedContact.metadata?.role || selectedContact.type"></div>
+              <div class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white text-lg font-bold mb-3" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.name)"></div>
+              <h2 class="font-serif text-xl font-semibold text-navy" x-text="selectedContact.name"></h2>
+              <div class="text-sm text-gray-500 mt-1" x-text="selectedContact.metadata?.household || selectedContact.company || 'Investor'"></div>
               <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
               <div class="mt-4 space-y-2 text-left text-sm">
                 <div class="flex items-center gap-2 text-gray-500">
@@ -205,7 +205,7 @@
               </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-5">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1" x-text="'Total ' + getPortalLabel('contactValue', 'AUM')"></div>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Total AUM</div>
               <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(selectedContact.metadata?.value)"></div>
               <div class="flex items-center gap-2 mt-2">
                 <svg width="80" height="24" viewBox="0 0 80 24">
@@ -226,7 +226,7 @@
                     <div class="flex justify-between items-start mb-2">
                       <div>
                         <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
-                        <div class="text-[11px] text-gray-400" x-text="getAccountTypeLabel(acct)"></div>
+                        <div class="text-[11px] text-gray-400" x-text="accountLabel(acct)"></div>
                       </div>
                       <template x-if="acct.metadata?.ytdReturn != null">
                         <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="acct.metadata.ytdReturn >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>

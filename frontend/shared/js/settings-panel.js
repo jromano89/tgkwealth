@@ -1,11 +1,16 @@
 /**
- * Shared settings state for branding and demo configuration.
+ * Shared settings state for branding and advanced sidebar controls.
  * Persists to localStorage so the advisor and investor portals stay aligned.
  */
 
 const TGK_DEMO_SETTINGS_STORAGE_KEY = 'tgk_demo_settings';
 const TGK_BRANDING_EVENT = 'tgk:branding-change';
-const TGK_CONFIG_DEFAULTS = window.TGK_CONFIG?.workflows || {};
+const TGK_IAM_PRODUCT_OPTIONS = Array.isArray(window.TGK_CONFIG?.iamProducts)
+  ? window.TGK_CONFIG.iamProducts.map((product) => ({ ...product }))
+  : [];
+const TGK_DEFAULT_IAM_PRODUCTS = Array.isArray(window.TGK_CONFIG?.defaultIamProducts)
+  ? window.TGK_CONFIG.defaultIamProducts
+  : TGK_IAM_PRODUCT_OPTIONS.map((product) => product.key);
 const TGK_PORTAL_TONES = {
   advisor: {
     pageBackground: '#f4f5f7',
@@ -21,18 +26,38 @@ const TGK_PORTAL_TONES = {
 const TGK_DEMO_DEFAULTS = {
   branding: {
     appName: window.TGK_CONFIG?.appName || 'TGK Wealth',
-    brandColor: '#3b5bdb'
+    brandColor: window.TGK_CONFIG?.brandColor || '#3b5bdb'
   },
-  config: {
-    accountOpeningWorkflowId: TGK_CONFIG_DEFAULTS.accountOpeningId || 'e26e565e-fb6a-433b-b004-bd2083c8963b',
-    assetTransferWorkflowId: TGK_CONFIG_DEFAULTS.assetTransferId || 'b59acbee-8052-403a-a752-c04287ad6ee1',
-    accountOpeningIdVerification: false,
-    assetTransferIdVerification: false
+  sidebar: {
+    iamProductKeys: normalizeIamProductKeys(TGK_DEFAULT_IAM_PRODUCTS)
   }
 };
 
 function normalizeHexColor(value, fallback = TGK_DEMO_DEFAULTS.branding.brandColor) {
   return /^#[0-9a-f]{6}$/i.test(String(value || '').trim()) ? String(value).trim() : fallback;
+}
+
+function canUseAdvancedCustomizations() {
+  return Boolean(window.TGK_ACCESS?.canSeeSettings?.());
+}
+
+function normalizeIamProductKeys(keys, fallback = []) {
+  const validKeys = new Set(
+    TGK_IAM_PRODUCT_OPTIONS.map((product) => String(product.key || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const source = Array.isArray(keys) ? keys : fallback;
+  const normalizedKeys = [];
+
+  source.forEach((key) => {
+    const normalizedKey = String(key || '').trim().toLowerCase();
+    if (!validKeys.has(normalizedKey) || normalizedKeys.includes(normalizedKey)) {
+      return;
+    }
+
+    normalizedKeys.push(normalizedKey);
+  });
+
+  return normalizedKeys;
 }
 
 function resolveBrandingAppName(value) {
@@ -134,50 +159,45 @@ function writeStoredSettings(settings) {
   } catch (error) {}
 }
 
-function clearStoredSettings() {
-  try {
-    window.localStorage.removeItem(TGK_DEMO_SETTINGS_STORAGE_KEY);
-  } catch (error) {}
-}
-
-function resolveDemoConfig(savedConfig = {}) {
-  const legacyIdVerification = savedConfig.idVerification !== undefined
-    ? Boolean(savedConfig.idVerification)
-    : undefined;
+function resolveSidebarSettings(savedSidebar = {}) {
+  if (Array.isArray(savedSidebar.iamProductKeys)) {
+    return {
+      iamProductKeys: normalizeIamProductKeys(savedSidebar.iamProductKeys)
+    };
+  }
 
   return {
-    accountOpeningWorkflowId: String(savedConfig.accountOpeningWorkflowId || TGK_DEMO_DEFAULTS.config.accountOpeningWorkflowId).trim()
-      || TGK_DEMO_DEFAULTS.config.accountOpeningWorkflowId,
-    assetTransferWorkflowId: String(savedConfig.assetTransferWorkflowId || TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId).trim()
-      || TGK_DEMO_DEFAULTS.config.assetTransferWorkflowId,
-    accountOpeningIdVerification: savedConfig.accountOpeningIdVerification !== undefined
-      ? Boolean(savedConfig.accountOpeningIdVerification)
-      : (legacyIdVerification ?? TGK_DEMO_DEFAULTS.config.accountOpeningIdVerification),
-    assetTransferIdVerification: savedConfig.assetTransferIdVerification !== undefined
-      ? Boolean(savedConfig.assetTransferIdVerification)
-      : (legacyIdVerification ?? TGK_DEMO_DEFAULTS.config.assetTransferIdVerification)
+    iamProductKeys: normalizeIamProductKeys(TGK_DEMO_DEFAULTS.sidebar.iamProductKeys)
   };
 }
 
-function syncRuntimeConfig(nextConfig) {
+function syncRuntimeSidebar(nextSidebar) {
   if (!window.TGK_DEMO) {
     window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
   }
 
-  window.TGK_DEMO.config = resolveDemoConfig({
-    ...(window.TGK_DEMO.config || {}),
-    ...nextConfig
+  window.TGK_DEMO.sidebar = resolveSidebarSettings({
+    ...(window.TGK_DEMO.sidebar || {}),
+    ...nextSidebar
   });
 }
 
 function buildDemoSettingsSnapshot(savedSettings) {
   const savedBranding = savedSettings.branding || {};
+  const isAdvanced = canUseAdvancedCustomizations();
+
   return {
     branding: {
-      appName: savedBranding.appName || TGK_DEMO_DEFAULTS.branding.appName,
-      brandColor: normalizeHexColor(savedBranding.brandColor)
+      appName: isAdvanced
+        ? (savedBranding.appName || TGK_DEMO_DEFAULTS.branding.appName)
+        : TGK_DEMO_DEFAULTS.branding.appName,
+      brandColor: isAdvanced
+        ? normalizeHexColor(savedBranding.brandColor)
+        : TGK_DEMO_DEFAULTS.branding.brandColor
     },
-    config: resolveDemoConfig(savedSettings.config || {}),
+    sidebar: isAdvanced
+      ? resolveSidebarSettings(savedSettings.sidebar || {})
+      : { iamProductKeys: [] },
     DEFAULTS: TGK_DEMO_DEFAULTS
   };
 }
@@ -197,9 +217,12 @@ function applyThemeColor(brandColor) {
 }
 
 function applyBrandingPreview(nextBranding = {}) {
+  const sourceBranding = canUseAdvancedCustomizations()
+    ? nextBranding
+    : TGK_DEMO_DEFAULTS.branding;
   const branding = {
-    appName: resolveBrandingAppName(nextBranding.appName),
-    brandColor: normalizeHexColor(nextBranding.brandColor)
+    appName: resolveBrandingAppName(sourceBranding.appName),
+    brandColor: normalizeHexColor(sourceBranding.brandColor)
   };
 
   if (!window.TGK_DEMO) {
@@ -250,24 +273,13 @@ function settingsPanelState() {
   return {
     appName: window.TGK_DEMO.branding.appName,
     brandColor: window.TGK_DEMO.branding.brandColor,
-    accountOpeningWorkflowId: window.TGK_DEMO.config.accountOpeningWorkflowId,
-    assetTransferWorkflowId: window.TGK_DEMO.config.assetTransferWorkflowId,
-    accountOpeningIdVerification: window.TGK_DEMO.config.accountOpeningIdVerification,
-    assetTransferIdVerification: window.TGK_DEMO.config.assetTransferIdVerification,
+    sidebarProductKeys: [...(window.TGK_DEMO.sidebar?.iamProductKeys || [])],
     dirty: false,
-    resettingBranding: false,
+    resettingDefaults: false,
 
-    canSeeDocusignSettings() {
-      return window.TGK_ACCESS?.canSeeDocusignSettings?.() ?? true;
-    },
-
-    currentConfig() {
-      return resolveDemoConfig({
-        ...(readStoredSettings().config || {}),
-        accountOpeningWorkflowId: this.accountOpeningWorkflowId,
-        assetTransferWorkflowId: this.assetTransferWorkflowId,
-        accountOpeningIdVerification: this.accountOpeningIdVerification,
-        assetTransferIdVerification: this.assetTransferIdVerification
+    currentSidebar() {
+      return resolveSidebarSettings({
+        iamProductKeys: this.sidebarProductKeys
       });
     },
 
@@ -276,6 +288,31 @@ function settingsPanelState() {
         appName: this.appName,
         brandColor: this.brandColor
       });
+    },
+
+    sidebarOptions() {
+      return TGK_IAM_PRODUCT_OPTIONS;
+    },
+
+    isSidebarProductEnabled(productKey) {
+      const key = String(productKey || '').trim().toLowerCase();
+      return this.sidebarProductKeys.includes(key);
+    },
+
+    toggleSidebarProduct(productKey, enabled) {
+      const key = String(productKey || '').trim().toLowerCase();
+      const selectedKeys = new Set(this.sidebarProductKeys);
+
+      if (enabled) {
+        selectedKeys.add(key);
+      } else {
+        selectedKeys.delete(key);
+      }
+
+      this.sidebarProductKeys = TGK_IAM_PRODUCT_OPTIONS
+        .map((product) => product.key)
+        .filter((productKeyValue) => selectedKeys.has(productKeyValue));
+      this.dirty = true;
     },
 
     previewAppName(value) {
@@ -293,38 +330,30 @@ function settingsPanelState() {
     save() {
       const nextBrandColor = normalizeHexColor(this.brandColor);
       const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
-      const nextConfig = this.currentConfig();
 
       writeStoredSettings({
         branding: {
           appName: nextAppName,
           brandColor: nextBrandColor
         },
-        config: nextConfig
+        sidebar: this.currentSidebar()
       });
 
       applyBrandingPreview({
         appName: nextAppName,
         brandColor: nextBrandColor
       });
-      syncRuntimeConfig(nextConfig);
+      syncRuntimeSidebar(this.currentSidebar());
       this.dirty = false;
       window.location.reload();
     },
 
-    saveConfig() {
-      const existing = readStoredSettings();
-      const nextConfig = this.currentConfig();
-      existing.config = nextConfig;
-      writeStoredSettings(existing);
-      syncRuntimeConfig(nextConfig);
-    },
-
-    resetBranding() {
-      this.resettingBranding = true;
+    resetCustomizations() {
+      this.resettingDefaults = true;
       const existing = readStoredSettings();
       this.appName = TGK_DEMO_DEFAULTS.branding.appName;
       this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
+      this.sidebarProductKeys = [...TGK_DEMO_DEFAULTS.sidebar.iamProductKeys];
       this.dirty = false;
       writeStoredSettings({
         ...existing,
@@ -332,10 +361,12 @@ function settingsPanelState() {
           appName: TGK_DEMO_DEFAULTS.branding.appName,
           brandColor: TGK_DEMO_DEFAULTS.branding.brandColor
         },
-        config: this.currentConfig()
+        sidebar: this.currentSidebar()
       });
       applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
-      this.resettingBranding = false;
+      syncRuntimeSidebar(this.currentSidebar());
+      this.resettingDefaults = false;
+      window.location.reload();
     }
   };
 }

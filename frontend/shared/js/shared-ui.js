@@ -25,106 +25,97 @@ function fmtPct(n) {
   return sign + normalized.toFixed(1) + '%';
 }
 
-function getPortalConfig() {
-  return window.TGK_CONFIG || {};
+function accountLabel(account) {
+  const label = String(
+    account?.metadata?.accountType
+    || account?.metadata?.label
+    || account?.accountType
+    || account?.account_type
+    || 'Account'
+  ).trim();
+
+  return label || 'Account';
 }
 
-function getPortalName(fallback = '') {
-  const portalName = String(getPortalConfig().portalName || '').trim();
-  return portalName || fallback;
+function getConfiguredIamProducts() {
+  const configuredProducts = Array.isArray(window.TGK_CONFIG?.iamProducts)
+    ? window.TGK_CONFIG.iamProducts
+    : [];
+
+  return configuredProducts
+    .filter((product) => product && typeof product === 'object')
+    .map((product) => ({ ...product }));
 }
 
-function getPortalLabel(key, fallback = '') {
-  const value = String(getPortalConfig().labels?.[key] || '').trim();
-  return value || fallback;
+function getDefaultIamProductKeys() {
+  const configuredProducts = getConfiguredIamProducts();
+  const validKeys = new Set(configuredProducts.map((product) => product.key));
+  const configuredKeys = Array.isArray(window.TGK_CONFIG?.defaultIamProducts)
+    ? window.TGK_CONFIG.defaultIamProducts
+    : configuredProducts.map((product) => product.key);
+  const normalizedKeys = [];
+
+  configuredKeys.forEach((key) => {
+    const normalizedKey = String(key || '').trim().toLowerCase();
+    if (!validKeys.has(normalizedKey) || normalizedKeys.includes(normalizedKey)) {
+      return;
+    }
+
+    normalizedKeys.push(normalizedKey);
+  });
+
+  return normalizedKeys.length
+    ? normalizedKeys
+    : configuredProducts.map((product) => product.key);
 }
 
-function getAccountTypeLabel(account) {
-  const accountTypes = getPortalConfig().labels?.accountTypes || {};
-  const typeCode = String(account?.accountType || account?.account_type || '').trim();
-  const explicitLabel = String(account?.metadata?.accountType || '').trim();
+function getVisibleIamProductKeys() {
+  if (!window.TGK_ACCESS?.canSeeIamProducts?.()) {
+    return [];
+  }
 
-  return accountTypes[typeCode] || explicitLabel || typeCode;
+  const configuredProducts = getConfiguredIamProducts();
+  const validKeys = new Set(configuredProducts.map((product) => product.key));
+  const candidateKeys = Array.isArray(window.TGK_DEMO?.sidebar?.iamProductKeys)
+    ? window.TGK_DEMO.sidebar.iamProductKeys
+    : getDefaultIamProductKeys();
+  const visibleKeys = [];
+
+  candidateKeys.forEach((key) => {
+    const normalizedKey = String(key || '').trim().toLowerCase();
+    if (!validKeys.has(normalizedKey) || visibleKeys.includes(normalizedKey)) {
+      return;
+    }
+
+    visibleKeys.push(normalizedKey);
+  });
+
+  return visibleKeys;
 }
-
-const TGK_IAM_PRODUCTS = Object.freeze([
-  { key: 'doc-gen', label: 'Doc Gen', icon: 'doc-gen', isBuilt: false },
-  { key: 'id-verification', label: 'ID Verification', icon: 'id-verification', isBuilt: false },
-  { key: 'monitor', label: 'Monitor', icon: 'monitor', isBuilt: true },
-  { key: 'notary', label: 'Notary', icon: 'notary', isBuilt: false },
-  { key: 'web-forms', label: 'Web Forms', icon: 'web-forms', isBuilt: false },
-  { key: 'workspaces', label: 'Workspaces', icon: 'workspaces', isBuilt: false }
-]);
 
 function getIamProducts() {
-  return TGK_IAM_PRODUCTS.map((product) => ({ ...product }));
+  const visibleKeys = new Set(getVisibleIamProductKeys());
+  return getConfiguredIamProducts()
+    .filter((product) => visibleKeys.has(product.key))
+    .map((product) => ({ ...product }));
 }
 
 function getIamProduct(productKey) {
   const key = String(productKey || '').trim().toLowerCase();
-  return TGK_IAM_PRODUCTS.find((product) => product.key === key) || null;
+  return getConfiguredIamProducts().find((product) => product.key === key) || null;
 }
 
-function getIamProductPlaceholder(productKey, portalName = '') {
+function getIamProductPlaceholder(productKey) {
   const product = getIamProduct(productKey);
-  if (!product || product.isBuilt) {
+  if (!product || product.key === 'monitor') {
     return null;
   }
-
-  const scope = String(portalName || 'this portal').trim();
-  const copy = {
-    'doc-gen': {
-      description: `Document generation templates are not wired into ${scope} yet.`,
-      checkpoints: [
-        'Template selection and data binding placeholder',
-        'Output preview and package assembly placeholder',
-        'Delivery into downstream agreement flows placeholder'
-      ]
-    },
-    'id-verification': {
-      description: `Identity verification is reserved in ${scope}, but the live flow is not connected yet.`,
-      checkpoints: [
-        'Identity session launch placeholder',
-        'Verification result summary placeholder',
-        'Risk signals and remediation placeholder'
-      ]
-    },
-    notary: {
-      description: `Remote online notarization is planned for ${scope}, but there is no live experience here yet.`,
-      checkpoints: [
-        'Notary session intake placeholder',
-        'Signer and witness preparation placeholder',
-        'Completion and audit handoff placeholder'
-      ]
-    },
-    'web-forms': {
-      description: `Web Forms is included in the navigation model, but the interactive form builder is not implemented yet.`,
-      checkpoints: [
-        'Form entry experience placeholder',
-        'Submission routing placeholder',
-        'Agreement creation handoff placeholder'
-      ]
-    },
-    workspaces: {
-      description: `Workspaces is staged in ${scope}, but the collaborative workspace view has not been built yet.`,
-      checkpoints: [
-        'Workspace landing view placeholder',
-        'Shared document list placeholder',
-        'Participant activity stream placeholder'
-      ]
-    }
-  };
 
   return {
     label: product.label,
     eyebrow: 'Docusign IAM Product',
-    title: `${product.label} is not yet built out`,
-    description: copy[product.key]?.description || `A placeholder view exists for ${product.label}, but the live experience is not connected yet.`,
-    checkpoints: copy[product.key]?.checkpoints || [
-      'Navigation placeholder',
-      'Workflow placeholder',
-      'Detail experience placeholder'
-    ]
+    title: product.label,
+    description: 'Coming soon.'
   };
 }
 
@@ -456,177 +447,11 @@ function createEnvelopeModalHelpers() {
 function sharedSettingsTemplate() {
   return `
     <section class="tgk-settings-shell">
-      <div class="tgk-settings-grid">
-        <div class="tgk-settings-stack">
-          <template x-if="canSeeDocusignSettings()">
-            <section class="tgk-settings-card" x-data="docusignSettings()">
-              <div class="tgk-settings-card__header tgk-settings-card__header--split">
-                <div>
-                  <div class="tgk-settings-card__eyebrow">Docusign Account</div>
-                  <p class="tgk-settings-card__text">Connect once and save the Docusign account used across both portals.</p>
-                </div>
-                <button @click="openScopesModal()" class="tgk-button tgk-button--secondary">Scopes</button>
-              </div>
-
-              <div class="tgk-settings-card__body">
-                <template x-if="loading">
-                  <div class="tgk-banner tgk-banner--neutral">
-                    <div class="tgk-banner__label">Checking Connection</div>
-                    <div class="tgk-banner__meta">Loading the current Docusign session.</div>
-                  </div>
-                </template>
-
-                <template x-if="error">
-                  <div class="tgk-banner tgk-banner--danger">
-                    <div class="tgk-banner__label">Connection Error</div>
-                    <div class="tgk-banner__meta" x-text="error"></div>
-                  </div>
-                </template>
-
-                <template x-if="!loading && hasSavedAccount()">
-                  <div class="tgk-settings-stack">
-                    <div class="tgk-banner tgk-banner--positive">
-                      <div>
-                        <div class="tgk-banner__label">Connected</div>
-                        <div class="tgk-banner__title" x-text="session.accountName"></div>
-                        <div class="tgk-banner__meta" x-text="session.name || session.email"></div>
-                        <div class="tgk-banner__footnote" x-text="session.accountId"></div>
-                      </div>
-                      <div class="tgk-inline-actions">
-                        <button x-show="canChangeAccount()" @click="beginAccountSelection()" class="tgk-button tgk-button--secondary">Change Account</button>
-                        <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
-                      </div>
-                    </div>
-
-                    <template x-if="shouldShowAccountPicker()">
-                      <div class="tgk-field-card">
-                        <label class="tgk-field-label">Change Saved Account</label>
-                        <p class="tgk-help-text">Choose the account used for live demo actions.</p>
-                        <select x-model="selectedAccountId" class="tgk-form-input tgk-form-select">
-                          <template x-for="account in availableAccounts()" :key="account.accountId">
-                            <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="account.accountName + (account.isDefault ? ' (Default)' : '')"></option>
-                          </template>
-                        </select>
-                        <div class="tgk-inline-actions tgk-inline-actions--end">
-                          <button @click="cancelAccountSelection()" class="tgk-button tgk-button--secondary">Cancel</button>
-                          <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </template>
-
-                <template x-if="!loading && needsAccountSelection()">
-                  <div class="tgk-settings-stack">
-                    <div class="tgk-banner tgk-banner--warning">
-                      <div>
-                        <div class="tgk-banner__label">Connection Ready</div>
-                        <div class="tgk-banner__title" x-text="session.name || session.email"></div>
-                        <div class="tgk-banner__meta">Choose the Docusign account the demo should use.</div>
-                      </div>
-                      <div class="tgk-inline-actions">
-                        <button @click="logout()" class="tgk-button tgk-button--danger">Disconnect</button>
-                      </div>
-                    </div>
-
-                    <div class="tgk-field-card">
-                      <label class="tgk-field-label">Choose Account</label>
-                      <p class="tgk-help-text">Save the account used for live workflows and previews.</p>
-                      <select x-model="selectedAccountId" class="tgk-form-input tgk-form-select">
-                        <template x-for="account in availableAccounts()" :key="account.accountId">
-                          <option :value="account.accountId" :selected="account.accountId === selectedAccountId" x-text="account.accountName + (account.isDefault ? ' (Default)' : '')"></option>
-                        </template>
-                      </select>
-                      <button @click="selectAccount(selectedAccountId)" :disabled="!selectedAccountId || savingAccount" class="tgk-button tgk-button--primary tgk-button--full" x-text="savingAccount ? 'Saving...' : 'Save Account'"></button>
-                    </div>
-                  </div>
-                </template>
-
-                <template x-if="!loading && !hasConnection()">
-                  <div class="tgk-settings-stack">
-                    <div class="tgk-banner tgk-banner--neutral">
-                      <div class="tgk-banner__label">No Account Connected</div>
-                      <div class="tgk-banner__meta">Connect Docusign for live workflows, history, and previews.</div>
-                    </div>
-                    <div class="tgk-inline-actions">
-                      <button @click="login()" class="tgk-button tgk-button--primary" x-text="authInProgress ? 'Connecting...' : 'Connect Docusign'"></button>
-                    </div>
-                  </div>
-                </template>
-
-                <div x-show="showScopesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                  <div class="absolute inset-0 bg-black/40" @click="closeScopesModal()"></div>
-                  <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6">
-                    <div class="flex items-start justify-between gap-4 mb-4">
-                      <div>
-                        <h3 class="text-base font-semibold text-navy">Requested Docusign Scopes</h3>
-                        <p class="text-xs text-gray-400 mt-1">Save the app-wide scope string used for consent and backend DocuSign API tokens.</p>
-                      </div>
-                      <button @click="closeScopesModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-                    </div>
-
-                    <textarea x-model="requestedScopesText" rows="8" class="tgk-form-input tgk-form-textarea tgk-form-input--mono"></textarea>
-                    <p class="tgk-help-text mt-2">This is saved per app on the backend. If you add scopes that were not previously consented, reconnect Docusign once to grant them.</p>
-
-                    <div class="flex items-center justify-end gap-3 mt-5">
-                      <button @click="closeScopesModal()" class="tgk-button tgk-button--secondary">Cancel</button>
-                      <button @click="saveRequestedScopes()" :disabled="savingScopes" class="tgk-button tgk-button--primary" x-text="savingScopes ? 'Saving...' : 'Save Scopes'"></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </template>
-
-          <section class="tgk-settings-card">
-            <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Demo Configuration</div>
-              <p class="tgk-settings-card__text">Set the workflow IDs and signing rules used across the demo.</p>
-            </div>
-
-            <div class="tgk-settings-card__body">
-              <div class="tgk-settings-field-grid">
-                <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-accountOpeningWorkflowId">Account Opening Workflow</label>
-                  <input id="tgk-accountOpeningWorkflowId" type="text" x-model="accountOpeningWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
-
-                  <label class="tgk-settings-toggle-row mt-3">
-                    <div class="tgk-settings-toggle-copy">
-                      <div class="tgk-settings-toggle-title">ID Verification</div>
-                    </div>
-                    <div class="relative">
-                      <input type="checkbox" x-model="accountOpeningIdVerification" @change="saveConfig()" class="sr-only peer">
-                      <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                      <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                    </div>
-                  </label>
-                </div>
-
-                <div class="tgk-field-card">
-                  <label class="tgk-field-label" for="tgk-assetTransferWorkflowId">Asset Transfer Workflow</label>
-                  <input id="tgk-assetTransferWorkflowId" type="text" x-model="assetTransferWorkflowId" @change="saveConfig()" class="tgk-form-input tgk-form-input--mono tgk-form-input--compact" placeholder="workflow-id">
-
-                  <label class="tgk-settings-toggle-row mt-3">
-                    <div class="tgk-settings-toggle-copy">
-                      <div class="tgk-settings-toggle-title">ID Verification</div>
-                    </div>
-                    <div class="relative">
-                      <input type="checkbox" x-model="assetTransferIdVerification" @change="saveConfig()" class="sr-only peer">
-                      <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                      <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <aside class="tgk-settings-stack">
-          <section class="tgk-settings-card tgk-settings-card--sticky">
-            <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Demo Branding</div>
-              <p class="tgk-settings-card__text">Set the shared name and accent color.</p>
+      <div class="tgk-settings-stack">
+        <section class="tgk-settings-card">
+              <div class="tgk-settings-card__header">
+              <div class="tgk-settings-card__eyebrow">Portal Settings</div>
+              <p class="tgk-settings-card__text">Adjust shared branding and the IAM sidebar.</p>
             </div>
 
             <div class="tgk-settings-card__body">
@@ -649,13 +474,36 @@ function sharedSettingsTemplate() {
                 </div>
               </div>
 
+              <div class="tgk-field-card">
+                <label class="tgk-field-label">IAM Sidebar</label>
+                <p class="tgk-help-text">Choose which IAM products appear in the sidebar.</p>
+                <div class="tgk-settings-stack mt-3">
+                  <template x-for="product in sidebarOptions()" :key="product.key">
+                    <label class="tgk-settings-toggle-row">
+                      <div class="tgk-settings-toggle-copy">
+                        <div class="tgk-settings-toggle-title" x-text="product.label"></div>
+                        <div class="tgk-settings-toggle-text" x-text="product.key === 'monitor' ? 'Live demo section.' : 'Coming soon.'"></div>
+                      </div>
+                      <div class="relative">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="isSidebarProductEnabled(product.key)"
+                          @change="toggleSidebarProduct(product.key, $event.target.checked)">
+                        <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
+                        <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                      </div>
+                    </label>
+                  </template>
+                </div>
+              </div>
+
               <div class="tgk-inline-actions">
-                <button @click="save()" :disabled="!dirty || resettingBranding" class="tgk-button tgk-button--primary">Save Branding</button>
-                <button @click="resetBranding()" :disabled="resettingBranding" class="tgk-button tgk-button--secondary" x-text="resettingBranding ? 'Resetting...' : 'Reset'"></button>
+                <button @click="save()" :disabled="!dirty || resettingDefaults" class="tgk-button tgk-button--primary">Save Changes</button>
+                <button @click="resetCustomizations()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
               </div>
             </div>
-          </section>
-        </aside>
+        </section>
       </div>
     </section>
   `;

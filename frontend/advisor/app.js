@@ -3,6 +3,12 @@ const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
 const CLIENT_DETAIL_REFRESH_MAX_MS = 20 * 60 * 1000;
+const AGREEMENT_TYPE_COLORS = {
+  'Account Opening': '#3567df',
+  Transfer: '#16a34a',
+  Maintenance: '#ea580c',
+  Other: '#64748b'
+};
 
 function normalizeStatusValue(value) {
   return String(value || '').trim().toLowerCase();
@@ -34,13 +40,6 @@ function advisorApp() {
     sidebarCollapsed: false,
     loading: true,
     agreementVolumeSeries: [5, 6, 4, 8, 9, 11, 8, 12, 14, 15, 16, 20],
-    agreementTypeBreakdown: [
-      { label: 'Acct Opening', value: 68, color: '#3567df' },
-      { label: 'Transfers', value: 32, color: '#16a34a' },
-      { label: 'Maintenance', value: 28, color: '#ea580c' }
-    ],
-    agreementCompletionRateValue: 94,
-    agreementTurnaroundHours: 12.4,
     allAgreements: [],
 
     monitorAlerts: [],
@@ -74,7 +73,7 @@ function advisorApp() {
     },
 
     canSeeIamProducts() {
-      return this.canSeeSettings();
+      return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
     },
 
     activateIamProduct(productKey) {
@@ -89,6 +88,8 @@ function advisorApp() {
       const allowedViews = new Set(['dashboard', 'documents', 'monitor', 'client']);
       if (this.canSeeSettings()) {
         allowedViews.add('settings');
+      }
+      if (this.canSeeIamProducts()) {
         this.iamProducts.forEach((product) => {
           allowedViews.add(product.key);
         });
@@ -107,22 +108,18 @@ function advisorApp() {
     },
 
     get currentIamPlaceholder() {
-      return getIamProductPlaceholder(this.view, getPortalName('Advisor Portal'));
+      return getIamProductPlaceholder(this.view);
     },
 
     getAccountOpeningWorkflowId() {
-      return String(
-        window.TGK_DEMO?.config?.accountOpeningWorkflowId
-        || window.TGK_CONFIG?.workflows?.accountOpeningId
-        || ''
-      ).trim();
+      return String(window.TGK_CONFIG?.workflows?.accountOpeningId || '').trim();
     },
 
     get filteredCustomers() {
       if (!this.searchQuery.trim()) return this.customers;
       const q = this.searchQuery.toLowerCase();
       return this.customers.filter(c =>
-        `${c.first_name} ${c.last_name} ${c.email} ${c.metadata?.role || ''} ${c.metadata?.riskProfile || ''}`.toLowerCase().includes(q)
+        `${c.name} ${c.email} ${c.company || ''} ${c.metadata?.household || ''} ${c.metadata?.riskProfile || ''}`.toLowerCase().includes(q)
       );
     },
 
@@ -139,15 +136,50 @@ function advisorApp() {
     },
 
     get complianceAlerts() {
-      return this.customers.filter(c => c.tags?.includes('review-needed')).length;
+      return this.customers.filter((customer) => normalizeStatusValue(customer.metadata?.status) !== 'active').length;
     },
 
     get totalAgreementCount() {
       return this.agreementTypeBreakdown.reduce((sum, item) => sum + item.value, 0);
     },
 
+    get agreementTypeBreakdown() {
+      const counts = this.allAgreements.reduce((map, agreement) => {
+        const type = String(agreement?.data?.agreementType || '').trim() || 'Other';
+        map.set(type, (map.get(type) || 0) + 1);
+        return map;
+      }, new Map());
+
+      return Array.from(counts.entries()).map(([label, value]) => ({
+        label,
+        value,
+        color: AGREEMENT_TYPE_COLORS[label] || AGREEMENT_TYPE_COLORS.Other
+      }));
+    },
+
     get agreementVolumePeak() {
       return Math.max(...this.agreementVolumeSeries, 1);
+    },
+
+    get agreementCompletionRateValue() {
+      if (this.allAgreements.length === 0) {
+        return 0;
+      }
+
+      const completedCount = this.allAgreements.filter((agreement) => agreement.status === 'completed').length;
+      return Math.round((completedCount / this.allAgreements.length) * 100);
+    },
+
+    get agreementTurnaroundHours() {
+      const turnaroundValues = this.allAgreements
+        .map((agreement) => Number(agreement?.data?.turnaroundHours))
+        .filter((value) => Number.isFinite(value) && value > 0);
+
+      if (turnaroundValues.length === 0) {
+        return 0;
+      }
+
+      return turnaroundValues.reduce((sum, value) => sum + value, 0) / turnaroundValues.length;
     },
 
     get agreementTypeGradient() {
@@ -458,10 +490,6 @@ function advisorApp() {
       ];
     },
 
-    getAccountOpeningIdvValue() {
-      return window.TGK_DEMO?.config?.accountOpeningIdVerification ? 'true' : 'false';
-    },
-
     async loadMaestroWorkflow() {
       this.stopMaestroCreationPolling();
       this.clearOnboardingRedirectTimer();
@@ -482,7 +510,7 @@ function advisorApp() {
           instance_name: `TGK Wealth Account Opening ${new Date().toISOString()}`,
           trigger_inputs: {
             appSlug: window.TGK_CONFIG?.appSlug,
-            idv: this.getAccountOpeningIdvValue()
+            idv: 'false'
           }
         });
 

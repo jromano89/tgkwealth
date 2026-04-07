@@ -3,11 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Backend Demo Architecture</title>
-  <link rel="icon" href="../shared/favicon.ico" sizes="any">
-  <link rel="stylesheet" href="../shared/styles/tgk-brand.css?v=20260406-1">
-  <script defer src="../config.js"></script>
+  <title>TGK Demo Architecture</title>
   <style>
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Regular.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Medium.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Semibold.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+    }
+
     :root {
       --cobalt: #4c00ff;
       --inkwell: #130032;
@@ -492,12 +513,11 @@
 <body>
   <main>
     <div class="topbar">
-      <a href="../" class="crumb">Back to TGK Wealth</a>
+      <a href="../" class="crumb">Back to Backend</a>
       <div class="cta-links">
-        <a href="../advisor/" class="cta">Advisor Portal</a>
-        <a href="../investor/" class="cta">Investor Portal</a>
-        <a id="openapi-link" href="#" class="cta">OpenAPI</a>
-        <a id="manifest-link" href="#" class="cta">Maestro Manifest</a>
+        <a href="../api/health" class="cta">Health</a>
+        <a href="../maestro/health" class="cta">Maestro Health</a>
+        <a href="../maestro/manifest/clientCredentials.ReadWriteManifest.json" class="cta">Maestro Manifest</a>
       </div>
     </div>
 
@@ -686,22 +706,5 @@
       </p>
     </section>
   </main>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const backendUrl = window.TGK_CONFIG?.backendUrl || 'http://localhost:3000';
-      const links = {
-        'openapi-link': `${backendUrl}/api/openapi.json`,
-        'manifest-link': `${backendUrl}/maestro/manifest/clientCredentials.ReadWriteManifest.json`
-      };
-
-      Object.entries(links).forEach(([id, href]) => {
-        const link = document.getElementById(id);
-        if (link) {
-          link.href = href;
-        }
-      });
-    });
-  </script>
 </body>
 </html>
