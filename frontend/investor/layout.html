@@ -13,36 +13,36 @@
       </div>
     </div>
 
-    <nav class="flex-1 px-2 mt-2 space-y-1">
-      <div x-show="!sidebarCollapsed" class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">Core</div>
+    <nav class="tgk-portal-nav">
+      <div x-show="!sidebarCollapsed" class="tgk-portal-nav__section">Core</div>
 
-      <button @click="setTab('overview')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'overview' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span x-show="!sidebarCollapsed">Overview</span>
+      <button @click="setTab('overview')" class="tgk-portal-nav__item" :class="{ 'tgk-portal-nav__item--active': tab === 'overview', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Overview</span>
       </button>
-      <button @click="setTab('documents')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'documents' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <span x-show="!sidebarCollapsed">Documents</span>
+      <button @click="setTab('documents')" class="tgk-portal-nav__item" :class="{ 'tgk-portal-nav__item--active': tab === 'documents', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Documents</span>
       </button>
-      <button @click="setTab('tasks')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors" :class="tab === 'tasks' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        <span x-show="!sidebarCollapsed" class="flex items-center gap-2">Tasks
-          <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
+      <button @click="setTab('tasks')" class="tgk-portal-nav__item" :class="{ 'tgk-portal-nav__item--active': tab === 'tasks', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__meta">Tasks
+          <template x-if="tasks.length > 0"><span class="tgk-portal-nav__badge" x-text="tasks.length"></span></template>
         </span>
       </button>
 
       <div x-show="canSeeIamProducts()">
-        <div x-show="!sidebarCollapsed" class="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">IAM Products</div>
+        <div x-show="!sidebarCollapsed" class="tgk-portal-nav__section">IAM Products</div>
         <div data-partial="../shared/partials/iam-products-nav.html"></div>
       </div>
 
-      <div x-show="canSeeSettings()" class="mx-3 mt-4 mb-2 border-t border-white/10"></div>
+      <div x-show="canSeeSettings()" class="tgk-portal-nav__divider"></div>
 
       <button x-show="canSeeSettings()" @click="setTab('settings')"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="tab === 'settings' ? 'bg-brand/20 text-blue-200' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span x-show="!sidebarCollapsed">Settings</span>
+        class="tgk-portal-nav__item"
+        :class="{ 'tgk-portal-nav__item--active': tab === 'settings', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Settings</span>
       </button>
     </nav>
 
@@ -52,8 +52,8 @@
 
     <!-- Portal Switch -->
     <div class="px-3 pb-2">
-      <a :href="'../advisor/index.html' + window.location.search" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors" :class="sidebarCollapsed ? 'justify-center' : ''">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      <a :href="'../advisor/index.html' + window.location.search" class="tgk-portal-switch" :class="{ 'tgk-portal-switch--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span x-show="!sidebarCollapsed">Switch to Advisor View</span>
       </a>
     </div>
@@ -70,7 +70,7 @@
 
   <!-- Main Content -->
   <main class="flex-1 overflow-auto">
-    <div class="p-6">
+    <div class="tgk-page-shell">
 
       <!-- Header -->
       <div x-show="isCoreTab(tab)" class="tgk-investor-header">
@@ -121,94 +121,93 @@
       </div>
 
       <!-- Tab Nav -->
-      <div x-show="isCoreTab(tab)" class="flex gap-6 border-b border-gray-200 mb-6">
-        <button @click="setTab('overview')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-          :class="tab === 'overview' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <div x-show="isCoreTab(tab)" class="tgk-core-tabs">
+        <button @click="setTab('overview')" class="tgk-core-tabs__item"
+          :class="{ 'tgk-core-tabs__item--active': tab === 'overview' }">
+          <svg class="tgk-core-tabs__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Overview
         </button>
-        <button @click="setTab('documents')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-          :class="tab === 'documents' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <button @click="setTab('documents')" class="tgk-core-tabs__item"
+          :class="{ 'tgk-core-tabs__item--active': tab === 'documents' }">
+          <svg class="tgk-core-tabs__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Documents
         </button>
-        <button @click="setTab('tasks')" class="flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-          :class="tab === 'tasks' ? 'text-brand border-brand' : 'text-gray-400 border-transparent hover:text-gray-600'">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-          <span class="flex items-center gap-1.5">Tasks
-            <template x-if="tasks.length > 0"><span class="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center" x-text="tasks.length"></span></template>
+        <button @click="setTab('tasks')" class="tgk-core-tabs__item"
+          :class="{ 'tgk-core-tabs__item--active': tab === 'tasks' }">
+          <svg class="tgk-core-tabs__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span class="tgk-core-tabs__meta">Tasks
+            <template x-if="tasks.length > 0"><span class="tgk-core-tabs__badge" x-text="tasks.length"></span></template>
           </span>
         </button>
       </div>
 
-      <div x-show="isCoreTab(tab) && !loading && !selectedClient" class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
-        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">+</div>
-        <h2 class="text-base font-semibold text-navy">No contact selected</h2>
-        <p class="mt-2 text-sm text-gray-500">Create a contact from the advisor portal or Maestro to populate the investor view.</p>
+      <div x-show="isCoreTab(tab) && !loading && !selectedClient" class="tgk-empty-panel">
+        <div class="tgk-empty-panel__icon">
+          <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <h2 class="tgk-empty-panel__title">No investor selected</h2>
+        <p class="tgk-empty-panel__copy">Create an investor from the advisor portal or Maestro to populate this view.</p>
       </div>
 
       <!-- OVERVIEW TAB -->
       <div x-show="tab === 'overview' && selectedClient">
-        <!-- Hero Card -->
-        <div class="bg-gradient-to-r from-navy to-navy-light rounded-xl p-8 text-white mb-6 relative overflow-hidden tgk-hero-shimmer">
-          <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/5"></div>
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-300 mb-2">Total Portfolio Value</div>
-          <div class="font-serif text-[44px] font-semibold leading-tight" x-text="fmtMoney(totalPortfolioValue)"></div>
-          <div class="flex gap-8 mt-4">
+        <div class="tgk-hero-card tgk-hero-shimmer">
+          <div class="tgk-hero-card__orb"></div>
+          <div class="tgk-hero-card__eyebrow">Total Portfolio Value</div>
+          <div class="tgk-hero-card__value" x-text="fmtMoney(totalPortfolioValue)"></div>
+          <div class="tgk-hero-card__stats">
             <div>
-              <div class="text-[10px] uppercase tracking-wider text-gray-400">YTD Return</div>
-              <div class="text-lg font-semibold text-green-400" x-text="fmtPct(ytdReturn)"></div>
+              <div class="tgk-hero-card__label">YTD Return</div>
+              <div class="tgk-hero-card__metric tgk-hero-card__metric--positive" x-text="fmtPct(ytdReturn)"></div>
             </div>
             <div>
-              <div class="text-[10px] uppercase tracking-wider text-gray-400">Accounts</div>
-              <div class="text-lg font-semibold" x-text="accounts.length"></div>
+              <div class="tgk-hero-card__label">Accounts</div>
+              <div class="tgk-hero-card__metric" x-text="accounts.length"></div>
             </div>
             <div>
-              <div class="text-[10px] uppercase tracking-wider text-gray-400">Risk Profile</div>
-              <div class="text-lg font-semibold" x-text="selectedClient?.metadata?.riskProfile || '—'"></div>
+              <div class="tgk-hero-card__label">Risk Profile</div>
+              <div class="tgk-hero-card__metric" x-text="selectedClient?.metadata?.riskProfile || '—'"></div>
             </div>
           </div>
         </div>
 
-        <!-- Account Cards -->
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="tgk-account-grid" style="margin-bottom:24px;">
           <template x-for="acct in accounts" :key="acct.id">
-            <div class="bg-white rounded-xl shadow-sm p-5 border border-transparent hover:border-brand/20 hover:shadow-md transition-all duration-200">
-              <div class="flex justify-between items-start mb-2">
+            <div class="tgk-account-card">
+              <div class="tgk-account-card__header">
                 <div>
-                  <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
-                  <div class="text-[11px] text-gray-400" x-text="accountLabel(acct)"></div>
+                  <div class="tgk-account-card__title" x-text="acct.metadata?.name || acct.account_type"></div>
+                  <div class="tgk-account-card__meta" x-text="accountLabel(acct)"></div>
                 </div>
                 <template x-if="acct.metadata?.ytdReturn != null">
-                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="acct.metadata.ytdReturn >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
+                  <span class="tgk-status-badge" :class="acct.metadata.ytdReturn >= 0 ? 'tgk-status-badge--success' : 'tgk-status-badge--danger'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
                 </template>
               </div>
-              <div class="font-serif text-2xl font-semibold text-navy mb-3" x-text="fmtMoney(acct.metadata?.value)"></div>
-              <div class="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
-                <div class="bg-brand" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
-                <div class="bg-green-400" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
-                <div class="bg-yellow-400" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
-                <div class="bg-gray-300" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
+              <div class="tgk-account-card__value" x-text="fmtMoney(acct.metadata?.value)"></div>
+              <div class="tgk-allocation-bar">
+                <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--equity" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
+                <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--fixed" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
+                <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--alt" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
+                <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--cash" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
               </div>
-              <div class="flex gap-3 mt-2 text-[10px] text-gray-500">
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-brand"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
+              <div class="tgk-allocation-legend">
+                <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--equity"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
+                <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--fixed"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
+                <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--alt"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
+                <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--cash"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
               </div>
             </div>
           </template>
         </div>
 
-        <!-- Advisor Contact -->
-        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-brand">
-          <h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3">Your Advisor</h3>
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white font-bold" x-text="assignedAdvisor?.metadata?.avatar || 'A'"></div>
+        <div class="tgk-surface-panel tgk-surface-panel--md tgk-advisor-card">
+          <h3 class="tgk-advisor-card__eyebrow">Your Advisor</h3>
+          <div class="tgk-advisor-card__body">
+            <div class="tgk-advisor-card__avatar" x-text="assignedAdvisor?.metadata?.avatar || 'A'"></div>
             <div>
-              <div class="font-medium text-navy" x-text="assignedAdvisor?.name || 'Your Advisor'"></div>
-              <div class="text-sm text-gray-500" x-text="assignedAdvisor?.title || 'Advisor'"></div>
-              <div class="text-xs text-gray-400 mt-0.5" x-text="((assignedAdvisor?.email || '') + ' · ' + (assignedAdvisor?.phone || '')).replace(/^ · | · $/g, '')"></div>
+              <div class="tgk-advisor-card__name" x-text="assignedAdvisor?.name || 'Your Advisor'"></div>
+              <div class="tgk-advisor-card__meta" x-text="assignedAdvisor?.title || 'Advisor'"></div>
+              <div class="tgk-advisor-card__meta" x-text="((assignedAdvisor?.email || '') + ' · ' + (assignedAdvisor?.phone || '')).replace(/^ · | · $/g, '')"></div>
             </div>
           </div>
         </div>
@@ -216,52 +215,48 @@
 
       <!-- DOCUMENTS TAB -->
       <div x-show="tab === 'documents' && selectedClient">
-        <div class="bg-white rounded-xl shadow-sm p-5">
-          <div class="mb-4">
-            <div>
-              <h3 class="font-semibold text-base text-navy">Documents</h3>
-              <p class="text-xs text-gray-400 mt-1">Signed packets and live status updates in one place.</p>
+        <div class="tgk-surface-panel tgk-surface-panel--md">
+          <div class="tgk-panel-heading tgk-panel-heading--spaced">
+            <div class="tgk-panel-heading">
+              <h3 class="tgk-panel-title">Documents</h3>
+              <p class="tgk-panel-copy">Signed packets and live status updates in one place.</p>
             </div>
           </div>
           <template x-if="envelopes.length === 0">
-            <div class="text-center py-8 text-gray-400">
-              <div class="text-3xl mb-2">📄</div>
-              <p class="text-sm">No documents yet.</p>
+            <div class="tgk-empty-panel tgk-empty-panel--compact">
+              <div class="tgk-empty-panel__icon">
+                <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              </div>
+              <p class="tgk-empty-panel__title">No documents yet</p>
+              <p class="tgk-empty-panel__copy">Agreement packets will appear here as they are sent and completed.</p>
             </div>
           </template>
-          <div class="space-y-3">
+          <div class="tgk-record-list">
             <template x-for="env in envelopes" :key="env.id">
-              <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white transition-colors hover:border-gray-300">
-                <div class="flex items-center gap-4 min-w-0 flex-1">
-                  <div class="min-w-0 flex-1">
-                    <div class="text-[15px] font-semibold leading-5 text-navy truncate" x-text="env.name || 'Untitled'"></div>
-                    <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
-                      <span class="font-mono text-gray-400 truncate max-w-full" x-text="env.id || ''"></span>
+              <div class="tgk-record-row">
+                <div class="tgk-record-row__main">
+                  <div class="tgk-record-row__content">
+                    <div class="tgk-record-row__title" x-text="env.name || 'Untitled'"></div>
+                    <div class="tgk-record-row__meta">
+                      <span class="tgk-record-row__id" x-text="env.id || ''"></span>
                       <template x-if="envelopeTimestampLabel(env)">
-                        <span class="inline-flex items-center gap-2 text-gray-500">
-                          <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                        <span class="u-row u-gap-2">
+                          <span class="tgk-record-row__meta-dot"></span>
                           <span x-text="envelopeTimestampLabel(env)"></span>
                         </span>
                       </template>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
-                    <button @click="viewEnvelopeDoc(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View document">
+                  <div class="tgk-record-row__actions">
+                    <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                     </button>
-                    <button @click="viewEnvelopeHistory(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View history">
+                    <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </button>
                   </div>
                 </div>
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize flex-shrink-0"
-                  :class="{
-                    'bg-green-100 text-green-700': env.status === 'completed',
-                    'bg-blue-100 text-blue-700': env.status === 'sent',
-                    'bg-yellow-100 text-yellow-700': env.status === 'delivered',
-                    'bg-gray-100 text-gray-600': !['completed','sent','delivered'].includes(env.status)
-                  }"
-                  x-text="env.status || 'unknown'"></span>
+                <span class="tgk-status-badge" :class="statusClasses(env.status)" x-text="env.status || 'unknown'"></span>
               </div>
             </template>
           </div>
@@ -270,19 +265,24 @@
 
       <!-- TASKS TAB -->
       <div x-show="tab === 'tasks' && selectedClient">
-        <div class="bg-white rounded-xl shadow-sm p-5">
-          <h3 class="font-semibold text-base text-navy mb-4">Tasks</h3>
+        <div class="tgk-surface-panel tgk-surface-panel--md">
+          <div class="tgk-panel-heading tgk-panel-heading--spaced">
+            <h3 class="tgk-panel-title">Tasks</h3>
+          </div>
           <template x-if="tasks.length === 0">
-            <div class="text-center py-8 text-gray-400">
-              <div class="text-3xl mb-2">✓</div>
-              <p class="text-sm">All caught up. No open tasks.</p>
+            <div class="tgk-empty-panel tgk-empty-panel--compact">
+              <div class="tgk-empty-panel__icon">
+                <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <p class="tgk-empty-panel__title">All caught up</p>
+              <p class="tgk-empty-panel__copy">No open tasks right now.</p>
             </div>
           </template>
-          <div class="space-y-3">
+          <div class="tgk-task-list">
             <template x-for="task in tasks" :key="task.id">
               <div
-                class="flex items-start gap-3 p-4 rounded-lg border border-brand/20 bg-blue-50/30 transition-colors"
-                :class="taskCanLaunchWorkflow(task) ? 'cursor-pointer hover:border-brand/40 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-brand/20' : ''"
+                class="tgk-task-card"
+                :class="{ 'tgk-task-card--interactive': taskCanLaunchWorkflow(task) }"
                 :role="taskCanLaunchWorkflow(task) ? 'button' : null"
                 :tabindex="taskCanLaunchWorkflow(task) ? 0 : -1"
                 @click="handleTaskClick(task)"
@@ -291,14 +291,14 @@
                 @mouseenter="taskCanLaunchWorkflow(task) && warmTaskWorkflow()"
                 @focus="taskCanLaunchWorkflow(task) && warmTaskWorkflow()"
                 @touchstart.passive="taskCanLaunchWorkflow(task) && warmTaskWorkflow()">
-                <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div class="tgk-task-card__icon">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-navy" x-text="task.title"></div>
-                  <p class="text-xs text-gray-500 mt-1" x-text="task.description"></p>
+                <div class="tgk-task-card__body">
+                  <div class="tgk-task-card__title" x-text="task.title"></div>
+                  <p class="tgk-task-card__copy" x-text="task.description"></p>
                 </div>
-                <button @click.stop="dismissTask(task.id)" class="text-gray-300 hover:text-green-500 transition-colors flex-shrink-0 mt-0.5" title="Mark complete">
+                <button @click.stop="dismissTask(task.id)" class="tgk-task-card__dismiss" title="Mark complete">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 </button>
               </div>
@@ -308,10 +308,10 @@
       </div>
 
       <!-- MONITOR TAB -->
-      <div x-show="tab === 'monitor'" class="p-0" data-partial="../shared/partials/monitor-view.html"></div>
+      <div x-show="tab === 'monitor'" data-partial="../shared/partials/monitor-view.html"></div>
 
       <!-- IAM PRODUCT PLACEHOLDER -->
-      <div x-show="currentIamPlaceholder" class="p-0" data-partial="../shared/partials/iam-placeholder-view.html"></div>
+      <div x-show="currentIamPlaceholder" data-partial="../shared/partials/iam-placeholder-view.html"></div>
 
       <!-- SETTINGS TAB -->
       <div x-show="canSeeSettings() && tab === 'settings'">
@@ -324,52 +324,43 @@
   </main>
 
   <template x-if="showTaskWorkflow">
-    <div class="fixed inset-0 z-50 flex items-center justify-center" @keydown.escape.window="closeTaskWorkflow()">
-      <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeTaskWorkflow()"></div>
-      <div class="relative flex h-[min(95vh,1040px)] w-[min(92vw,1260px)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+    <div class="tgk-modal-shell" @keydown.escape.window="closeTaskWorkflow()">
+      <div class="tgk-modal-backdrop" @click="closeTaskWorkflow()"></div>
+      <div class="tgk-modal-card tgk-modal-card--workflow">
+        <div class="tgk-modal-header">
           <div class="min-w-0 pr-4">
-            <h2 class="font-serif text-lg font-semibold text-navy leading-tight" x-text="taskWorkflowTask?.title || 'Continue Asset Transfer'"></h2>
-            <p class="mt-1 text-sm text-gray-500" x-text="clientName || selectedClient?.name || 'Investor workflow'"></p>
+            <h2 class="tgk-modal-title" x-text="taskWorkflowTask?.title || 'Continue Asset Transfer'"></h2>
+            <p class="tgk-panel-copy" x-text="clientName || selectedClient?.name || 'Investor workflow'"></p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="tgk-inline-actions">
             <template x-if="taskWorkflowInstanceUrl">
-              <a :href="taskWorkflowInstanceUrl" target="_blank" rel="noreferrer" class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-medium text-gray-600 hover:border-gray-300 hover:text-navy transition-colors">
+              <a :href="taskWorkflowInstanceUrl" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">
                 Open in New Tab
               </a>
             </template>
-            <button @click="closeTaskWorkflow()" class="h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg leading-none transition-colors">&times;</button>
+            <button @click="closeTaskWorkflow()" class="tgk-modal-close">&times;</button>
           </div>
         </div>
 
-        <div class="flex-1 min-h-0 bg-slate-50">
+        <div class="tgk-modal-body tgk-modal-body--workflow">
           <template x-if="taskWorkflowLoading">
             <div class="flex h-full items-center justify-center p-10">
-              <div class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-                <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">
-                  Docusign IAM
-                </div>
-                <h3 class="text-xl font-semibold text-navy mb-3">Preparing asset transfer</h3>
-                <p class="text-sm leading-6 text-gray-500">Launching the asset transfer workflow for this investor.</p>
+              <div class="tgk-workflow-state">
+                <div class="tgk-pill tgk-pill--brand">Docusign IAM</div>
+                <h3 class="tgk-workflow-title">Preparing asset transfer</h3>
+                <p class="tgk-workflow-copy">Launching the asset transfer workflow for this investor.</p>
 
-                <div class="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div class="tgk-workflow-progress">
                   <div
-                    class="h-full rounded-full bg-brand transition-all duration-500"
+                    class="tgk-workflow-progress__bar"
                     :style="`width:${((taskWorkflowLoadingIndex + 1) / taskWorkflowLoadingSteps.length) * 100}%`"></div>
                 </div>
 
-                <div class="mt-5 space-y-2">
+                <div class="tgk-workflow-step-list">
                   <template x-for="(step, index) in taskWorkflowLoadingSteps" :key="step">
-                    <div class="flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors"
-                      :class="index <= taskWorkflowLoadingIndex ? 'border-brand/20 bg-brand/5' : 'border-gray-200 bg-white'">
-                      <div class="flex items-center gap-2">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold"
-                          :class="index <= taskWorkflowLoadingIndex ? 'bg-brand text-white' : 'bg-slate-100 text-gray-500'"
-                          x-text="index < taskWorkflowLoadingIndex ? '✓' : index + 1"></span>
-                        <span class="text-sm font-medium"
-                          :class="index <= taskWorkflowLoadingIndex ? 'text-navy' : 'text-gray-500'"
-                          x-text="step"></span>
-                      </div>
+                    <div class="tgk-workflow-step" :class="{ 'tgk-workflow-step--active': index <= taskWorkflowLoadingIndex }">
+                      <span class="tgk-workflow-step__index" :class="{ 'tgk-workflow-step__index--active': index <= taskWorkflowLoadingIndex }" x-text="index < taskWorkflowLoadingIndex ? '✓' : index + 1"></span>
+                      <span class="tgk-workflow-step__label" :class="{ 'tgk-workflow-step__label--active': index <= taskWorkflowLoadingIndex }" x-text="step"></span>
                     </div>
                   </template>
                 </div>
@@ -379,12 +370,12 @@
 
           <template x-if="!taskWorkflowLoading && taskWorkflowError">
             <div class="flex h-full items-center justify-center p-10">
-              <div class="w-full max-w-2xl rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-                <div class="text-sm font-semibold text-red-600 mb-3">Unable to launch asset transfer</div>
-                <p class="text-sm text-gray-600 leading-6" x-text="taskWorkflowError"></p>
-                <div class="mt-6 flex items-center gap-2">
-                  <button @click="loadTaskWorkflow(taskWorkflowTask)" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">Try Again</button>
-                  <button @click="closeTaskWorkflow()" class="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-300 transition-colors">Close</button>
+              <div class="tgk-workflow-state tgk-workflow-state--error">
+                <h3 class="tgk-workflow-title">Unable to launch asset transfer</h3>
+                <p class="tgk-workflow-copy" x-text="taskWorkflowError"></p>
+                <div class="tgk-workflow-actions">
+                  <button @click="loadTaskWorkflow(taskWorkflowTask)" class="tgk-button tgk-button--primary">Try Again</button>
+                  <button @click="closeTaskWorkflow()" class="tgk-button tgk-button--secondary">Close</button>
                 </div>
               </div>
             </div>
@@ -392,7 +383,7 @@
 
           <template x-if="!taskWorkflowLoading && !taskWorkflowError && taskWorkflowInstanceUrl">
             <iframe
-              class="h-full w-full border-0 bg-white"
+              class="tgk-modal-frame"
               :src="taskWorkflowInstanceUrl"
               title="Docusign IAM Asset Transfer"
               referrerpolicy="strict-origin-when-cross-origin"

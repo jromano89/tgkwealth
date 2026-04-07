@@ -15,34 +15,34 @@
     </div>
 
     <!-- Nav -->
-    <nav class="flex-1 px-2 mt-2 space-y-1">
-      <div x-show="!sidebarCollapsed" class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">Core</div>
+    <nav class="tgk-portal-nav">
+      <div x-show="!sidebarCollapsed" class="tgk-portal-nav__section">Core</div>
 
       <button @click="goBack()"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="view === 'dashboard' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span x-show="!sidebarCollapsed">Dashboard</span>
+        class="tgk-portal-nav__item"
+        :class="{ 'tgk-portal-nav__item--active': view === 'dashboard', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Dashboard</span>
       </button>
       <button @click="setView('documents')"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="view === 'documents' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <span x-show="!sidebarCollapsed">Agreements</span>
+        class="tgk-portal-nav__item"
+        :class="{ 'tgk-portal-nav__item--active': view === 'documents', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Agreements</span>
       </button>
 
       <div x-show="canSeeIamProducts()">
-        <div x-show="!sidebarCollapsed" class="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">IAM Products</div>
+        <div x-show="!sidebarCollapsed" class="tgk-portal-nav__section">IAM Products</div>
         <div data-partial="../shared/partials/iam-products-nav.html"></div>
       </div>
 
-      <div x-show="canSeeSettings()" class="mx-3 mt-4 mb-2 border-t border-white/10"></div>
+      <div x-show="canSeeSettings()" class="tgk-portal-nav__divider"></div>
 
       <button x-show="canSeeSettings()" @click="setView('settings')"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
-        :class="view === 'settings' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span x-show="!sidebarCollapsed">Settings</span>
+        class="tgk-portal-nav__item"
+        :class="{ 'tgk-portal-nav__item--active': view === 'settings', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Settings</span>
       </button>
     </nav>
 
@@ -52,8 +52,8 @@
 
     <!-- Portal Switch -->
     <div class="px-3 pb-2">
-      <a :href="'../investor/index.html' + window.location.search" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors" :class="sidebarCollapsed ? 'justify-center' : ''">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      <a :href="'../investor/index.html' + window.location.search" class="tgk-portal-switch" :class="{ 'tgk-portal-switch--collapsed': sidebarCollapsed }">
+        <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span x-show="!sidebarCollapsed">Switch to Investor View</span>
       </a>
     </div>
@@ -72,47 +72,50 @@
   <main class="tgk-main" :class="{ 'tgk-main--clipped': view === 'documents' }">
 
     <!-- DASHBOARD VIEW -->
-    <div x-show="view === 'dashboard'" class="p-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-semibold text-navy">Advisor Portal</h1>
-        <div class="flex items-center gap-3">
-          <div class="relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input x-model="searchQuery" type="text" placeholder="Search clients" class="pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 w-56 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:bg-white transition-colors">
+    <div x-show="view === 'dashboard'" class="tgk-page-shell">
+      <div class="tgk-page-stack">
+        <div class="tgk-page-header">
+          <h1 class="tgk-page-title">Advisor Portal</h1>
+          <div class="tgk-page-header__actions">
+            <label class="tgk-search-field">
+              <svg class="tgk-search-field__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input x-model="searchQuery" type="text" placeholder="Search clients" class="tgk-form-input tgk-search-field__input">
+            </label>
+            <div x-data x-init="mountSharedTemplate($el, newsPanelTemplate())"></div>
+            <button @click="openOnboarding()" @mouseenter="warmOnboarding()" @focus="warmOnboarding()" @touchstart.passive="warmOnboarding()" class="tgk-button tgk-button--primary">Open Account</button>
           </div>
-          <div x-data x-init="mountSharedTemplate($el, newsPanelTemplate())"></div>
-          <button @click="openOnboarding()" @mouseenter="warmOnboarding()" @focus="warmOnboarding()" @touchstart.passive="warmOnboarding()" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">Open Account</button>
         </div>
-      </div>
 
-      <!-- Stat Cards -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl p-4 border-l-4 border-brand shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Total AUM</div>
-          <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(totalAum)"></div>
-          <div class="text-xs text-gray-400 mt-1" x-text="customers.length + ' client relationships'"></div>
-        </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Aggregate Net Worth</div>
-          <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(totalNetWorth)"></div>
-          <div class="text-xs text-gray-400 mt-1">+2.9% this quarter</div>
-        </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Pending Reviews</div>
-          <div class="font-serif text-2xl font-semibold text-navy" x-text="pendingReviews"></div>
-          <div class="text-xs text-gray-400 mt-1">Annual & suitability</div>
-        </div>
-        <div class="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Compliance Alerts</div>
-          <div class="font-serif text-2xl font-semibold text-navy" x-text="complianceAlerts"></div>
-          <div class="text-xs text-gray-400 mt-1">KYC refresh needed</div>
-        </div>
-      </div>
+        <div class="tgk-kpi-grid">
+          <section class="tgk-kpi tgk-tone-border--sky">
+            <div class="tgk-kpi__label">Total AUM</div>
+            <div class="tgk-kpi__value" x-text="fmtMoney(totalAum)"></div>
+            <div class="tgk-kpi__detail" x-text="customers.length + ' client relationships'"></div>
+          </section>
 
-      <!-- Client Book -->
-      <div class="bg-white rounded-xl shadow-sm p-5">
-        <h2 class="font-semibold text-base text-navy mb-4">Investor Book</h2>
+          <section class="tgk-kpi tgk-tone-border--emerald">
+            <div class="tgk-kpi__label">Aggregate Net Worth</div>
+            <div class="tgk-kpi__value" x-text="fmtMoney(totalNetWorth)"></div>
+            <div class="tgk-kpi__detail">+2.9% this quarter</div>
+          </section>
+
+          <section class="tgk-kpi tgk-tone-border--amber">
+            <div class="tgk-kpi__label">Pending Reviews</div>
+            <div class="tgk-kpi__value" x-text="pendingReviews"></div>
+            <div class="tgk-kpi__detail">Annual &amp; suitability</div>
+          </section>
+
+          <section class="tgk-kpi tgk-tone-border--red">
+            <div class="tgk-kpi__label">Compliance Alerts</div>
+            <div class="tgk-kpi__value" x-text="complianceAlerts"></div>
+            <div class="tgk-kpi__detail">KYC refresh needed</div>
+          </section>
+        </div>
+
+        <div class="tgk-surface-panel tgk-surface-panel--md">
+          <div class="tgk-panel-heading tgk-panel-heading--spaced">
+            <h2 class="tgk-panel-title">Investor Book</h2>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full min-w-[760px]">
               <thead>
@@ -150,7 +153,7 @@
                     </td>
                     <td class="text-sm text-gray-600" x-text="c.metadata?.riskProfile || '—'"></td>
                     <td>
-                      <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(c.metadata?.status)" x-text="c.metadata?.status || 'active'"></span>
+                      <span class="tgk-status-badge" :class="statusClasses(c.metadata?.status)" x-text="c.metadata?.status || 'active'"></span>
                     </td>
                     <td class="text-center">
                       <button @click.stop="deleteCustomer(c, $event)" class="w-5 h-5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center" title="Remove">
@@ -162,134 +165,137 @@
               </tbody>
             </table>
           </div>
-        <template x-if="filteredCustomers.length === 0">
-          <div class="rounded-2xl border border-dashed border-gray-300 bg-slate-50 px-6 py-10 text-center">
-            <div class="text-sm font-semibold text-navy">No customers yet</div>
-            <p class="mt-2 text-sm text-gray-500">Create a customer from Maestro or the API to start building the client book.</p>
-          </div>
-        </template>
+          <template x-if="filteredCustomers.length === 0">
+            <div class="tgk-empty-panel tgk-empty-panel--compact">
+              <div class="tgk-empty-panel__icon">
+                <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+              </div>
+              <div class="tgk-empty-panel__title">No investors yet</div>
+              <p class="tgk-empty-panel__copy">Create an investor from Maestro or the API to start building the client book.</p>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
 
     <!-- CLIENT DETAIL VIEW -->
     <template x-if="view === 'client' && selectedContact">
-      <div class="p-6">
-        <button @click="goBack()" class="flex items-center gap-1 text-sm text-gray-500 hover:text-brand mb-4">
+      <div class="tgk-page-shell">
+        <button @click="goBack()" class="tgk-back-link">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
           Back to Dashboard
         </button>
 
-        <div class="flex gap-6">
-          <!-- Profile Sidebar -->
-          <div class="w-[300px] flex-shrink-0 space-y-4">
-            <div class="bg-white rounded-xl shadow-sm p-5 text-center">
-              <div class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white text-lg font-bold mb-3" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.name)"></div>
-              <h2 class="font-serif text-xl font-semibold text-navy" x-text="selectedContact.name"></h2>
-              <div class="text-sm text-gray-500 mt-1" x-text="selectedContact.metadata?.household || selectedContact.company || 'Investor'"></div>
-              <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
-              <div class="mt-4 space-y-2 text-left text-sm">
-                <div class="flex items-center gap-2 text-gray-500">
-                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+        <div class="tgk-detail-layout">
+          <div class="tgk-detail-sidebar">
+            <div class="tgk-surface-panel tgk-surface-panel--md tgk-profile-card">
+              <div class="tgk-profile-card__avatar" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.name)"></div>
+              <h2 class="tgk-profile-card__name" x-text="selectedContact.name"></h2>
+              <div class="tgk-profile-card__meta" x-text="selectedContact.metadata?.household || selectedContact.company || 'Investor'"></div>
+              <span class="tgk-status-badge" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
+              <div class="tgk-contact-list">
+                <div class="tgk-contact-row">
+                  <svg class="tgk-contact-row__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
                   <span x-text="selectedContact.phone || '—'"></span>
                 </div>
-                <div class="flex items-center gap-2 text-gray-500">
-                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                <div class="tgk-contact-row">
+                  <svg class="tgk-contact-row__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                   <span x-text="selectedContact.email"></span>
                 </div>
                 <template x-if="selectedContact.company">
-                  <div class="flex items-center gap-2 text-gray-500">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                  <div class="tgk-contact-row">
+                    <svg class="tgk-contact-row__icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
                     <span x-text="selectedContact.company"></span>
                   </div>
                 </template>
               </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-5">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Total AUM</div>
-              <div class="font-serif text-2xl font-semibold text-navy" x-text="fmtMoney(selectedContact.metadata?.value)"></div>
-              <div class="flex items-center gap-2 mt-2">
+            <section class="tgk-kpi tgk-tone-border--sky">
+              <div class="tgk-kpi__label">Total AUM</div>
+              <div class="tgk-kpi__value" x-text="fmtMoney(selectedContact.metadata?.value)"></div>
+              <div class="u-row u-gap-2" style="margin-top:8px;">
                 <svg width="80" height="24" viewBox="0 0 80 24">
                   <polyline fill="none" :stroke="(selectedContact.metadata?.changePct || 0) >= 0 ? '#16a34a' : '#dc2626'" stroke-width="2" stroke-linecap="round" :points="sparklinePath((selectedContact.metadata?.changePct || 0) >= 0)" />
                 </svg>
                 <span class="text-xs font-medium" :class="(selectedContact.metadata?.changePct || 0) >= 0 ? 'text-green-600' : 'text-red-600'" x-text="fmtPct(selectedContact.metadata?.changePct) + ' this month'"></span>
               </div>
-            </div>
+            </section>
           </div>
 
-          <!-- Content -->
-          <div class="flex-1">
-            <div class="bg-white rounded-xl shadow-sm p-5">
-              <h3 class="font-semibold text-base text-navy mb-4">Accounts</h3>
-              <div class="grid grid-cols-2 gap-4">
+          <div class="tgk-detail-main">
+            <div class="tgk-surface-panel tgk-surface-panel--md">
+              <div class="tgk-panel-heading tgk-panel-heading--spaced">
+                <h3 class="tgk-panel-title">Accounts</h3>
+              </div>
+              <div class="tgk-account-grid">
                 <template x-for="acct in selectedContactAccounts" :key="acct.id">
-                  <div class="border border-gray-100 rounded-lg p-4 hover:border-brand/30 transition-colors">
-                    <div class="flex justify-between items-start mb-2">
+                  <div class="tgk-account-card">
+                    <div class="tgk-account-card__header">
                       <div>
-                        <div class="font-medium text-sm text-navy" x-text="acct.metadata?.name || acct.account_type"></div>
-                        <div class="text-[11px] text-gray-400" x-text="accountLabel(acct)"></div>
+                        <div class="tgk-account-card__title" x-text="acct.metadata?.name || acct.account_type"></div>
+                        <div class="tgk-account-card__meta" x-text="accountLabel(acct)"></div>
                       </div>
                       <template x-if="acct.metadata?.ytdReturn != null">
-                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="acct.metadata.ytdReturn >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
+                        <span class="tgk-status-badge" :class="acct.metadata.ytdReturn >= 0 ? 'tgk-status-badge--success' : 'tgk-status-badge--danger'" x-text="fmtPct(acct.metadata.ytdReturn) + ' YTD'"></span>
                       </template>
                     </div>
-                    <div class="font-serif text-xl font-semibold text-navy mb-3" x-text="fmtMoney(acct.metadata?.value)"></div>
-                    <!-- Allocation Bar -->
-                    <div class="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
-                      <div class="bg-blue-500" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
-                      <div class="bg-green-400" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
-                      <div class="bg-yellow-400" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
-                      <div class="bg-gray-300" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
+                    <div class="tgk-account-card__value" x-text="fmtMoney(acct.metadata?.value)"></div>
+                    <div class="tgk-allocation-bar">
+                      <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--equity" :style="`width:${acct.metadata?.allocEquity || 0}%`"></div>
+                      <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--fixed" :style="`width:${acct.metadata?.allocFixed || 0}%`"></div>
+                      <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--alt" :style="`width:${acct.metadata?.allocAlt || 0}%`"></div>
+                      <div class="tgk-allocation-bar__segment tgk-allocation-bar__segment--cash" :style="`width:${acct.metadata?.allocCash || 0}%`"></div>
                     </div>
-                    <div class="flex gap-3 mt-2 text-[10px] text-gray-500">
-                      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
-                      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
-                      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
-                      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
+                    <div class="tgk-allocation-legend">
+                      <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--equity"></span> Equity <span x-text="(acct.metadata?.allocEquity||0)+'%'"></span></span>
+                      <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--fixed"></span> Fixed <span x-text="(acct.metadata?.allocFixed||0)+'%'"></span></span>
+                      <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--alt"></span> Alt <span x-text="(acct.metadata?.allocAlt||0)+'%'"></span></span>
+                      <span class="tgk-allocation-legend__item"><span class="tgk-allocation-legend__dot tgk-allocation-legend__dot--cash"></span> Cash <span x-text="(acct.metadata?.allocCash||0)+'%'"></span></span>
                     </div>
                   </div>
                 </template>
               </div>
             </div>
 
-            <!-- Documents -->
-            <div class="bg-white rounded-xl shadow-sm p-5 mt-5">
-              <h3 class="font-semibold text-base text-navy mb-4">Documents</h3>
+            <div class="tgk-surface-panel tgk-surface-panel--md">
+              <div class="tgk-panel-heading tgk-panel-heading--spaced">
+                <h3 class="tgk-panel-title">Documents</h3>
+              </div>
               <template x-if="selectedContactEnvelopes.length === 0">
-                <p class="text-sm text-gray-400">No documents yet.</p>
+                <div class="tgk-empty-panel tgk-empty-panel--compact">
+                  <div class="tgk-empty-panel__icon">
+                    <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                  </div>
+                  <div class="tgk-empty-panel__title">No documents yet</div>
+                  <p class="tgk-empty-panel__copy">Completed and in-flight agreement packets will appear here.</p>
+                </div>
               </template>
-              <div class="space-y-3">
+              <div class="tgk-record-list">
                 <template x-for="env in selectedContactEnvelopes" :key="env.id">
-                  <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white transition-colors hover:border-gray-300">
-                    <div class="flex items-center gap-4 min-w-0 flex-1">
-                      <div class="min-w-0 flex-1">
-                        <div class="text-[15px] font-semibold leading-5 text-navy truncate" x-text="env.name || 'Untitled'"></div>
-                        <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
-                          <span class="font-mono text-gray-400 truncate max-w-full" x-text="env.id || ''"></span>
+                  <div class="tgk-record-row">
+                    <div class="tgk-record-row__main">
+                      <div class="tgk-record-row__content">
+                        <div class="tgk-record-row__title" x-text="env.name || 'Untitled'"></div>
+                        <div class="tgk-record-row__meta">
+                          <span class="tgk-record-row__id" x-text="env.id || ''"></span>
                           <template x-if="envelopeTimestampLabel(env)">
-                            <span class="inline-flex items-center gap-2 text-gray-500">
-                              <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                            <span class="u-row u-gap-2">
+                              <span class="tgk-record-row__meta-dot"></span>
                               <span x-text="envelopeTimestampLabel(env)"></span>
                             </span>
                           </template>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 flex-shrink-0">
-                        <button @click="viewEnvelopeDoc(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View document">
+                      <div class="tgk-record-row__actions">
+                        <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </button>
-                        <button @click="viewEnvelopeHistory(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View history">
+                        <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                       </div>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize flex-shrink-0"
-                      :class="{
-                        'bg-green-100 text-green-700': env.status === 'completed',
-                        'bg-blue-100 text-blue-700': env.status === 'sent',
-                        'bg-yellow-100 text-yellow-700': env.status === 'delivered',
-                        'bg-gray-100 text-gray-600': !['completed','sent','delivered'].includes(env.status)
-                      }"
-                      x-text="env.status || 'unknown'"></span>
+                    <span class="tgk-status-badge" :class="statusClasses(env.status)" x-text="env.status || 'unknown'"></span>
                   </div>
                 </template>
               </div>
@@ -300,7 +306,7 @@
     </template>
 
     <!-- AGREEMENTS VIEW -->
-    <div x-show="view === 'documents'" class="flex h-full min-h-0 flex-col p-6">
+    <div x-show="view === 'documents'" class="tgk-page-shell">
       <div class="tgk-agreements-dashboard">
         <div class="tgk-agreements-kpis">
           <section class="tgk-agreements-kpi-card">
@@ -329,18 +335,16 @@
         </div>
 
         <div class="tgk-agreements-content">
-          <section class="tgk-agreements-list-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div class="flex items-center justify-between gap-4 mb-4">
-              <div>
-                <h3 class="font-semibold text-base text-navy">Agreements</h3>
-              </div>
+          <section class="tgk-agreements-list-panel tgk-surface-panel tgk-surface-panel--md">
+            <div class="tgk-panel-heading tgk-panel-heading--spaced">
+              <h3 class="tgk-panel-title">Agreements</h3>
             </div>
 
-            <div class="mb-4">
-              <div class="relative max-w-md">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <input x-model="agreementSearchQuery" type="text" placeholder="Search agreements" class="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm text-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20">
-              </div>
+            <div class="tgk-panel-heading--spaced">
+              <label class="tgk-search-field tgk-search-field--wide">
+                <svg class="tgk-search-field__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input x-model="agreementSearchQuery" type="text" placeholder="Search agreements" class="tgk-form-input tgk-search-field__input">
+              </label>
             </div>
 
             <div class="tgk-agreements-list-scroll">
@@ -352,44 +356,35 @@
                 <div class="py-10 text-center text-sm text-gray-400">No agreements found.</div>
               </template>
 
-              <div class="space-y-3" x-show="!agreementsLoading && filteredAgreements.length > 0">
+              <div class="tgk-record-list" x-show="!agreementsLoading && filteredAgreements.length > 0">
                 <template x-for="env in filteredAgreements" :key="env.id">
-                  <div class="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
-                    <div class="flex min-w-0 flex-1 items-center gap-4">
-                      <div class="min-w-0 flex-1">
-                        <div class="truncate text-[15px] font-semibold leading-5 text-navy" x-text="env.name || 'Untitled'"></div>
-                        <div class="mt-1 space-y-1 text-[11px] text-gray-500">
-                          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div class="tgk-record-row">
+                    <div class="tgk-record-row__main">
+                      <div class="tgk-record-row__content">
+                        <div class="tgk-record-row__title" x-text="env.name || 'Untitled'"></div>
+                        <div class="tgk-record-row__meta">
                             <span x-text="getAgreementInvestorName(env)"></span>
-                            <template x-if="envelopeTimestampLabel(env)">
-                              <span class="inline-flex items-center gap-2 text-gray-500">
-                                <span class="h-1 w-1 rounded-full bg-gray-300"></span>
-                                <span x-text="envelopeTimestampLabel(env)"></span>
-                              </span>
-                            </template>
-                          </div>
-                          <div class="font-mono text-gray-400 truncate" x-text="env.id || ''"></div>
+                          <template x-if="envelopeTimestampLabel(env)">
+                            <span class="u-row u-gap-2">
+                              <span class="tgk-record-row__meta-dot"></span>
+                              <span x-text="envelopeTimestampLabel(env)"></span>
+                            </span>
+                          </template>
+                          <span class="tgk-record-row__id" x-text="env.id || ''"></span>
                         </div>
                       </div>
 
-                      <div class="flex items-center gap-2 flex-shrink-0">
-                        <button @click="viewEnvelopeDoc(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View document">
+                      <div class="tgk-record-row__actions">
+                        <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </button>
-                        <button @click="viewEnvelopeHistory(env)" class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-brand" title="View history">
+                        <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                       </div>
                     </div>
 
-                    <span class="flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize"
-                      :class="{
-                        'bg-green-100 text-green-700': env.status === 'completed',
-                        'bg-blue-100 text-blue-700': env.status === 'sent',
-                        'bg-yellow-100 text-yellow-700': env.status === 'delivered',
-                        'bg-gray-100 text-gray-600': !['completed', 'sent', 'delivered'].includes(env.status)
-                      }"
-                      x-text="env.status || 'unknown'"></span>
+                    <span class="tgk-status-badge" :class="statusClasses(env.status)" x-text="env.status || 'unknown'"></span>
                   </div>
                 </template>
               </div>
@@ -436,13 +431,13 @@
     </div>
 
     <!-- MONITOR VIEW -->
-    <div x-show="view === 'monitor'" class="p-5 h-full overflow-y-auto" data-partial="../shared/partials/monitor-view.html"></div>
+    <div x-show="view === 'monitor'" class="tgk-page-shell u-scroll-y" data-partial="../shared/partials/monitor-view.html"></div>
 
     <!-- IAM PRODUCT PLACEHOLDER -->
-    <div x-show="currentIamPlaceholder" class="p-6" data-partial="../shared/partials/iam-placeholder-view.html"></div>
+    <div x-show="currentIamPlaceholder" class="tgk-page-shell" data-partial="../shared/partials/iam-placeholder-view.html"></div>
 
     <!-- SETTINGS VIEW -->
-    <div x-show="canSeeSettings() && view === 'settings'" class="p-6">
+    <div x-show="canSeeSettings() && view === 'settings'" class="tgk-page-shell">
       <div x-data="settingsPanelState()">
         <div x-init="mountSettingsPanel($el)"></div>
       </div>
@@ -450,51 +445,42 @@
 
     <!-- Onboarding Modal -->
     <template x-if="showOnboarding">
-      <div class="fixed inset-0 z-50 flex items-center justify-center">
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeOnboarding()"></div>
-        <div class="relative flex h-[min(95vh,1040px)] w-[min(92vw,1260px)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-          <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+      <div class="tgk-modal-shell">
+        <div class="tgk-modal-backdrop" @click="closeOnboarding()"></div>
+        <div class="tgk-modal-card tgk-modal-card--workflow">
+          <div class="tgk-modal-header">
             <div class="min-w-0 pr-4">
-              <h2 class="font-serif text-lg font-semibold text-navy leading-tight">New Account Opening</h2>
+              <h2 class="tgk-modal-title">New Account Opening</h2>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="tgk-inline-actions">
               <template x-if="maestroInstanceUrl">
-                <a :href="maestroInstanceUrl" target="_blank" rel="noreferrer" class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-medium text-gray-600 hover:border-gray-300 hover:text-navy transition-colors">
+                <a :href="maestroInstanceUrl" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">
                   Open in New Tab
                 </a>
               </template>
-              <button @click="closeOnboarding()" class="h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg leading-none transition-colors">&times;</button>
+              <button @click="closeOnboarding()" class="tgk-modal-close">&times;</button>
             </div>
           </div>
 
-          <div class="flex-1 min-h-0 bg-slate-50">
+          <div class="tgk-modal-body tgk-modal-body--workflow">
             <template x-if="maestroLoading">
               <div class="flex h-full items-center justify-center p-10">
-                <div class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-                  <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">
-                    Docusign IAM
-                  </div>
-                  <h3 class="text-xl font-semibold text-navy mb-3">Preparing account opening</h3>
-                  <p class="text-sm leading-6 text-gray-500">Starting the embedded onboarding experience for a new investor. The form will collect the required investor details directly in Docusign.</p>
+                <div class="tgk-workflow-state">
+                  <div class="tgk-pill tgk-pill--brand">Docusign IAM</div>
+                  <h3 class="tgk-workflow-title">Preparing account opening</h3>
+                  <p class="tgk-workflow-copy">Starting the embedded onboarding experience for a new investor. The form will collect the required investor details directly in Docusign.</p>
 
-                  <div class="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div class="tgk-workflow-progress">
                     <div
-                      class="h-full rounded-full bg-brand transition-all duration-500"
+                      class="tgk-workflow-progress__bar"
                       :style="`width:${((onboardingLoadingIndex + 1) / onboardingLoadingSteps.length) * 100}%`"></div>
                   </div>
 
-                  <div class="mt-5 space-y-2">
+                  <div class="tgk-workflow-step-list">
                     <template x-for="(step, index) in onboardingLoadingSteps" :key="step">
-                      <div class="flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors"
-                        :class="index <= onboardingLoadingIndex ? 'border-brand/20 bg-brand/5' : 'border-gray-200 bg-white'">
-                        <div class="flex items-center gap-2">
-                          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold"
-                            :class="index <= onboardingLoadingIndex ? 'bg-brand text-white' : 'bg-slate-100 text-gray-500'"
-                            x-text="index < onboardingLoadingIndex ? '✓' : index + 1"></span>
-                          <span class="text-sm font-medium"
-                            :class="index <= onboardingLoadingIndex ? 'text-navy' : 'text-gray-500'"
-                            x-text="step"></span>
-                        </div>
+                      <div class="tgk-workflow-step" :class="{ 'tgk-workflow-step--active': index <= onboardingLoadingIndex }">
+                        <span class="tgk-workflow-step__index" :class="{ 'tgk-workflow-step__index--active': index <= onboardingLoadingIndex }" x-text="index < onboardingLoadingIndex ? '✓' : index + 1"></span>
+                        <span class="tgk-workflow-step__label" :class="{ 'tgk-workflow-step__label--active': index <= onboardingLoadingIndex }" x-text="step"></span>
                       </div>
                     </template>
                   </div>
@@ -504,13 +490,13 @@
 
             <template x-if="!maestroLoading && maestroError">
               <div class="flex h-full items-center justify-center p-10">
-                <div class="w-full max-w-2xl rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-                  <div class="text-sm font-semibold text-red-600 mb-3">Unable to launch account opening</div>
-                  <p class="text-sm text-gray-600 leading-6" x-text="maestroError"></p>
-                  <p class="mt-4 text-xs text-gray-500">If this is a consent issue, reconnect Docusign so the app can request the `aow_manage` scope.</p>
-                  <div class="mt-6 flex items-center gap-2">
-                    <button @click="loadMaestroWorkflow()" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-light transition-colors">Try Again</button>
-                    <button @click="closeOnboarding()" class="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-300 transition-colors">Close</button>
+                <div class="tgk-workflow-state tgk-workflow-state--error">
+                  <h3 class="tgk-workflow-title">Unable to launch account opening</h3>
+                  <p class="tgk-workflow-copy" x-text="maestroError"></p>
+                  <p class="tgk-workflow-copy">If this is a consent issue, reconnect Docusign so the app can request the <code>aow_manage</code> scope.</p>
+                  <div class="tgk-workflow-actions">
+                    <button @click="loadMaestroWorkflow()" class="tgk-button tgk-button--primary">Try Again</button>
+                    <button @click="closeOnboarding()" class="tgk-button tgk-button--secondary">Close</button>
                   </div>
                 </div>
               </div>
@@ -518,7 +504,7 @@
 
             <template x-if="!maestroLoading && !maestroError && maestroInstanceUrl && !maestroCompleted">
               <iframe
-                class="h-full w-full border-0 bg-white"
+                class="tgk-modal-frame"
                 :src="maestroInstanceUrl"
                 @load="handleOnboardingFrameLoad()"
                 title="Docusign IAM Account Opening"
@@ -529,19 +515,19 @@
 
             <template x-if="maestroCompleted && maestroNewContact">
               <div class="flex h-full items-center justify-center p-10">
-                <div class="w-full max-w-2xl rounded-2xl border border-emerald-200 bg-white p-8 shadow-sm text-center">
-                  <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-                    <svg class="h-7 w-7 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <div class="tgk-workflow-state tgk-workflow-state--success">
+                  <div class="tgk-workflow-success-icon">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
                   </div>
-                  <h3 class="text-xl font-semibold text-navy mb-2">Account opened successfully</h3>
-                  <p class="text-sm text-gray-500 leading-6">
+                  <h3 class="tgk-workflow-title">Account opened successfully</h3>
+                  <p class="tgk-workflow-copy">
                     <span x-text="maestroNewContact.first_name + ' ' + maestroNewContact.last_name"></span>
                     has been added to your book. Redirecting now…
                   </p>
-                  <div class="mt-6 h-1 overflow-hidden rounded-full bg-emerald-100">
-                    <div class="h-full rounded-full bg-emerald-500 animate-[shrink_3s_linear_forwards]"></div>
+                  <div class="tgk-workflow-progress tgk-workflow-progress--success">
+                    <div class="tgk-workflow-progress__bar tgk-workflow-progress__bar--success" style="animation: shrink 3s linear forwards;"></div>
                   </div>
                 </div>
               </div>

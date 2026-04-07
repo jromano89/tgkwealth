@@ -37,22 +37,22 @@ function newsPanel() {
   function badgeFor(title, category) {
     const haystack = title.toLowerCase();
     if (/(breaking|live update)/.test(haystack)) {
-      return { label: 'Breaking', color: 'bg-red-100 text-red-700' };
+      return { label: 'Breaking', color: 'tgk-tone-pill--red' };
     }
     if (/earnings/.test(haystack)) {
-      return { label: 'Earnings', color: 'bg-blue-100 text-blue-700' };
+      return { label: 'Earnings', color: 'tgk-tone-pill--blue' };
     }
     if (category === 'POLICY') {
-      return { label: 'Policy', color: 'bg-amber-100 text-amber-700' };
+      return { label: 'Policy', color: 'tgk-tone-pill--amber' };
     }
     if (/(merger|acquisition|deal\b|ipo\b)/.test(haystack)) {
-      return { label: 'Deal', color: 'bg-indigo-100 text-indigo-700' };
+      return { label: 'Deal', color: 'tgk-tone-pill--violet' };
     }
     if (category === 'MACRO') {
-      return { label: 'Macro', color: 'bg-sky-100 text-sky-700' };
+      return { label: 'Macro', color: 'tgk-tone-pill--sky' };
     }
     if (/(alert|warning|surge|plunge|selloff)/.test(haystack)) {
-      return { label: 'Alert', color: 'bg-purple-100 text-purple-700' };
+      return { label: 'Alert', color: 'tgk-tone-pill--violet' };
     }
     return null;
   }
@@ -184,7 +184,11 @@ function newsPanel() {
     },
 
     impactColor(level) {
-      return { high: 'bg-red-500', medium: 'bg-amber-500', low: 'bg-green-500' }[level] || 'bg-gray-400';
+      return {
+        high: 'tgk-news-impact-dot--high',
+        medium: 'tgk-news-impact-dot--medium',
+        low: 'tgk-news-impact-dot--low'
+      }[level] || 'tgk-news-impact-dot--neutral';
     }
   };
 }

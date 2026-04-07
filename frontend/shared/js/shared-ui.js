@@ -185,17 +185,17 @@ function monitorTimeAgo(isoString) {
 // Status badge classes
 function statusClasses(status) {
   const map = {
-    active: 'bg-green-100 text-green-700',
-    review: 'bg-amber-100 text-amber-700',
-    pending: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    sent: 'bg-blue-100 text-blue-700',
-    delivered: 'bg-indigo-100 text-indigo-700',
-    created: 'bg-gray-100 text-gray-600',
-    declined: 'bg-red-100 text-red-700',
-    voided: 'bg-gray-100 text-gray-500'
+    active: 'tgk-status-badge--success',
+    review: 'tgk-status-badge--warning',
+    pending: 'tgk-status-badge--info',
+    completed: 'tgk-status-badge--success',
+    sent: 'tgk-status-badge--info',
+    delivered: 'tgk-status-badge--warning',
+    created: 'tgk-status-badge--neutral',
+    declined: 'tgk-status-badge--danger',
+    voided: 'tgk-status-badge--neutral'
   };
-  return map[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-600';
+  return map[(status || '').toLowerCase()] || 'tgk-status-badge--neutral';
 }
 
 // Generate initials from a name
@@ -233,66 +233,66 @@ function stockTickerTemplate() {
 function newsPanelTemplate() {
   return `
     <div x-data="newsPanel()">
-      <button @click="toggleOpen()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50">
-        <span>📺</span> Headlines <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+      <button @click="toggleOpen()" class="tgk-button tgk-button--secondary">
+        <span>📺</span> Headlines <span class="tgk-news-live-dot"></span>
       </button>
       <template x-if="open">
         <div>
           <div class="fixed inset-0 bg-black/30 z-40" @click="open = false"></div>
-          <div class="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 overflow-auto p-6 transition-transform">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="font-semibold text-lg text-navy">Market Headlines</h2>
-              <button @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <div class="tgk-news-sheet">
+            <div class="tgk-news-header">
+              <h2 class="tgk-news-title">Market Headlines</h2>
+              <button @click="open = false" class="tgk-modal-close">&times;</button>
             </div>
-            <input x-model="search" placeholder="Filter headlines" class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
-            <div class="flex gap-1.5 flex-wrap mb-4">
+            <input x-model="search" placeholder="Filter headlines" class="tgk-form-input tgk-news-search">
+            <div class="tgk-news-filter-bar">
               <template x-for="cat in categories" :key="cat">
-                <button @click="activeCategory = cat" class="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide transition-colors"
-                  :class="activeCategory === cat ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                <button @click="activeCategory = cat" class="tgk-filter-chip"
+                  :class="{ 'tgk-filter-chip--active': activeCategory === cat }"
                   x-text="cat === 'all' ? 'All' : cat"></button>
               </template>
             </div>
             <template x-if="loading && !loaded">
-              <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-6 text-center text-sm text-gray-500">
+              <div class="tgk-news-state">
                 Loading live headlines...
               </div>
             </template>
             <template x-if="!loading && error && !loaded">
-              <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">
+              <div class="tgk-news-state tgk-news-state--error">
                 Unable to load live headlines.
               </div>
             </template>
             <template x-if="!loading && !error && loaded && filteredItems.length === 0">
-              <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-6 text-center text-sm text-gray-500">
+              <div class="tgk-news-state">
                 No live headlines matched your filters.
               </div>
             </template>
-            <div class="space-y-3" x-show="loaded && filteredItems.length > 0">
+            <div class="tgk-news-list" x-show="loaded && filteredItems.length > 0">
               <template x-for="item in filteredItems" :key="item.title">
                 <a
                   :href="item.link || '#'"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="block p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-colors"
+                  class="tgk-news-item"
                   :class="{ 'pointer-events-none': !item.link }">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-[10px] font-medium uppercase tracking-wide text-gray-500" x-text="item.category"></span>
+                  <div class="tgk-news-item__meta">
+                    <span class="tgk-news-item__eyebrow" x-text="item.category"></span>
                     <template x-if="item.badge">
-                      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" :class="item.badgeColor" x-text="item.badge"></span>
+                      <span class="tgk-badge" :class="item.badgeColor" x-text="item.badge"></span>
                     </template>
-                    <span class="ml-auto text-[10px] text-gray-400" x-text="item.time"></span>
+                    <span class="tgk-news-item__time" x-text="item.time"></span>
                   </div>
-                  <div class="font-medium text-sm text-navy mb-1" x-text="item.title"></div>
-                  <div class="text-xs text-gray-500" x-text="item.summary"></div>
-                  <div class="mt-2 flex items-center gap-1.5">
-                    <div class="w-1.5 h-1.5 rounded-full" :class="impactColor(item.impact)"></div>
-                    <span class="text-[10px] text-gray-400" x-text="item.impact + ' impact'"></span>
+                  <div class="tgk-news-item__headline" x-text="item.title"></div>
+                  <div class="tgk-news-item__summary" x-text="item.summary"></div>
+                  <div class="tgk-news-item__impact">
+                    <div class="tgk-news-impact-dot" :class="impactColor(item.impact)"></div>
+                    <span x-text="item.impact + ' impact'"></span>
                   </div>
                 </a>
               </template>
             </div>
-            <div class="mt-4 text-center text-[10px] text-gray-400 flex items-center justify-center gap-1.5" x-show="loaded && filteredItems.length > 0">
-              <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live feed
+            <div class="tgk-news-footer" x-show="loaded && filteredItems.length > 0">
+              <span class="tgk-news-live-dot"></span> Live feed
             </div>
           </div>
         </div>
