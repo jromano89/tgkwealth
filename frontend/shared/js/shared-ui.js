@@ -214,15 +214,15 @@ function sparklinePath(positive) {
 
 function stockTickerTemplate() {
   return `
-    <div class="bg-navy text-white text-[11px] h-7 overflow-hidden relative z-50" x-data="stockTicker()">
-      <div class="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-navy to-transparent z-10"></div>
-      <div class="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-navy to-transparent z-10"></div>
-      <div class="ticker-scroll flex items-center h-full whitespace-nowrap">
+    <div class="tgk-stock-ticker" x-data="stockTicker()">
+      <div class="tgk-stock-ticker__fade tgk-stock-ticker__fade--left"></div>
+      <div class="tgk-stock-ticker__fade tgk-stock-ticker__fade--right"></div>
+      <div class="tgk-stock-ticker__track">
         <template x-for="(item, i) in [...prices, ...prices]" :key="'t'+i">
-          <span class="inline-flex items-center px-4 gap-1.5 transition-colors" :class="item.flash">
-            <span class="font-semibold" x-text="item.sym"></span>
+          <span class="tgk-stock-ticker__item" :class="item.flash">
+            <span class="tgk-stock-ticker__symbol" x-text="item.sym"></span>
             <span x-text="fmt(item.price)"></span>
-            <span :class="item.change >= 0 ? 'text-green-400' : 'text-red-400'" x-text="fmtChange(item.change)"></span>
+            <span :class="item.change >= 0 ? 'tgk-stock-ticker__change--up' : 'tgk-stock-ticker__change--down'" x-text="fmtChange(item.change)"></span>
           </span>
         </template>
       </div>
@@ -477,22 +477,22 @@ function sharedSettingsTemplate() {
               <div class="tgk-field-card">
                 <label class="tgk-field-label">IAM Sidebar</label>
                 <p class="tgk-help-text">Choose which IAM products appear in the sidebar.</p>
-                <div class="tgk-settings-stack mt-3">
+                <div class="tgk-settings-toggle-list">
                   <template x-for="product in sidebarOptions()" :key="product.key">
                     <label class="tgk-settings-toggle-row">
                       <div class="tgk-settings-toggle-copy">
                         <div class="tgk-settings-toggle-title" x-text="product.label"></div>
                         <div class="tgk-settings-toggle-text" x-text="product.key === 'monitor' ? 'Live demo section.' : 'Coming soon.'"></div>
                       </div>
-                      <div class="relative">
+                      <span class="tgk-switch">
                         <input
                           type="checkbox"
-                          class="sr-only peer"
+                          class="tgk-switch__input"
                           :checked="isSidebarProductEnabled(product.key)"
                           @change="toggleSidebarProduct(product.key, $event.target.checked)">
-                        <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand transition-colors"></div>
-                        <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-                      </div>
+                        <span class="tgk-switch__track"></span>
+                        <span class="tgk-switch__thumb"></span>
+                      </span>
                     </label>
                   </template>
                 </div>

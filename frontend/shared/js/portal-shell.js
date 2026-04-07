@@ -38,8 +38,12 @@
       } catch (error) {
         console.error('Failed to load partial:', error);
         slot.innerHTML = `
-          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            Unable to load shared view content.
+          <div class="tgk-surface-panel tgk-banner tgk-banner--danger">
+            <div>
+              <div class="tgk-banner__label">Shared Partial</div>
+              <div class="tgk-banner__title">Unable to load shared view content</div>
+              <p class="tgk-banner__meta">Refresh the page or verify the partial was deployed with the frontend.</p>
+            </div>
           </div>
         `;
       }
@@ -63,10 +67,10 @@
 
   function renderLayoutError(root) {
     root.innerHTML = `
-      <div class="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div class="max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-sm">
-          <div class="text-sm font-semibold text-red-600">Unable to load the portal layout</div>
-          <p class="mt-2 text-sm text-gray-600">Refresh the page or check that the static frontend files were deployed together.</p>
+      <div class="tgk-screen-state">
+        <div class="tgk-surface-panel tgk-surface-panel--md tgk-screen-state__card">
+          <div class="tgk-screen-state__title">Unable to load the portal layout</div>
+          <p class="tgk-screen-state__copy">Refresh the page or check that the static frontend files were deployed together.</p>
         </div>
       </div>
     `;

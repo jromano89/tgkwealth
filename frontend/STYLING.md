@@ -18,6 +18,7 @@ Workflow:
 2. Make the UI change.
 3. Run `node scripts/report-classes.js`.
 4. If the change is visual, verify it in a browser render.
+5. When trimming the utility layer, run `node scripts/report-classes.js --unused` first.
 
 Strict mode fails when unresolved static classes remain:
 

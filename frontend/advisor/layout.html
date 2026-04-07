@@ -1,16 +1,16 @@
 <!-- Stock Ticker -->
 <div x-data x-init="mountSharedTemplate($el, stockTickerTemplate())"></div>
 
-<div class="flex h-[calc(100vh-28px)]" x-data="advisorApp()">
+<div class="tgk-portal-shell" x-data="advisorApp()">
 
   <!-- Sidebar -->
-  <aside class="bg-navy text-white flex flex-col flex-shrink-0 transition-all duration-200" :class="sidebarCollapsed ? 'w-[68px]' : 'w-[220px]'">
+  <aside class="tgk-portal-sidebar" :class="{ 'tgk-portal-sidebar--collapsed': sidebarCollapsed }">
     <!-- Logo -->
-    <div class="p-4 flex items-center gap-3 cursor-pointer" @click="sidebarCollapsed = !sidebarCollapsed">
-      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-text="brandingInitial"></div>
-      <div x-show="!sidebarCollapsed" class="overflow-hidden">
-        <div class="font-bold text-sm leading-tight" x-text="brandingAppName"></div>
-        <div class="text-[10px] text-gray-400 tracking-widest uppercase">Advisor Portal</div>
+    <div class="tgk-portal-brand" @click="sidebarCollapsed = !sidebarCollapsed">
+      <div class="tgk-portal-brand__mark" x-text="brandingInitial"></div>
+      <div x-show="!sidebarCollapsed" class="tgk-portal-brand__copy">
+        <div class="tgk-portal-brand__title" x-text="brandingAppName"></div>
+        <div class="tgk-portal-brand__meta">Advisor Portal</div>
       </div>
     </div>
 
@@ -46,12 +46,12 @@
       </button>
     </nav>
 
-    <div class="px-4 pb-3" x-show="!sidebarCollapsed">
-      <div class="text-[10px] uppercase tracking-wide text-gray-500">For demo purposes only</div>
+    <div class="tgk-portal-note" x-show="!sidebarCollapsed">
+      <div class="tgk-portal-note__text">For demo purposes only</div>
     </div>
 
     <!-- Portal Switch -->
-    <div class="px-3 pb-2">
+    <div class="tgk-portal-switch-wrap">
       <a :href="'../investor/index.html' + window.location.search" class="tgk-portal-switch" :class="{ 'tgk-portal-switch--collapsed': sidebarCollapsed }">
         <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span x-show="!sidebarCollapsed">Switch to Investor View</span>
@@ -59,11 +59,11 @@
     </div>
 
     <!-- User -->
-    <div class="p-3 border-t border-white/10 bg-white/5 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-xs font-bold flex-shrink-0" x-text="currentUser?.metadata?.avatar || 'GG'"></div>
-      <div x-show="!sidebarCollapsed" class="overflow-hidden">
-        <div class="text-sm font-medium leading-tight" x-text="currentUser?.name || 'Gordon Gecko'"></div>
-        <div class="text-[10px] text-gray-400" x-text="currentUser?.title || 'Senior Advisor'"></div>
+    <div class="tgk-portal-user">
+      <div class="tgk-portal-user__avatar" style="background: var(--color-brand, #3b5bdb);" x-text="currentUser?.metadata?.avatar || 'GG'"></div>
+      <div x-show="!sidebarCollapsed" class="tgk-portal-user__copy">
+        <div class="tgk-portal-user__title" x-text="currentUser?.name || 'Gordon Gecko'"></div>
+        <div class="tgk-portal-user__meta" x-text="currentUser?.title || 'Senior Advisor'"></div>
       </div>
     </div>
   </aside>
@@ -116,48 +116,48 @@
           <div class="tgk-panel-heading tgk-panel-heading--spaced">
             <h2 class="tgk-panel-title">Investor Book</h2>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[760px]">
+          <div class="tgk-data-table-shell">
+            <table class="tgk-data-table">
               <thead>
-                <tr class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 border-b">
-                  <th class="text-left pb-3">Investor</th>
-                  <th class="text-left pb-3">AUM</th>
-                  <th class="text-left pb-3">Net Worth</th>
-                  <th class="text-left pb-3">Trend</th>
-                  <th class="text-left pb-3">Risk Profile</th>
-                  <th class="text-left pb-3">Status</th>
-                  <th class="w-8 pb-3"></th>
+                <tr class="tgk-data-table__head-row">
+                  <th class="tgk-data-table__heading">Investor</th>
+                  <th class="tgk-data-table__heading">AUM</th>
+                  <th class="tgk-data-table__heading">Net Worth</th>
+                  <th class="tgk-data-table__heading">Trend</th>
+                  <th class="tgk-data-table__heading">Risk Profile</th>
+                  <th class="tgk-data-table__heading">Status</th>
+                  <th class="tgk-data-table__heading tgk-data-table__heading--action"></th>
                 </tr>
               </thead>
               <tbody>
                 <template x-for="c in filteredCustomers" :key="c.id">
-                  <tr @click="viewClient(c)" class="group border-b border-gray-50 even:bg-gray-50/50 hover:bg-blue-50/50 cursor-pointer transition-colors">
-                    <td class="py-3">
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.name)"></div>
-                        <div>
-                          <div class="font-medium text-sm text-navy" x-text="c.name"></div>
-                          <div class="text-[11px] text-gray-400" x-text="c.metadata?.household || c.company || 'Investor'"></div>
+                  <tr @click="viewClient(c)" class="tgk-data-table__row">
+                    <td class="tgk-data-table__cell">
+                      <div class="tgk-data-table__contact">
+                        <div class="tgk-data-table__avatar" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.name)"></div>
+                        <div class="tgk-data-table__identity">
+                          <div class="tgk-data-table__name" x-text="c.name"></div>
+                          <div class="tgk-data-table__meta" x-text="c.metadata?.household || c.company || 'Investor'"></div>
                         </div>
                       </div>
                     </td>
-                    <td class="text-sm font-medium" x-text="fmtMoney(c.metadata?.value)"></td>
-                    <td class="text-sm" x-text="fmtMoney(c.metadata?.netWorth)"></td>
-                    <td>
-                      <div class="flex items-center gap-2">
+                    <td class="tgk-data-table__cell tgk-data-table__cell--numeric" x-text="fmtMoney(c.metadata?.value)"></td>
+                    <td class="tgk-data-table__cell tgk-data-table__cell--numeric" x-text="fmtMoney(c.metadata?.netWorth)"></td>
+                    <td class="tgk-data-table__cell">
+                      <div class="tgk-data-table__trend">
                         <svg width="60" height="20" viewBox="0 0 80 24">
                           <polyline fill="none" :stroke="(c.metadata?.changePct || 0) >= 0 ? '#16a34a' : '#dc2626'" stroke-width="2" stroke-linecap="round" :points="sparklinePath((c.metadata?.changePct || 0) >= 0)" />
                         </svg>
-                        <span class="text-xs font-medium" :class="(c.metadata?.changePct || 0) >= 0 ? 'text-green-600' : 'text-red-600'" x-text="fmtPct(c.metadata?.changePct)"></span>
+                        <span :class="(c.metadata?.changePct || 0) >= 0 ? 'tgk-data-table__change--up' : 'tgk-data-table__change--down'" x-text="fmtPct(c.metadata?.changePct)"></span>
                       </div>
                     </td>
-                    <td class="text-sm text-gray-600" x-text="c.metadata?.riskProfile || '—'"></td>
-                    <td>
+                    <td class="tgk-data-table__cell" x-text="c.metadata?.riskProfile || '—'"></td>
+                    <td class="tgk-data-table__cell">
                       <span class="tgk-status-badge" :class="statusClasses(c.metadata?.status)" x-text="c.metadata?.status || 'active'"></span>
                     </td>
-                    <td class="text-center">
-                      <button @click.stop="deleteCustomer(c, $event)" class="w-5 h-5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center" title="Remove">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    <td class="tgk-data-table__cell tgk-data-table__cell--action">
+                      <button @click.stop="deleteCustomer(c, $event)" class="tgk-data-table__remove" title="Remove">
+                        <svg class="tgk-icon tgk-icon--sm" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
                     </td>
                   </tr>
