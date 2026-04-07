@@ -343,7 +343,7 @@
             <div class="tgk-panel-heading--spaced">
               <label class="tgk-search-field tgk-search-field--wide">
                 <svg class="tgk-search-field__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <input x-model="agreementSearchQuery" type="text" placeholder="Search agreements" class="tgk-form-input tgk-search-field__input">
+                <input x-model="agreementSearchQuery" type="text" placeholder="Search agreements" class="tgk-form-input tgk-form-input--compact tgk-search-field__input">
               </label>
             </div>
 
@@ -392,7 +392,7 @@
           </section>
 
           <div class="tgk-agreements-side-stack">
-            <section class="tgk-agreements-panel">
+            <section class="tgk-agreements-panel tgk-agreements-panel--types">
               <div class="tgk-agreements-panel-title">Document Types</div>
               <div class="tgk-agreements-donut-shell">
                 <div class="tgk-agreements-donut" :style="`background:${agreementTypeGradient}`">

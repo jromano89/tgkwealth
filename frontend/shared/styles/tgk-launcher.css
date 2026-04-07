@@ -9,35 +9,14 @@
   --tgk-dark-surface: #150034;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 html,
 body {
   min-height: 100%;
-  margin: 0;
 }
 
 body {
-  font-family: var(--tgk-font-sans);
   color: var(--tgk-white);
   background: var(--tgk-dark-surface);
-}
-
-a {
-  color: inherit;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
 }
 
 .page-shell {

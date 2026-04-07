@@ -270,12 +270,11 @@
             <h3 class="tgk-panel-title">Tasks</h3>
           </div>
           <template x-if="tasks.length === 0">
-            <div class="tgk-empty-panel tgk-empty-panel--compact">
+            <div class="tgk-empty-panel tgk-empty-panel--compact tgk-empty-panel--tasks">
               <div class="tgk-empty-panel__icon">
                 <svg class="tgk-icon tgk-icon--lg tgk-icon--muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
               </div>
-              <p class="tgk-empty-panel__title">All caught up</p>
-              <p class="tgk-empty-panel__copy">No open tasks right now.</p>
+              <p class="tgk-empty-panel__title">All caught up. No open tasks.</p>
             </div>
           </template>
           <div class="tgk-task-list">
