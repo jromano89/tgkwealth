@@ -182,7 +182,7 @@
     <template x-if="view === 'client' && selectedContact">
       <div class="tgk-page-shell">
         <button @click="goBack()" class="tgk-back-link">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+          <svg class="tgk-icon tgk-icon--sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
           Back to Dashboard
         </button>
 
@@ -217,7 +217,7 @@
                 <svg width="80" height="24" viewBox="0 0 80 24">
                   <polyline fill="none" :stroke="(selectedContact.metadata?.changePct || 0) >= 0 ? '#16a34a' : '#dc2626'" stroke-width="2" stroke-linecap="round" :points="sparklinePath((selectedContact.metadata?.changePct || 0) >= 0)" />
                 </svg>
-                <span class="text-xs font-medium" :class="(selectedContact.metadata?.changePct || 0) >= 0 ? 'text-green-600' : 'text-red-600'" x-text="fmtPct(selectedContact.metadata?.changePct) + ' this month'"></span>
+                <span class="tgk-trend-text" :class="(selectedContact.metadata?.changePct || 0) >= 0 ? 'tgk-trend-text--up' : 'tgk-trend-text--down'" x-text="fmtPct(selectedContact.metadata?.changePct) + ' this month'"></span>
               </div>
             </section>
           </div>
@@ -288,10 +288,10 @@
                       </div>
                       <div class="tgk-record-row__actions">
                         <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                          <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </button>
                         <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                       </div>
                     </div>
@@ -349,11 +349,11 @@
 
             <div class="tgk-agreements-list-scroll">
               <template x-if="agreementsLoading">
-                <div class="py-10 text-center text-sm text-gray-400">Loading agreements...</div>
+                <div class="tgk-inline-message">Loading agreements...</div>
               </template>
 
               <template x-if="!agreementsLoading && filteredAgreements.length === 0">
-                <div class="py-10 text-center text-sm text-gray-400">No agreements found.</div>
+                <div class="tgk-inline-message">No agreements found.</div>
               </template>
 
               <div class="tgk-record-list" x-show="!agreementsLoading && filteredAgreements.length > 0">
@@ -376,10 +376,10 @@
 
                       <div class="tgk-record-row__actions">
                         <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                          <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         </button>
                         <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                       </div>
                     </div>
@@ -449,7 +449,7 @@
         <div class="tgk-modal-backdrop" @click="closeOnboarding()"></div>
         <div class="tgk-modal-card tgk-modal-card--workflow">
           <div class="tgk-modal-header">
-            <div class="min-w-0 pr-4">
+            <div class="tgk-modal-heading">
               <h2 class="tgk-modal-title">New Account Opening</h2>
             </div>
             <div class="tgk-inline-actions">
@@ -464,7 +464,7 @@
 
           <div class="tgk-modal-body tgk-modal-body--workflow">
             <template x-if="maestroLoading">
-              <div class="flex h-full items-center justify-center p-10">
+              <div class="tgk-workflow-shell">
                 <div class="tgk-workflow-state">
                   <div class="tgk-pill tgk-pill--brand">Docusign IAM</div>
                   <h3 class="tgk-workflow-title">Preparing account opening</h3>
@@ -489,7 +489,7 @@
             </template>
 
             <template x-if="!maestroLoading && maestroError">
-              <div class="flex h-full items-center justify-center p-10">
+              <div class="tgk-workflow-shell">
                 <div class="tgk-workflow-state tgk-workflow-state--error">
                   <h3 class="tgk-workflow-title">Unable to launch account opening</h3>
                   <p class="tgk-workflow-copy" x-text="maestroError"></p>
@@ -514,10 +514,10 @@
             </template>
 
             <template x-if="maestroCompleted && maestroNewContact">
-              <div class="flex h-full items-center justify-center p-10">
+              <div class="tgk-workflow-shell">
                 <div class="tgk-workflow-state tgk-workflow-state--success">
                   <div class="tgk-workflow-success-icon">
-                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <svg class="tgk-icon tgk-icon--lg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
                   </div>

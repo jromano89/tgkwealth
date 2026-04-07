@@ -74,7 +74,7 @@
 
       <!-- Header -->
       <div x-show="isCoreTab(tab)" class="tgk-investor-header">
-        <div class="min-w-0">
+        <div class="tgk-investor-header__copy">
           <h1 class="tgk-investor-header__title">
             Good afternoon,
             <span class="tgk-investor-switch" x-data="{ open: false }">
@@ -115,7 +115,7 @@
           </h1>
           <p class="tgk-investor-header__meta">Portfolio snapshot as of <span x-text="portfolioDateLabel"></span></p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="tgk-investor-header__actions">
           <div x-data x-init="mountSharedTemplate($el, newsPanelTemplate())"></div>
         </div>
       </div>
@@ -249,10 +249,10 @@
                   </div>
                   <div class="tgk-record-row__actions">
                     <button @click="viewEnvelopeDoc(env)" class="tgk-icon-button" title="View document">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                      <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                     </button>
                     <button @click="viewEnvelopeHistory(env)" class="tgk-icon-button" title="View history">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </button>
                   </div>
                 </div>
@@ -292,14 +292,14 @@
                 @focus="taskCanLaunchWorkflow(task) && warmTaskWorkflow()"
                 @touchstart.passive="taskCanLaunchWorkflow(task) && warmTaskWorkflow()">
                 <div class="tgk-task-card__icon">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                  <svg class="tgk-icon tgk-icon--sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
                 <div class="tgk-task-card__body">
                   <div class="tgk-task-card__title" x-text="task.title"></div>
                   <p class="tgk-task-card__copy" x-text="task.description"></p>
                 </div>
                 <button @click.stop="dismissTask(task.id)" class="tgk-task-card__dismiss" title="Mark complete">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <svg class="tgk-icon tgk-icon--md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 </button>
               </div>
             </template>
@@ -328,7 +328,7 @@
       <div class="tgk-modal-backdrop" @click="closeTaskWorkflow()"></div>
       <div class="tgk-modal-card tgk-modal-card--workflow">
         <div class="tgk-modal-header">
-          <div class="min-w-0 pr-4">
+          <div class="tgk-modal-heading">
             <h2 class="tgk-modal-title" x-text="taskWorkflowTask?.title || 'Continue Asset Transfer'"></h2>
             <p class="tgk-panel-copy" x-text="clientName || selectedClient?.name || 'Investor workflow'"></p>
           </div>
@@ -344,7 +344,7 @@
 
         <div class="tgk-modal-body tgk-modal-body--workflow">
           <template x-if="taskWorkflowLoading">
-            <div class="flex h-full items-center justify-center p-10">
+            <div class="tgk-workflow-shell">
               <div class="tgk-workflow-state">
                 <div class="tgk-pill tgk-pill--brand">Docusign IAM</div>
                 <h3 class="tgk-workflow-title">Preparing asset transfer</h3>
@@ -369,7 +369,7 @@
           </template>
 
           <template x-if="!taskWorkflowLoading && taskWorkflowError">
-            <div class="flex h-full items-center justify-center p-10">
+            <div class="tgk-workflow-shell">
               <div class="tgk-workflow-state tgk-workflow-state--error">
                 <h3 class="tgk-workflow-title">Unable to launch asset transfer</h3>
                 <p class="tgk-workflow-copy" x-text="taskWorkflowError"></p>

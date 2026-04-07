@@ -238,7 +238,7 @@ function newsPanelTemplate() {
       </button>
       <template x-if="open">
         <div>
-          <div class="fixed inset-0 bg-black/30 z-40" @click="open = false"></div>
+          <div class="tgk-news-overlay" @click="open = false"></div>
           <div class="tgk-news-sheet">
             <div class="tgk-news-header">
               <h2 class="tgk-news-title">Market Headlines</h2>
@@ -274,7 +274,7 @@ function newsPanelTemplate() {
                   target="_blank"
                   rel="noopener noreferrer"
                   class="tgk-news-item"
-                  :class="{ 'pointer-events-none': !item.link }">
+                  :class="{ 'tgk-news-item--disabled': !item.link }">
                   <div class="tgk-news-item__meta">
                     <span class="tgk-news-item__eyebrow" x-text="item.category"></span>
                     <template x-if="item.badge">

@@ -1755,6 +1755,14 @@
   box-shadow: var(--tgk-shadow-soft);
 }
 
+.tgk-workflow-shell {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
 .tgk-workflow-state--error {
   border-color: rgba(239, 68, 68, 0.24);
 }
@@ -1874,6 +1882,13 @@
   color: #10b981;
 }
 
+.tgk-news-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .tgk-news-sheet {
   position: fixed;
   inset: 0 0 0 auto;
@@ -1949,6 +1964,10 @@
   border-color: rgba(148, 163, 184, 0.24);
   background: #f8fafc;
   box-shadow: var(--tgk-shadow-soft);
+}
+
+.tgk-news-item--disabled {
+  pointer-events: none;
 }
 
 .tgk-news-item__meta {
@@ -2101,6 +2120,10 @@
   margin-bottom: 8px;
 }
 
+.tgk-investor-header__copy {
+  min-width: 0;
+}
+
 .tgk-investor-header__title {
   margin: 0;
   color: var(--color-navy, #1a1a2e);
@@ -2115,6 +2138,12 @@
   color: #98a2b3;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.tgk-investor-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .tgk-investor-switch {
@@ -2214,6 +2243,16 @@
 .tgk-icon--sm {
   width: 16px;
   height: 16px;
+}
+
+.tgk-icon--xs {
+  width: 12px;
+  height: 12px;
+}
+
+.tgk-icon--md {
+  width: 20px;
+  height: 20px;
 }
 
 .tgk-icon--lg {
@@ -3242,6 +3281,13 @@
   justify-content: flex-end;
 }
 
+.tgk-inline-message {
+  padding-block: 40px;
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: center;
+}
+
 .tgk-banner {
   display: flex;
   align-items: flex-start;
@@ -3382,6 +3428,11 @@
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
+.tgk-modal-heading {
+  min-width: 0;
+  padding-right: 16px;
+}
+
 .tgk-modal-eyebrow {
   font-size: 11px;
   font-weight: 700;
@@ -3480,6 +3531,19 @@
   color: var(--tgk-text-muted);
   font-size: 13px;
   line-height: 1.7;
+}
+
+.tgk-trend-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tgk-trend-text--up {
+  color: #16a34a;
+}
+
+.tgk-trend-text--down {
+  color: var(--tgk-color-red-600, #dc2626);
 }
 
 .tgk-history-list {
