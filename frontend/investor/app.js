@@ -14,6 +14,7 @@ function investorApp() {
     accounts: [],
     envelopes: [],
     sidebarCollapsed: false,
+    _sidebarChangeHandler: null,
     loading: true,
     tasks: [],
     monitorAlerts: [],
@@ -27,6 +28,11 @@ function investorApp() {
 
     async init() {
       this.initializeBrandingState();
+      this.refreshSidebarProducts();
+      if (!this._sidebarChangeHandler) {
+        this._sidebarChangeHandler = () => this.refreshSidebarProducts();
+        window.addEventListener('tgk:sidebar-change', this._sidebarChangeHandler);
+      }
       try {
         const [advisors, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -54,6 +60,14 @@ function investorApp() {
 
     canSeeIamProducts() {
       return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
+    },
+
+    refreshSidebarProducts() {
+      this.iamProducts = getIamProducts();
+
+      if (!this.isCoreTab(this.tab) && this.tab !== 'settings' && !this.iamProducts.some((product) => product.key === this.tab)) {
+        this.tab = 'overview';
+      }
     },
 
     isCoreTab(tabName = this.tab) {

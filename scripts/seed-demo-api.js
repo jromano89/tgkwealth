@@ -51,6 +51,19 @@ function task(id, employeeId, customerId, title, description, extra = {}) {
   };
 }
 
+function buildAssetTransferTask(customer, index) {
+  const sequence = String(index + 1).padStart(3, '0');
+  const displayName = String(customer.displayName || `Investor ${index + 1}`).trim();
+
+  return task(
+    `ec52a1b8-2e88-4b85-8b4d-8e9cda92d${sequence}`,
+    customer.employeeId,
+    customer.id,
+    `Asset transfer for ${displayName}`,
+    `Launch the asset transfer workflow for ${displayName}.`
+  );
+}
+
 const employees = [
   {
     id: '4871abfa-8868-4501-b068-5936c6363e6b',
@@ -154,6 +167,27 @@ const customers = [
         account('acct-victor-2', 'Private Credit Reserve', 'Alternative', 6900000, 0.056, { equity: 10, fixed: 33, alt: 45, cash: 12 })
       ]
     }
+  },
+  {
+    id: '99999999-9999-4999-8999-999999999999',
+    employeeId: employees[0].id,
+    displayName: 'Paige Turner',
+    email: 'paige@turnkeycapital.co',
+    phone: '(917) 555-0119',
+    organization: 'Turnkey Capital',
+    status: 'active',
+    data: {
+      avatar: '#6c5b7b',
+      household: 'Next Gen Household',
+      riskProfile: 'Income Plus',
+      value: 8400000,
+      netWorth: 19100000,
+      changePct: 0.017,
+      accounts: [
+        account('acct-paige-1', 'Dividend Core Strategy', 'Brokerage', 4600000, 0.049, { equity: 32, fixed: 41, alt: 12, cash: 15 }),
+        account('acct-paige-2', 'Estate Liquidity Reserve', 'Trust', 3800000, 0.028, { equity: 12, fixed: 48, alt: 8, cash: 32 })
+      ]
+    }
   }
 ];
 
@@ -166,22 +200,7 @@ const envelopes = [
   envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1016', employees[1].id, customers[3].id, 'completed', 'Account Opening Packet', 'Account Opening', { customerName: customers[3].displayName, turnaroundHours: 7.1 })
 ];
 
-const tasks = [
-  task(
-    'ec52a1b8-2e88-4b85-8b4d-8e9cda92d001',
-    employees[0].id,
-    customers[2].id,
-    'Continue asset transfer',
-    'Launch the asset transfer workflow to finish the inbound transfer.'
-  ),
-  task(
-    'ec52a1b8-2e88-4b85-8b4d-8e9cda92d002',
-    employees[1].id,
-    customers[1].id,
-    'Start transfer package',
-    'Launch the asset transfer workflow for the pending transfer package.'
-  )
-];
+const tasks = customers.map(buildAssetTransferTask);
 
 async function request(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {

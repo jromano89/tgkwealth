@@ -5,6 +5,7 @@
 
 const TGK_DEMO_SETTINGS_STORAGE_KEY = 'tgk_demo_settings';
 const TGK_BRANDING_EVENT = 'tgk:branding-change';
+const TGK_SIDEBAR_EVENT = 'tgk:sidebar-change';
 const TGK_IAM_PRODUCT_OPTIONS = Array.isArray(window.TGK_CONFIG?.iamProducts)
   ? window.TGK_CONFIG.iamProducts.map((product) => ({ ...product }))
   : [];
@@ -176,10 +177,33 @@ function syncRuntimeSidebar(nextSidebar) {
     window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
   }
 
-  window.TGK_DEMO.sidebar = resolveSidebarSettings({
+  const resolvedSidebar = resolveSidebarSettings({
     ...(window.TGK_DEMO.sidebar || {}),
     ...nextSidebar
   });
+
+  window.TGK_DEMO.sidebar = resolvedSidebar;
+  return resolvedSidebar;
+}
+
+function dispatchSidebarChange(nextSidebar) {
+  window.dispatchEvent(new CustomEvent(TGK_SIDEBAR_EVENT, {
+    detail: resolveSidebarSettings(nextSidebar)
+  }));
+}
+
+function persistSidebarSettings(nextSidebar) {
+  const resolvedSidebar = resolveSidebarSettings(nextSidebar);
+  const existing = readStoredSettings();
+
+  writeStoredSettings({
+    ...existing,
+    sidebar: resolvedSidebar
+  });
+
+  syncRuntimeSidebar(resolvedSidebar);
+  dispatchSidebarChange(resolvedSidebar);
+  return resolvedSidebar;
 }
 
 function buildDemoSettingsSnapshot(savedSettings) {
@@ -316,7 +340,7 @@ function settingsPanelState() {
 
       this.docusignConsentBusy = true;
       this.docusignConsentStatus = 'working';
-      this.docusignConsentMessage = 'Waiting for consent window...';
+      this.docusignConsentMessage = 'Waiting for popup...';
 
       try {
         await window.TGK_API.startDocusignConsent();
@@ -349,7 +373,8 @@ function settingsPanelState() {
       this.sidebarProductKeys = TGK_IAM_PRODUCT_OPTIONS
         .map((product) => product.key)
         .filter((productKeyValue) => selectedKeys.has(productKeyValue));
-      this.dirty = true;
+
+      persistSidebarSettings(this.currentSidebar());
     },
 
     previewAppName(value) {
@@ -367,20 +392,22 @@ function settingsPanelState() {
     save() {
       const nextBrandColor = normalizeHexColor(this.brandColor);
       const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
+      const nextSidebar = this.currentSidebar();
 
       writeStoredSettings({
         branding: {
           appName: nextAppName,
           brandColor: nextBrandColor
         },
-        sidebar: this.currentSidebar()
+        sidebar: nextSidebar
       });
 
       applyBrandingPreview({
         appName: nextAppName,
         brandColor: nextBrandColor
       });
-      syncRuntimeSidebar(this.currentSidebar());
+      syncRuntimeSidebar(nextSidebar);
+      dispatchSidebarChange(nextSidebar);
       this.dirty = false;
       window.location.reload();
     },
@@ -402,6 +429,7 @@ function settingsPanelState() {
       });
       applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
       syncRuntimeSidebar(this.currentSidebar());
+      dispatchSidebarChange(this.currentSidebar());
       this.resettingDefaults = false;
       window.location.reload();
     }

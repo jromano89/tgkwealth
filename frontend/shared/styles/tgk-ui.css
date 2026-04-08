@@ -10,8 +10,8 @@
   --tgk-border-strong: rgba(15, 23, 42, 0.14);
   --tgk-text: #0f172a;
   --tgk-text-muted: #64748b;
-  --tgk-shadow: 0 24px 64px rgba(15, 23, 42, 0.08);
-  --tgk-shadow-soft: 0 12px 28px rgba(15, 23, 42, 0.06);
+  --tgk-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+  --tgk-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.05);
   --tgk-page-bg: #f4f5f7;
 }
 
@@ -19,7 +19,16 @@
   margin: 0;
   font-family: var(--tgk-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   font-size: 13px;
-  background: var(--tgk-page-bg);
+  background-color: var(--tgk-page-bg);
+  background-image:
+    radial-gradient(circle at top right, color-mix(in oklab, var(--color-brand, #3b5bdb) 10%, transparent), transparent 32%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.82), transparent 26%),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--tgk-page-bg) 82%, #ffffff),
+      var(--tgk-page-bg) 58%,
+      color-mix(in oklab, var(--tgk-page-bg) 90%, #eef2f7)
+    );
 }
 
 .tgk-portal-body[data-portal='advisor'] {
@@ -58,10 +67,10 @@
 
 .tgk-agreements-kpi-card,
 .tgk-agreements-panel {
-  border: 1px solid #dbe4ef;
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+  box-shadow: var(--tgk-shadow-soft);
 }
 
 .tgk-agreements-kpi-card {
@@ -103,7 +112,7 @@
 
 .tgk-agreements-side-stack {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
 }
@@ -117,6 +126,13 @@
 
 .tgk-agreements-panel--types {
   padding: 14px 16px 16px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.tgk-agreements-panel--volume {
+  max-height: 280px;
+  overflow: hidden;
 }
 
 .tgk-agreements-panel-title {
@@ -464,7 +480,7 @@
 
 .ticker-scroll,
 .tgk-stock-ticker__track {
-  animation: tgk-scroll 90s linear infinite;
+  animation: tgk-scroll 240s linear infinite;
 }
 
 .flash-green {
@@ -596,6 +612,24 @@
 
 .tgk-settings-toggle-copy {
   min-width: 0;
+}
+
+.tgk-settings-consent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tgk-settings-consent-copy {
+  min-width: 0;
+}
+
+.tgk-settings-consent-meta {
+  margin-top: 2px;
+  color: var(--tgk-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .tgk-settings-toggle-list {
@@ -731,8 +765,8 @@
 }
 
 .tgk-surface-panel {
-  background: #fff;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+  border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 24px;
   box-shadow: var(--tgk-shadow-soft);
 }
@@ -885,14 +919,15 @@
 .tgk-page-title {
   margin-top: 0;
   color: var(--tgk-text);
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 
 .tgk-page-copy {
   margin-top: 2px;
   max-width: 720px;
-  color: var(--tgk-text-muted);
+  color: #52637a;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -907,7 +942,12 @@
   width: 220px;
   flex: 0 0 220px;
   flex-direction: column;
-  background: var(--color-navy, #1a1a2e);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-navy, #1a1a2e) 88%, #08101d 12%),
+    color-mix(in oklab, var(--color-navy-light, #2d3250) 84%, #09101d 16%)
+  );
   color: #fff;
   transition: width 0.2s ease;
 }
@@ -933,7 +973,12 @@
   justify-content: center;
   flex: 0 0 auto;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-brand, #3b5bdb), var(--color-brand-light, #5c7cfa));
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--color-brand, #3b5bdb) 84%, #ffffff),
+    color-mix(in oklab, var(--color-brand, #3b5bdb) 72%, #14213d 28%)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px rgba(3, 7, 18, 0.22);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -988,22 +1033,31 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
+  border: 1px solid transparent;
   border-radius: 10px;
   color: #9ca3af;
   font-size: 14px;
   line-height: 1.2;
   text-align: left;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
 .tgk-portal-nav__item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.05);
   color: #fff;
+  transform: translateX(1px);
 }
 
 .tgk-portal-nav__item--active {
-  background: color-mix(in oklab, var(--color-brand, #3b5bdb) 20%, transparent);
-  color: #bfdbfe;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-brand, #3b5bdb) 18%, rgba(255, 255, 255, 0.05)),
+    color-mix(in oklab, var(--color-brand, #3b5bdb) 10%, rgba(255, 255, 255, 0.02))
+  );
+  border-color: color-mix(in oklab, var(--color-brand, #3b5bdb) 30%, rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #eef5ff;
 }
 
 .tgk-portal-nav__item--collapsed {
@@ -1194,6 +1248,12 @@
   padding: 20px;
 }
 
+.tgk-page-shell--scrollable {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+}
+
 .tgk-page-stack {
   display: flex;
   flex-direction: column;
@@ -1247,11 +1307,16 @@
 
 .tgk-search-field__input {
   padding-left: 36px;
-  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .tgk-search-field__input:focus {
   background: #fff;
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--color-brand, #4c6ef5) 14%, transparent),
+    0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .tgk-back-link {
@@ -1357,9 +1422,9 @@
 }
 
 .tgk-account-card {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #fbfdff);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
   padding: 15px;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -1478,15 +1543,16 @@
   justify-content: space-between;
   gap: 14px;
   padding: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 18px;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .tgk-record-row:hover {
   border-color: rgba(148, 163, 184, 0.24);
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.05);
 }
 
 .tgk-record-row__main {
@@ -1766,8 +1832,9 @@
 }
 
 .tgk-modal-card--workflow {
-  width: min(92vw, 1260px);
-  height: min(95vh, 1040px);
+  width: min(94vw, 1260px);
+  height: min(99vh, 1120px);
+  border-radius: 22px;
 }
 
 .tgk-modal-body--workflow {
@@ -1790,7 +1857,7 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 24px;
   background: #fff;
-  padding: 32px;
+  padding: 18px;
   box-shadow: var(--tgk-shadow-soft);
 }
 
@@ -1799,7 +1866,7 @@
   height: 100%;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 18px;
 }
 
 .tgk-workflow-state--error {
@@ -1812,22 +1879,22 @@
 }
 
 .tgk-workflow-title {
-  margin: 14px 0 0;
+  margin: 8px 0 0;
   color: var(--tgk-text);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.35;
 }
 
 .tgk-workflow-copy {
-  margin: 12px 0 0;
+  margin: 6px 0 0;
   color: var(--tgk-text-muted);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .tgk-workflow-progress {
-  margin-top: 24px;
+  margin-top: 14px;
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
@@ -1852,17 +1919,17 @@
 .tgk-workflow-step-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 5px;
+  margin-top: 12px;
 }
 
 .tgk-workflow-step {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 16px;
+  border-radius: 14px;
   background: #fff;
   transition: border-color 0.18s ease, background-color 0.18s ease;
 }
@@ -1893,9 +1960,9 @@
 
 .tgk-workflow-step__label {
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 .tgk-workflow-step__label--active {
@@ -1905,14 +1972,14 @@
 .tgk-workflow-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 24px;
+  gap: 6px;
+  margin-top: 14px;
 }
 
 .tgk-workflow-success-icon {
   display: inline-flex;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
@@ -2384,10 +2451,10 @@
 
 .tgk-kpi {
   border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   border-left-width: 4px;
   border-left-style: solid;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
   padding: 13px 15px;
   box-shadow: var(--tgk-shadow-soft);
 }
@@ -3289,16 +3356,21 @@
   line-height: 1.6;
 }
 
+.tgk-help-text--compact {
+  margin-top: 8px;
+}
+
 .tgk-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 9px 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid transparent;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
@@ -3322,20 +3394,30 @@
 }
 
 .tgk-button--primary {
-  background: linear-gradient(135deg, var(--color-brand, #4c6ef5), var(--color-brand-light, #7c91ff));
+  border-color: color-mix(in oklab, var(--color-brand, #4c6ef5) 60%, #0f172a 16%);
+  background: color-mix(in oklab, var(--color-brand, #4c6ef5) 82%, #10213c 18%);
   color: #fff;
-  box-shadow: 0 12px 24px color-mix(in oklab, var(--color-brand, #4c6ef5) 28%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.tgk-button--primary:hover {
+  border-color: color-mix(in oklab, var(--color-brand, #4c6ef5) 68%, #0b1324 18%);
+  background: color-mix(in oklab, var(--color-brand, #4c6ef5) 76%, #0b1324 24%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 10px rgba(15, 23, 42, 0.1);
 }
 
 .tgk-button--secondary {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   border-color: rgba(148, 163, 184, 0.3);
   color: #475569;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .tgk-button--secondary:hover {
+  background: #fff;
   border-color: rgba(71, 85, 105, 0.28);
   color: var(--tgk-text);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
 }
 
 .tgk-button--danger {
@@ -3504,15 +3586,15 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
 .tgk-modal-heading {
   min-width: 0;
-  padding-right: 16px;
+  padding-right: 8px;
 }
 
 .tgk-modal-eyebrow {
@@ -3569,6 +3651,56 @@
 .tgk-modal-close:hover {
   background: rgba(148, 163, 184, 0.12);
   color: #475569;
+}
+
+.tgk-modal-shell--workflow {
+  padding: 4px;
+}
+
+.tgk-modal-card--workflow .tgk-modal-header {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 6;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.tgk-modal-card--workflow .tgk-modal-heading {
+  padding-right: 4px;
+}
+
+.tgk-modal-card--workflow .tgk-modal-title {
+  margin: 2px 0 0;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.tgk-modal-card--workflow .tgk-inline-actions {
+  gap: 6px;
+  align-items: center;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.tgk-modal-card--workflow .tgk-button {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.tgk-modal-card--workflow .tgk-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 22px;
 }
 
 .tgk-document-frame {
@@ -3690,6 +3822,16 @@
 
   .tgk-agreements-side-stack {
     grid-template-rows: none;
+  }
+
+  .tgk-agreements-panel--types {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .tgk-agreements-panel--volume {
+    max-height: none;
+    overflow: visible;
   }
 
   .tgk-settings-grid {

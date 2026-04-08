@@ -42,7 +42,7 @@
         class="tgk-portal-nav__item"
         :class="{ 'tgk-portal-nav__item--active': view === 'settings', 'tgk-portal-nav__item--collapsed': sidebarCollapsed }">
         <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Settings</span>
+        <span x-show="!sidebarCollapsed" class="tgk-portal-nav__label">Configure</span>
       </button>
     </nav>
 
@@ -51,7 +51,7 @@
     </div>
 
     <!-- Portal Switch -->
-    <div class="tgk-portal-switch-wrap">
+    <div x-show="canSeeSettings()" class="tgk-portal-switch-wrap">
       <a :href="'../investor/index.html' + window.location.search" class="tgk-portal-switch" :class="{ 'tgk-portal-switch--collapsed': sidebarCollapsed }">
         <svg class="tgk-portal-nav__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span x-show="!sidebarCollapsed">Switch to Investor View</span>
@@ -306,7 +306,7 @@
     </template>
 
     <!-- AGREEMENTS VIEW -->
-    <div x-show="view === 'documents'" class="tgk-page-shell">
+    <div x-show="view === 'documents'" class="tgk-page-shell tgk-page-shell--scrollable">
       <div class="tgk-agreements-dashboard">
         <div class="tgk-agreements-kpis">
           <section class="tgk-agreements-kpi-card">
@@ -413,7 +413,7 @@
               </div>
             </section>
 
-            <section class="tgk-agreements-panel">
+            <section class="tgk-agreements-panel tgk-agreements-panel--volume">
               <div class="tgk-agreements-panel-title">Agreement Volume — Last 12 Months</div>
               <div class="tgk-agreements-chart-surface">
                 <div class="tgk-agreements-chart-frame">
@@ -445,13 +445,10 @@
 
     <!-- Onboarding Modal -->
     <template x-if="showOnboarding">
-      <div class="tgk-modal-shell">
+      <div class="tgk-modal-shell tgk-modal-shell--workflow">
         <div class="tgk-modal-backdrop" @click="closeOnboarding()"></div>
         <div class="tgk-modal-card tgk-modal-card--workflow">
           <div class="tgk-modal-header">
-            <div class="tgk-modal-heading">
-              <h2 class="tgk-modal-title">New Account Opening</h2>
-            </div>
             <div class="tgk-inline-actions">
               <template x-if="maestroInstanceUrl">
                 <a :href="maestroInstanceUrl" target="_blank" rel="noreferrer" class="tgk-button tgk-button--secondary">

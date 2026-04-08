@@ -445,15 +445,14 @@ function sharedSettingsTemplate() {
       <div class="tgk-settings-stack">
         <section class="tgk-settings-card">
               <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Portal Settings</div>
-              <p class="tgk-settings-card__text">Adjust shared branding and the IAM sidebar.</p>
+              <div class="tgk-settings-card__eyebrow">Configure</div>
+              <p class="tgk-settings-card__text">Shared branding and sidebar controls.</p>
             </div>
 
             <div class="tgk-settings-card__body">
               <div class="tgk-field-card">
                 <label class="tgk-field-label" for="tgk-appName">App Name</label>
                 <input id="tgk-appName" x-model="appName" @input="previewAppName($event.target.value)" class="tgk-form-input" placeholder="TGK Wealth">
-                <p class="tgk-help-text">Used in both portal sidebars.</p>
               </div>
 
               <div class="tgk-field-card">
@@ -471,13 +470,11 @@ function sharedSettingsTemplate() {
 
               <div class="tgk-field-card">
                 <label class="tgk-field-label">IAM Sidebar</label>
-                <p class="tgk-help-text">Choose which IAM products appear in the sidebar.</p>
                 <div class="tgk-settings-toggle-list">
                   <template x-for="product in sidebarOptions()" :key="product.key">
                     <label class="tgk-settings-toggle-row">
                       <div class="tgk-settings-toggle-copy">
                         <div class="tgk-settings-toggle-title" x-text="product.label"></div>
-                        <div class="tgk-settings-toggle-text" x-text="product.key === 'monitor' ? 'Live demo section.' : 'Coming soon.'"></div>
                       </div>
                       <span class="tgk-switch">
                         <input
@@ -494,29 +491,14 @@ function sharedSettingsTemplate() {
               </div>
 
               <div class="tgk-field-card">
-                <label class="tgk-field-label">Docusign Consent</label>
-                <p class="tgk-help-text">User/account/scopes are configured in <code>frontend/config.js</code>. This only opens the admin consent popup for JWT grant access.</p>
-                <div class="tgk-settings-toggle-list">
-                  <div class="tgk-settings-toggle-row">
-                    <div class="tgk-settings-toggle-copy">
-                      <div class="tgk-settings-toggle-title">User ID</div>
-                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.userId || 'Not configured'"></div>
+                <label class="tgk-field-label">Docusign Account</label>
+                <div class="tgk-settings-consent-row">
+                  <div class="tgk-settings-consent-copy">
+                    <div class="tgk-settings-consent-meta">
+                      <div x-text="'User ID: ' + (docusignConfig.userId || 'Not configured')"></div>
+                      <div x-text="'Account ID: ' + (docusignConfig.accountId || 'Not configured')"></div>
                     </div>
                   </div>
-                  <div class="tgk-settings-toggle-row">
-                    <div class="tgk-settings-toggle-copy">
-                      <div class="tgk-settings-toggle-title">Account ID</div>
-                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.accountId || 'Not configured'"></div>
-                    </div>
-                  </div>
-                  <div class="tgk-settings-toggle-row">
-                    <div class="tgk-settings-toggle-copy">
-                      <div class="tgk-settings-toggle-title">Scopes</div>
-                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.scopes || 'Not configured'"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="tgk-inline-actions" style="margin-top:16px;">
                   <button
                     @click="grantDocusignConsent()"
                     :disabled="docusignConsentBusy || !hasDocusignAuthConfig()"
@@ -524,10 +506,10 @@ function sharedSettingsTemplate() {
                     x-text="docusignConsentBusy ? 'Waiting...' : 'Grant Consent'"></button>
                 </div>
                 <p
-                  class="tgk-help-text"
-                  style="margin-top:12px;"
+                  x-show="docusignConsentMessage || !hasDocusignAuthConfig()"
+                  class="tgk-help-text tgk-help-text--compact"
                   :style="docusignConsentStatus === 'error' ? 'color:#b42318;' : docusignConsentStatus === 'success' ? 'color:#067647;' : ''"
-                  x-text="docusignConsentMessage || (!hasDocusignAuthConfig() ? 'Add userId, accountId, and scopes in frontend/config.js first.' : 'No consent action in progress.')"></p>
+                  x-text="docusignConsentMessage || 'Configure frontend/config.js first.'"></p>
               </div>
 
               <div class="tgk-inline-actions">

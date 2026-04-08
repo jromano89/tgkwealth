@@ -73,8 +73,8 @@
       setSelectedOption('workflow', state.workflow);
 
       heroCopy.textContent = HERO_COPY;
-      generateLink.href = buildHref(selectedWorkflow.routeHref, state);
-      configurablePortalLink.href = buildHref(selectedWorkflow.routeHref, state, { mode: 'advanced' });
+      generateLink.href = buildHref(selectedWorkflow.routeHref, state, { mode: 'normal' });
+      configurablePortalLink.href = 'advisor/?mode=advanced';
       syncUrl(state);
     }
 

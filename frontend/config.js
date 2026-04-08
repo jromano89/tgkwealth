@@ -1,23 +1,16 @@
 (function () {
   const APP_SLUG = 'tgk-wealth';
   const APP_NAME = 'TGK Wealth';
-  const BRAND_COLOR = '#3b5bdb';
+  const DOCUSIGN_USER_ID = '26016859-d095-4c40-8892-0de438e2a226';
+  const DOCUSIGN_ACCOUNT_ID = '18ecd535-9f12-4c7f-8cf3-caf870d86437';
+  const DOCUSIGN_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
+  
   const BACKEND_URL = 'https://backend-tgk.up.railway.app';
   const DOCUSIGN_BASE_URL = 'https://api-d.docusign.com';
-  // Fill these once per demo frontend. The backend consent callback stays fixed.
-  const DOCUSIGN_USER_ID = '';
-  const DOCUSIGN_ACCOUNT_ID = '';
-  const DOCUSIGN_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
   const ADVISOR_ID = '4871abfa-8868-4501-b068-5936c6363e6b';
+  const BRAND_COLOR = '#3b5bdb';
   const DEFAULT_MODE = 'advanced';
-  const DEFAULT_IAM_PRODUCTS = [
-    'doc-gen',
-    'id-verification',
-    'monitor',
-    'notary',
-    'web-forms',
-    'workspaces'
-  ];
+
   const WORKFLOWS = Object.freeze({
     accountOpeningId: 'e26e565e-fb6a-433b-b004-bd2083c8963b',
     assetTransferId: 'b59acbee-8052-403a-a752-c04287ad6ee1'
@@ -83,7 +76,6 @@
     defaultMode: DEFAULT_MODE,
     workflows: { ...WORKFLOWS },
     iamProducts: IAM_PRODUCTS.map((product) => ({ ...product })),
-    defaultIamProducts: [...DEFAULT_IAM_PRODUCTS],
     mode
   };
 

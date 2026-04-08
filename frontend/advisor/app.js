@@ -3,6 +3,10 @@ const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
 const CLIENT_DETAIL_REFRESH_MS = 5000;
 const CLIENT_DETAIL_REFRESH_MAX_MS = 20 * 60 * 1000;
+const AGREEMENT_SUMMARY_METRICS = Object.freeze({
+  totalCount: 128,
+  completionRate: 87
+});
 const AGREEMENT_TYPE_COLORS = {
   'Account Opening': '#3567df',
   Transfer: '#16a34a',
@@ -38,7 +42,10 @@ function advisorApp() {
     onboardingLoadingIndex: 0,
     onboardingLoadingTimer: null,
     sidebarCollapsed: false,
+    _sidebarChangeHandler: null,
     loading: true,
+    totalAgreementCount: AGREEMENT_SUMMARY_METRICS.totalCount,
+    agreementCompletionRateValue: AGREEMENT_SUMMARY_METRICS.completionRate,
     agreementVolumeSeries: [5, 6, 4, 8, 9, 11, 8, 12, 14, 15, 16, 20],
     allAgreements: [],
 
@@ -53,6 +60,11 @@ function advisorApp() {
 
     async init() {
       this.initializeBrandingState();
+      this.refreshSidebarProducts();
+      if (!this._sidebarChangeHandler) {
+        this._sidebarChangeHandler = () => this.refreshSidebarProducts();
+        window.addEventListener('tgk:sidebar-change', this._sidebarChangeHandler);
+      }
       try {
         const [employees, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -73,6 +85,18 @@ function advisorApp() {
 
     canSeeIamProducts() {
       return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
+    },
+
+    isCoreView(viewName = this.view) {
+      return ['dashboard', 'documents', 'monitor', 'client'].includes(viewName);
+    },
+
+    refreshSidebarProducts() {
+      this.iamProducts = getIamProducts();
+
+      if (!this.isCoreView() && this.view !== 'settings' && !this.iamProducts.some((product) => product.key === this.view)) {
+        this.view = 'dashboard';
+      }
     },
 
     activateIamProduct(productKey) {
@@ -138,10 +162,6 @@ function advisorApp() {
       return this.customers.filter((customer) => normalizeStatusValue(customer.metadata?.status) !== 'active').length;
     },
 
-    get totalAgreementCount() {
-      return this.agreementTypeBreakdown.reduce((sum, item) => sum + item.value, 0);
-    },
-
     get agreementTypeBreakdown() {
       const counts = this.allAgreements.reduce((map, agreement) => {
         const type = String(agreement?.data?.agreementType || '').trim() || 'Other';
@@ -160,15 +180,6 @@ function advisorApp() {
       return Math.max(...this.agreementVolumeSeries, 1);
     },
 
-    get agreementCompletionRateValue() {
-      if (this.allAgreements.length === 0) {
-        return 0;
-      }
-
-      const completedCount = this.allAgreements.filter((agreement) => agreement.status === 'completed').length;
-      return Math.round((completedCount / this.allAgreements.length) * 100);
-    },
-
     get agreementTurnaroundHours() {
       const turnaroundValues = this.allAgreements
         .map((agreement) => Number(agreement?.data?.turnaroundHours))
@@ -182,7 +193,11 @@ function advisorApp() {
     },
 
     get agreementTypeGradient() {
-      const total = this.totalAgreementCount || 1;
+      if (this.agreementTypeBreakdown.length === 0) {
+        return 'conic-gradient(#dbe4ef 0% 100%)';
+      }
+
+      const total = this.agreementTypeBreakdown.reduce((sum, item) => sum + item.value, 0) || 1;
       let offset = 0;
 
       return `conic-gradient(${this.agreementTypeBreakdown.map((item) => {
