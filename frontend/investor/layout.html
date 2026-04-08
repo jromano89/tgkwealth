@@ -117,6 +117,15 @@
         </div>
         <div class="tgk-investor-header__actions">
           <div x-data x-init="mountSharedTemplate($el, newsPanelTemplate())"></div>
+          <button
+            @click="openAccountMaintenance()"
+            @mouseenter="selectedClient && warmAccountMaintenance()"
+            @focus="selectedClient && warmAccountMaintenance()"
+            @touchstart.passive="selectedClient && warmAccountMaintenance()"
+            :disabled="!selectedClient"
+            class="tgk-button tgk-button--primary">
+            Account Maintenance
+          </button>
         </div>
       </div>
 
@@ -342,8 +351,8 @@
             <div class="tgk-workflow-shell">
               <div class="tgk-workflow-state">
                 <div class="tgk-pill tgk-pill--brand">Docusign IAM</div>
-                <h3 class="tgk-workflow-title">Preparing asset transfer</h3>
-                <p class="tgk-workflow-copy">Launching the asset transfer workflow for this investor.</p>
+                <h3 class="tgk-workflow-title" x-text="getTaskWorkflowPresentation().loadingTitle"></h3>
+                <p class="tgk-workflow-copy" x-text="getTaskWorkflowPresentation().loadingCopy"></p>
 
                 <div class="tgk-workflow-progress">
                   <div
@@ -366,10 +375,10 @@
           <template x-if="!taskWorkflowLoading && taskWorkflowError">
             <div class="tgk-workflow-shell">
               <div class="tgk-workflow-state tgk-workflow-state--error">
-                <h3 class="tgk-workflow-title">Unable to launch asset transfer</h3>
+                <h3 class="tgk-workflow-title" x-text="getTaskWorkflowPresentation().errorTitle"></h3>
                 <p class="tgk-workflow-copy" x-text="taskWorkflowError"></p>
                 <div class="tgk-workflow-actions">
-                  <button @click="loadTaskWorkflow(taskWorkflowTask)" class="tgk-button tgk-button--primary">Try Again</button>
+                  <button @click="loadTaskWorkflow()" class="tgk-button tgk-button--primary">Try Again</button>
                   <button @click="closeTaskWorkflow()" class="tgk-button tgk-button--secondary">Close</button>
                 </div>
               </div>
@@ -380,7 +389,7 @@
             <iframe
               class="tgk-modal-frame"
               :src="taskWorkflowInstanceUrl"
-              title="Docusign IAM Asset Transfer"
+              :title="getTaskWorkflowPresentation().frameTitle"
               referrerpolicy="strict-origin-when-cross-origin"
               allow="clipboard-write; fullscreen">
             </iframe>

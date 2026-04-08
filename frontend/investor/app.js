@@ -30,6 +30,7 @@ function investorApp() {
     loading: true,
     tasks: [],
     showTaskWorkflow: false,
+    taskWorkflowKind: 'asset-transfer',
     taskWorkflowTask: null,
     taskWorkflowInstanceUrl: '',
     taskWorkflowError: null,
@@ -79,6 +80,10 @@ function investorApp() {
 
     getAssetTransferWorkflowId() {
       return String(window.TGK_CONFIG?.workflows?.assetTransferId || '').trim();
+    },
+
+    getAccountMaintenanceWorkflowId() {
+      return String(window.TGK_CONFIG?.workflows?.accountMaintenanceId || '').trim();
     },
 
     async loadClient() {
@@ -160,6 +165,70 @@ function investorApp() {
 
     warmTaskWorkflow() {
       return TGK_API.warmDocusignExperience();
+    },
+
+    warmAccountMaintenance() {
+      return this.warmTaskWorkflow();
+    },
+
+    getTaskWorkflowKind(task = this.taskWorkflowTask) {
+      const workflow = String(task?.data?.workflow || this.taskWorkflowKind || 'asset-transfer').trim().toLowerCase();
+
+      if (workflow === 'account-maintenance' || workflow === 'account_maintenance' || workflow === 'maintenance') {
+        return 'account-maintenance';
+      }
+
+      return 'asset-transfer';
+    },
+
+    getTaskWorkflowPresentation(task = this.taskWorkflowTask) {
+      const workflowKind = this.getTaskWorkflowKind(task);
+
+      if (workflowKind === 'account-maintenance') {
+        return {
+          kind: workflowKind,
+          workflowId: this.getAccountMaintenanceWorkflowId(),
+          loadingTitle: 'Preparing account maintenance',
+          loadingCopy: 'Launching the account maintenance workflow for this investor.',
+          errorTitle: 'Unable to launch account maintenance',
+          frameTitle: 'Docusign IAM Account Maintenance',
+          missingWorkflowMessage: 'No account maintenance workflow is configured.',
+          launchErrorMessage: 'Failed to launch account maintenance.',
+          instanceName: `TGK Wealth Account Maintenance ${this.clientName || ''} ${new Date().toISOString()}`.trim(),
+          steps: [
+            'Connecting to Docusign IAM',
+            'Preparing account maintenance',
+            'Launching the embedded experience'
+          ]
+        };
+      }
+
+      return {
+        kind: workflowKind,
+        workflowId: String(
+          task?.data?.workflowId
+          || task?.data?.workflow_id
+          || this.getAssetTransferWorkflowId()
+          || ''
+        ).trim(),
+        loadingTitle: 'Preparing asset transfer',
+        loadingCopy: 'Launching the asset transfer workflow for this investor.',
+        errorTitle: 'Unable to launch asset transfer',
+        frameTitle: 'Docusign IAM Asset Transfer',
+        missingWorkflowMessage: 'No asset transfer workflow is configured.',
+        launchErrorMessage: 'Failed to launch asset transfer.',
+        instanceName: `TGK Wealth Asset Transfer ${this.clientName || task?.title || ''} ${new Date().toISOString()}`.trim(),
+        steps: [
+          'Connecting to Docusign IAM',
+          'Preparing asset transfer',
+          'Launching the embedded experience'
+        ]
+      };
+    },
+
+    syncTaskWorkflowLoadingSteps(task = this.taskWorkflowTask) {
+      const presentation = this.getTaskWorkflowPresentation(task);
+      this.taskWorkflowLoadingSteps = [...presentation.steps];
     },
 
     getTaskWorkflowId(task) {
@@ -269,46 +338,69 @@ function investorApp() {
 
     resetTaskWorkflowState() {
       this.showTaskWorkflow = false;
+      this.taskWorkflowKind = 'asset-transfer';
       this.taskWorkflowTask = null;
       this.taskWorkflowInstanceUrl = '';
       this.taskWorkflowError = null;
       this.taskWorkflowLoading = false;
+      this.syncTaskWorkflowLoadingSteps();
       this.stopWorkflowLoading();
     },
 
     async openTaskWorkflow(task) {
       this.resetTaskWorkflowState();
       this.showTaskWorkflow = true;
+      this.taskWorkflowKind = this.getTaskWorkflowKind(task);
       this.taskWorkflowTask = task || null;
+      this.syncTaskWorkflowLoadingSteps(task);
       this.warmTaskWorkflow();
       await this.loadTaskWorkflow(task);
+    },
+
+    async openAccountMaintenance() {
+      if (!this.selectedClient) {
+        return;
+      }
+
+      this.resetTaskWorkflowState();
+      this.showTaskWorkflow = true;
+      this.taskWorkflowKind = 'account-maintenance';
+      this.syncTaskWorkflowLoadingSteps();
+      this.warmAccountMaintenance();
+      await this.loadTaskWorkflow();
     },
 
     closeTaskWorkflow() {
       this.resetTaskWorkflowState();
     },
 
-    async loadTaskWorkflow(task) {
+    async loadTaskWorkflow(task = this.taskWorkflowTask) {
+      const targetTask = task || null;
+      const presentation = this.getTaskWorkflowPresentation(targetTask);
+
       this.taskWorkflowLoading = true;
       this.taskWorkflowError = null;
       this.taskWorkflowInstanceUrl = '';
+      this.syncTaskWorkflowLoadingSteps(targetTask);
       this.startWorkflowLoading();
 
       try {
-        const existingInstanceUrl = this.getTaskWorkflowLaunchUrl(task);
+        const existingInstanceUrl = presentation.kind === 'asset-transfer'
+          ? this.getTaskWorkflowLaunchUrl(targetTask)
+          : '';
         if (existingInstanceUrl) {
           this.taskWorkflowInstanceUrl = existingInstanceUrl;
           return;
         }
 
-        const workflowId = this.getTaskWorkflowId(task);
+        const workflowId = presentation.workflowId;
         if (!workflowId) {
-          throw new Error('No asset transfer workflow is configured.');
+          throw new Error(presentation.missingWorkflowMessage);
         }
 
         const result = await TGK_API.triggerMaestroWorkflow(workflowId, {
-          instance_name: `TGK Wealth Asset Transfer ${this.clientName || task?.title || ''} ${new Date().toISOString()}`.trim(),
-          trigger_inputs: this.getTaskWorkflowTriggerInputs(task)
+          instance_name: presentation.instanceName,
+          trigger_inputs: this.getTaskWorkflowTriggerInputs(targetTask)
         });
 
         if (!result?.instance_url) {
@@ -316,10 +408,12 @@ function investorApp() {
         }
 
         this.taskWorkflowInstanceUrl = result.instance_url;
-        this.persistTaskWorkflowLaunchUrl(task, result.instance_url);
+        if (presentation.kind === 'asset-transfer') {
+          this.persistTaskWorkflowLaunchUrl(targetTask, result.instance_url);
+        }
       } catch (e) {
-        console.error('Failed to load asset transfer workflow:', e);
-        this.taskWorkflowError = e.message || 'Failed to launch asset transfer.';
+        console.error(`Failed to load ${presentation.kind} workflow:`, e);
+        this.taskWorkflowError = e.message || presentation.launchErrorMessage;
       } finally {
         this.taskWorkflowLoading = false;
         this.stopWorkflowLoading();

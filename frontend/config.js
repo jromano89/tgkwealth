@@ -13,7 +13,8 @@
 
   const WORKFLOWS = Object.freeze({
     accountOpeningId: 'e26e565e-fb6a-433b-b004-bd2083c8963b',
-    assetTransferId: 'b59acbee-8052-403a-a752-c04287ad6ee1'
+    assetTransferId: 'b59acbee-8052-403a-a752-c04287ad6ee1',
+    accountMaintenanceId: 'b59acbee-8052-403a-a752-c04287ad6ee1'
   });
   const IAM_PRODUCTS = Object.freeze([
     { key: 'doc-gen', label: 'Doc Gen', icon: 'doc-gen' },
