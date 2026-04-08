@@ -1,6 +1,6 @@
 /**
  * Stock Ticker Component
- * Pulls delayed quotes through the backend proxy, with graceful fallback data.
+ * Pulls the latest quotes through the backend proxy, with graceful fallback data.
  */
 function stockTicker() {
   const refreshMs = 5 * 60 * 1000;
@@ -77,18 +77,20 @@ function stockTicker() {
     const quotes = new Map();
     for (const line of lines) {
       const parts = line.split(',');
-      if (parts.length < 7 || parts[0].includes('N/D')) {
+      if (parts.length < 8 || parts[0] === 'Symbol' || parts[0].includes('N/D')) {
         continue;
       }
 
       const open = Number.parseFloat(parts[3]);
       const close = Number.parseFloat(parts[6]);
+      const prev = Number.parseFloat(parts[8]);
       if (!Number.isFinite(close)) {
         continue;
       }
 
-      const change = Number.isFinite(open) && open > 0
-        ? ((close - open) / open) * 100
+      const baseline = Number.isFinite(prev) && prev > 0 ? prev : open;
+      const change = Number.isFinite(baseline) && baseline > 0
+        ? ((close - baseline) / baseline) * 100
         : 0;
       const sym = parts[0].replace(/\.us$/i, '').toUpperCase();
 
@@ -170,7 +172,7 @@ function stockTicker() {
       try {
         const csv = await TGK_API.proxyText({
           method: 'GET',
-          url: `https://stooq.com/q/l/?s=${symbols.map(symbol => symbol.feed).join('+')}&i=d`
+          url: `https://stooq.com/q/l/?s=${symbols.map(symbol => symbol.feed).join('+')}&f=sd2t2ohlcvp&h&e=csv`
         });
         return parseQuotes(csv);
       } catch (error) {
