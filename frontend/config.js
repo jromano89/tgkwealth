@@ -40,8 +40,8 @@
 
   const APP_SLUG = ic ? instanceSlug : 'tgk-wealth';
   const APP_NAME = ic?.metadata?.name || 'TGK Wealth';
-  const DOCUSIGN_USER_ID = ic?.docusign?.userId || '26016859-d095-4c40-8892-0de438e2a226';
-  const DOCUSIGN_ACCOUNT_ID = ic?.docusign?.accountId || '18ecd535-9f12-4c7f-8cf3-caf870d86437';
+  const DOCUSIGN_USER_ID = ic?.docusign?.userId || 'd4020d17-b433-44a7-83b6-01813206bee4';
+  const DOCUSIGN_ACCOUNT_ID = ic?.docusign?.accountId || '130fa778-ea24-4594-9293-8a363b6ccd72';
   const DOCUSIGN_SCOPES = ic?.docusign?.scopes || 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
   const DOCUSIGN_BASE_URL = ic?.docusign?.baseUrl || 'https://api-d.docusign.com';
   const ADVISOR_ID = ic?.advisorId || '4871abfa-8868-4501-b068-5936c6363e6b';
@@ -116,7 +116,8 @@
     instanceConfig: ic || null,
     terminology: ic?.terminology || null,
     kpis: ic?.kpis || null,
-    agreements: ic?.agreements || null
+    agreements: ic?.agreements || null,
+    defaultIamProducts: ic?.defaultIamProducts || null
   };
 
   window.TGK_ACCESS = createAccess(mode);
