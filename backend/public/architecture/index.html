@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TGK Demo Architecture</title>
+  <style>
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Regular.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Medium.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'DSIndigo';
+      src: url('https://docucdn-a.akamaihd.net/olive/fonts/3.1.0/DSIndigo-Semibold.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+    }
+
+    :root {
+      --cobalt: #4c00ff;
+      --ink: #16003f;
+      --ink-soft: #5d4d80;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-strong: #ffffff;
+      --surface-tint: #f7f4ff;
+      --line: rgba(22, 0, 63, 0.1);
+      --line-strong: rgba(76, 0, 255, 0.18);
+      --danger: #ff5252;
+      --success: #00a37a;
+      --warm: #fff5f0;
+      --shadow: 0 24px 64px rgba(22, 0, 63, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: 'DSIndigo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(76, 0, 255, 0.1), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255, 82, 82, 0.08), transparent 24%),
+        linear-gradient(180deg, #ffffff 0%, #f7f3ff 100%);
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.5rem 0 4rem;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .crumb,
+    .link-pill {
+      text-decoration: none;
+      color: var(--ink-soft);
+    }
+
+    .crumb {
+      font-size: 0.94rem;
+    }
+
+    .crumb:hover,
+    .link-pill:hover {
+      color: var(--cobalt);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.65rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 1rem;
+      padding: 2rem;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: linear-gradient(140deg, rgba(255, 255, 255, 0.94), rgba(247, 244, 255, 0.84));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.38rem 0.72rem;
+      border-radius: 999px;
+      background: rgba(76, 0, 255, 0.08);
+      color: var(--cobalt);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      max-width: 11ch;
+      font-size: clamp(2.6rem, 5vw, 4.9rem);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+      margin-bottom: 1rem;
+    }
+
+    .lede {
+      max-width: 60ch;
+      color: var(--ink-soft);
+      font-size: 1rem;
+      line-height: 1.75;
+    }
+
+    .hero-cards {
+      display: grid;
+      gap: 0.9rem;
+      align-content: start;
+    }
+
+    .hero-card {
+      padding: 1rem 1.05rem;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .hero-card strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .hero-card p {
+      color: var(--ink-soft);
+      font-size: 0.93rem;
+      line-height: 1.65;
+    }
+
+    .section {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 18px 48px rgba(22, 0, 63, 0.05);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-head h2 {
+      font-size: 1.5rem;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p {
+      max-width: 56ch;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .lane {
+      position: relative;
+      padding: 1rem;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 244, 255, 0.82));
+      min-height: 100%;
+    }
+
+    .lane::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -0.6rem;
+      width: 1.2rem;
+      height: 2px;
+      background: var(--line-strong);
+      transform: translateY(-50%);
+    }
+
+    .lane:last-child::after {
+      display: none;
+    }
+
+    .lane-kicker {
+      color: var(--cobalt);
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .lane-title {
+      font-size: 1.15rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .lane-copy {
+      color: var(--ink-soft);
+      font-size: 0.94rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .lane-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .mini-card {
+      padding: 0.9rem;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+    }
+
+    .mini-card strong {
+      display: block;
+      font-size: 0.96rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .mini-card span {
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .journey {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .step {
+      padding: 1.15rem;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .step-index {
+      width: 2rem;
+      height: 2rem;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(76, 0, 255, 0.1);
+      color: var(--cobalt);
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.85rem;
+    }
+
+    .step h3 {
+      font-size: 1.08rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .step p {
+      color: var(--ink-soft);
+      font-size: 0.93rem;
+      line-height: 1.65;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .principle {
+      padding: 1rem;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--surface-strong), var(--surface-tint));
+    }
+
+    .principle-mark {
+      width: 0.72rem;
+      height: 0.72rem;
+      border-radius: 999px;
+      background: var(--danger);
+      margin-bottom: 0.85rem;
+      box-shadow: 0 0 0 6px rgba(255, 82, 82, 0.08);
+    }
+
+    .principle:nth-child(2) .principle-mark {
+      background: var(--cobalt);
+      box-shadow: 0 0 0 6px rgba(76, 0, 255, 0.08);
+    }
+
+    .principle:nth-child(3) .principle-mark {
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(0, 163, 122, 0.08);
+    }
+
+    .principle:nth-child(4) .principle-mark {
+      background: #ff8a00;
+      box-shadow: 0 0 0 6px rgba(255, 138, 0, 0.08);
+    }
+
+    .principle h3 {
+      font-size: 1rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .principle p {
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .footer-note {
+      margin-top: 1rem;
+      padding: 1rem 1.1rem;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: var(--warm);
+      color: var(--ink-soft);
+      font-size: 0.93rem;
+      line-height: 1.65;
+    }
+
+    .footer-note strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 940px) {
+      .hero,
+      .diagram,
+      .journey,
+      .principles {
+        grid-template-columns: 1fr;
+      }
+
+      .lane::after {
+        top: auto;
+        bottom: -0.6rem;
+        left: 50%;
+        right: auto;
+        width: 2px;
+        height: 1.2rem;
+        transform: translateX(-50%);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        width: min(100% - 1rem, 1120px);
+        padding-top: 0.75rem;
+      }
+
+      .hero,
+      .section {
+        padding: 1.2rem;
+      }
+
+      h1 {
+        font-size: 2.55rem;
+      }
+
+      .topbar,
+      .section-head {
+        align-items: start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <a class="crumb" href="/">← Back to TGK Demo Backend</a>
+      <div class="actions">
+        <a class="link-pill" href="/api/health">Backend Health</a>
+        <a class="link-pill" href="/maestro/manifest/clientCredentials.ReadWriteManifest.json">Maestro Manifest</a>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">TGK Wealth Demo</div>
+        <h1>One demo story, three moving parts.</h1>
+        <p class="lede">
+          The TGK platform brings together two polished demo portals, one reusable backend, and
+          DocuSign IAM and Maestro services. The result is a guided story that feels like a real
+          product experience without turning the demo itself into a large application.
+        </p>
+      </div>
+
+      <div class="hero-cards">
+        <div class="hero-card">
+          <strong>For an audience, not an engineer</strong>
+          <p>
+            The experience is designed to feel simple on the surface: launch the portal, start a
+            workflow, and show what changes across the advisor and investor views.
+          </p>
+        </div>
+        <div class="hero-card">
+          <strong>Reusable behind the scenes</strong>
+          <p>
+            The same backend handles auth, proxying, persistence, and Maestro support so future
+            demos do not need to rebuild the plumbing each time.
+          </p>
+        </div>
+        <div class="hero-card">
+          <strong>Fast to host and easy to move</strong>
+          <p>
+            The frontend stays static and build-free. The backend stays lightweight. That keeps the
+            demo portable across local environments and simple cloud hosting.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Architecture At A Glance</div>
+          <h2>How the experience is organized</h2>
+        </div>
+        <p>
+          The project is intentionally split into clear layers so each part has one job: present
+          the story, support the story, or power the workflow.
+        </p>
+      </div>
+
+      <div class="diagram">
+        <article class="lane">
+          <div class="lane-kicker">Experience Layer</div>
+          <div class="lane-title">Advisor and Investor Portals</div>
+          <p class="lane-copy">
+            Two lightweight frontends present the same demo from different points of view.
+          </p>
+          <div class="lane-list">
+            <div class="mini-card">
+              <strong>Launcher</strong>
+              <span>Select the story and enter the correct portal.</span>
+            </div>
+            <div class="mini-card">
+              <strong>Advisor View</strong>
+              <span>Shows client book, agreements, onboarding, and configuration controls.</span>
+            </div>
+            <div class="mini-card">
+              <strong>Investor View</strong>
+              <span>Shows accounts, documents, tasks, and embedded workflow follow-up.</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane">
+          <div class="lane-kicker">Support Layer</div>
+          <div class="lane-title">Reusable TGK Backend</div>
+          <p class="lane-copy">
+            A single backend keeps the demo coherent by centralizing the services both portals need.
+          </p>
+          <div class="lane-list">
+            <div class="mini-card">
+              <strong>Auth and Consent</strong>
+              <span>Handles the DocuSign consent callback and token retrieval.</span>
+            </div>
+            <div class="mini-card">
+              <strong>API Proxy</strong>
+              <span>Keeps DocuSign API traffic moving through one controlled backend path.</span>
+            </div>
+            <div class="mini-card">
+              <strong>Demo Data Store</strong>
+              <span>Persists employees, customers, envelopes, and tasks in local SQLite.</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane">
+          <div class="lane-kicker">Workflow Layer</div>
+          <div class="lane-title">DocuSign IAM and Maestro</div>
+          <p class="lane-copy">
+            Live DocuSign services deliver the embedded workflow moments that make the demo feel real.
+          </p>
+          <div class="lane-list">
+            <div class="mini-card">
+              <strong>IAM</strong>
+              <span>Supports consent, tokens, account context, and downstream API access.</span>
+            </div>
+            <div class="mini-card">
+              <strong>Maestro</strong>
+              <span>Launches workflow instances such as account opening and asset transfer.</span>
+            </div>
+            <div class="mini-card">
+              <strong>Manifest Bridge</strong>
+              <span>Lets the TGK backend present the demo data in a Maestro-friendly shape.</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Audience Journey</div>
+          <h2>What someone sees during the demo</h2>
+        </div>
+        <p>
+          The platform is built to support a clean narrative from setup to outcome, not just a list
+          of disconnected pages.
+        </p>
+      </div>
+
+      <div class="journey">
+        <article class="step">
+          <div class="step-index">1</div>
+          <h3>Open the story</h3>
+          <p>
+            The presenter starts from the launcher or directly in a portal. Branding, mode, and
+            workflow configuration shape the experience without requiring a rebuild.
+          </p>
+        </article>
+
+        <article class="step">
+          <div class="step-index">2</div>
+          <h3>Trigger a live workflow</h3>
+          <p>
+            The advisor or investor experience launches a real Maestro flow through the backend,
+            using DocuSign services behind the scenes.
+          </p>
+        </article>
+
+        <article class="step">
+          <div class="step-index">3</div>
+          <h3>Show the outcome</h3>
+          <p>
+            The portals refresh around the workflow result so the audience can see how documents,
+            tasks, and customer state evolve across the full story.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Why It Is Built This Way</div>
+          <h2>The design principles behind the demo</h2>
+        </div>
+        <p>
+          This is not trying to be a production platform. It is trying to be a credible, flexible,
+          easy-to-run demo foundation.
+        </p>
+      </div>
+
+      <div class="principles">
+        <article class="principle">
+          <div class="principle-mark"></div>
+          <h3>Simple frontends</h3>
+          <p>
+            Static portals keep hosting easy and make the demo fast to iterate on.
+          </p>
+        </article>
+
+        <article class="principle">
+          <div class="principle-mark"></div>
+          <h3>Reusable backend</h3>
+          <p>
+            Shared plumbing means new demo variations can reuse the same foundation.
+          </p>
+        </article>
+
+        <article class="principle">
+          <div class="principle-mark"></div>
+          <h3>Real workflow moments</h3>
+          <p>
+            Live IAM and Maestro integration keeps the story grounded in actual DocuSign capabilities.
+          </p>
+        </article>
+
+        <article class="principle">
+          <div class="principle-mark"></div>
+          <h3>Clear demo narrative</h3>
+          <p>
+            The architecture supports a presentation flow that is easy to explain to non-technical audiences.
+          </p>
+        </article>
+      </div>
+
+      <div class="footer-note">
+        <strong>In plain terms:</strong> TGK is a demo shell around real workflow services. The
+        frontends tell the story, the backend keeps the story coordinated, and DocuSign IAM plus
+        Maestro provide the live moments that matter.
+      </div>
+    </section>
+  </main>
+</body>
+</html>

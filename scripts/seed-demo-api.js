@@ -22,17 +22,13 @@ function account(id, name, accountType, value, ytdReturn, allocations, extra = {
   };
 }
 
-function envelope(id, employeeId, customerId, status, name, agreementType, extra = {}) {
+function envelope(id, employeeId, customerId, status, name) {
   return {
     id,
     employeeId,
     customerId,
     status,
-    name,
-    data: {
-      agreementType,
-      ...extra
-    }
+    name
   };
 }
 
@@ -70,16 +66,14 @@ const employees = [
     displayName: 'Gordon Gecko',
     email: 'g.gecko@tgkwealth.com',
     phone: '(212) 555-0100',
-    title: 'Senior Advisor',
-    data: { avatar: 'GG' }
+    title: 'Senior Advisor'
   },
   {
     id: '0cb0b7b2-78db-4e38-9c14-d665bbbe8ad9',
     displayName: 'Serena Blake',
     email: 's.blake@tgkwealth.com',
     phone: '(212) 555-0144',
-    title: 'Private Wealth Advisor',
-    data: { avatar: 'SB' }
+    title: 'Private Wealth Advisor'
   }
 ];
 
@@ -93,8 +87,6 @@ const customers = [
     organization: 'Margin Call Ventures',
     status: 'review',
     data: {
-      avatar: '#355c7d',
-      household: 'Founder Household',
       riskProfile: 'Balanced Growth',
       value: 9600000,
       netWorth: 21700000,
@@ -114,8 +106,6 @@ const customers = [
     organization: 'Vault Street Holdings',
     status: 'active',
     data: {
-      avatar: '#c06c84',
-      household: 'Executive Household',
       riskProfile: 'Moderate',
       value: 10800000,
       netWorth: 24300000,
@@ -135,8 +125,6 @@ const customers = [
     organization: 'Bull Market Group',
     status: 'pending',
     data: {
-      avatar: '#99b898',
-      household: 'Business Owner',
       riskProfile: 'Growth',
       value: 12300000,
       netWorth: 27200000,
@@ -156,8 +144,6 @@ const customers = [
     organization: 'Compound Interest Partners',
     status: 'active',
     data: {
-      avatar: '#2a363b',
-      household: 'Serial Entrepreneur',
       riskProfile: 'Moderate Growth',
       value: 16800000,
       netWorth: 36200000,
@@ -177,8 +163,6 @@ const customers = [
     organization: 'Turnkey Capital',
     status: 'active',
     data: {
-      avatar: '#6c5b7b',
-      household: 'Next Gen Household',
       riskProfile: 'Income Plus',
       value: 8400000,
       netWorth: 19100000,
@@ -192,12 +176,12 @@ const customers = [
 ];
 
 const envelopes = [
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1011', employees[0].id, customers[0].id, 'completed', 'Account Opening Packet', 'Account Opening', { customerName: customers[0].displayName, turnaroundHours: 8.4 }),
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1012', employees[1].id, customers[1].id, 'sent', 'Transfer Authorization', 'Transfer', { customerName: customers[1].displayName }),
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1013', employees[0].id, customers[0].id, 'completed', 'Beneficiary Update', 'Maintenance', { customerName: customers[0].displayName, turnaroundHours: 6.2 }),
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1014', employees[0].id, customers[2].id, 'delivered', 'ACAT Transfer Packet', 'Transfer', { customerName: customers[2].displayName }),
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1015', employees[1].id, customers[3].id, 'completed', 'Wire Authorization Update', 'Maintenance', { customerName: customers[3].displayName, turnaroundHours: 6.7 }),
-  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1016', employees[1].id, customers[3].id, 'completed', 'Account Opening Packet', 'Account Opening', { customerName: customers[3].displayName, turnaroundHours: 7.1 })
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1011', employees[0].id, customers[0].id, 'completed', 'Account Opening Packet'),
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1012', employees[1].id, customers[1].id, 'sent', 'Transfer Authorization'),
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1013', employees[0].id, customers[0].id, 'completed', 'Beneficiary Update'),
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1014', employees[0].id, customers[2].id, 'delivered', 'ACAT Transfer Packet'),
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1015', employees[1].id, customers[3].id, 'completed', 'Wire Authorization Update'),
+  envelope('6a0478f8-0d95-4a12-8e76-3fb7ca0a1016', employees[1].id, customers[3].id, 'completed', 'Account Opening Packet')
 ];
 
 const tasks = customers.map(buildAssetTransferTask);

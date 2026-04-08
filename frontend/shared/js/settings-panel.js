@@ -192,18 +192,32 @@ function dispatchSidebarChange(nextSidebar) {
   }));
 }
 
-function persistSidebarSettings(nextSidebar) {
-  const resolvedSidebar = resolveSidebarSettings(nextSidebar);
+function persistDemoSettings({ branding, sidebar } = {}) {
   const existing = readStoredSettings();
+  const nextBrandingSource = {
+    ...(existing.branding || {}),
+    ...(branding || {})
+  };
+  const nextBranding = {
+    appName: resolveBrandingAppName(nextBrandingSource.appName),
+    brandColor: normalizeHexColor(nextBrandingSource.brandColor)
+  };
+  const nextSidebar = resolveSidebarSettings(sidebar !== undefined ? sidebar : (existing.sidebar || {}));
 
   writeStoredSettings({
     ...existing,
-    sidebar: resolvedSidebar
+    branding: nextBranding,
+    sidebar: nextSidebar
   });
 
-  syncRuntimeSidebar(resolvedSidebar);
-  dispatchSidebarChange(resolvedSidebar);
-  return resolvedSidebar;
+  applyBrandingPreview(nextBranding);
+  syncRuntimeSidebar(nextSidebar);
+  dispatchSidebarChange(nextSidebar);
+
+  return {
+    branding: nextBranding,
+    sidebar: nextSidebar
+  };
 }
 
 function buildDemoSettingsSnapshot(savedSettings) {
@@ -298,8 +312,6 @@ function settingsPanelState() {
     appName: window.TGK_DEMO.branding.appName,
     brandColor: window.TGK_DEMO.branding.brandColor,
     sidebarProductKeys: [...(window.TGK_DEMO.sidebar?.iamProductKeys || [])],
-    dirty: false,
-    resettingDefaults: false,
     docusignConsentBusy: false,
     docusignConsentStatus: 'idle',
     docusignConsentMessage: '',
@@ -307,13 +319,6 @@ function settingsPanelState() {
     currentSidebar() {
       return resolveSidebarSettings({
         iamProductKeys: this.sidebarProductKeys
-      });
-    },
-
-    previewBranding() {
-      applyBrandingPreview({
-        appName: this.appName,
-        brandColor: this.brandColor
       });
     },
 
@@ -374,64 +379,38 @@ function settingsPanelState() {
         .map((product) => product.key)
         .filter((productKeyValue) => selectedKeys.has(productKeyValue));
 
-      persistSidebarSettings(this.currentSidebar());
+      this.applySettingsUpdate();
     },
 
-    previewAppName(value) {
-      this.appName = value;
-      this.dirty = true;
-      this.previewBranding();
-    },
-
-    applyColor(hex) {
-      this.brandColor = normalizeHexColor(hex);
-      this.dirty = true;
-      this.previewBranding();
-    },
-
-    save() {
-      const nextBrandColor = normalizeHexColor(this.brandColor);
-      const nextAppName = this.appName.trim() || TGK_DEMO_DEFAULTS.branding.appName;
-      const nextSidebar = this.currentSidebar();
-
-      writeStoredSettings({
+    applySettingsUpdate() {
+      const nextState = persistDemoSettings({
         branding: {
-          appName: nextAppName,
-          brandColor: nextBrandColor
-        },
-        sidebar: nextSidebar
-      });
-
-      applyBrandingPreview({
-        appName: nextAppName,
-        brandColor: nextBrandColor
-      });
-      syncRuntimeSidebar(nextSidebar);
-      dispatchSidebarChange(nextSidebar);
-      this.dirty = false;
-      window.location.reload();
-    },
-
-    resetCustomizations() {
-      this.resettingDefaults = true;
-      const existing = readStoredSettings();
-      this.appName = TGK_DEMO_DEFAULTS.branding.appName;
-      this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
-      this.sidebarProductKeys = [...TGK_DEMO_DEFAULTS.sidebar.iamProductKeys];
-      this.dirty = false;
-      writeStoredSettings({
-        ...existing,
-        branding: {
-          appName: TGK_DEMO_DEFAULTS.branding.appName,
-          brandColor: TGK_DEMO_DEFAULTS.branding.brandColor
+          appName: this.appName,
+          brandColor: this.brandColor
         },
         sidebar: this.currentSidebar()
       });
-      applyBrandingPreview(TGK_DEMO_DEFAULTS.branding);
-      syncRuntimeSidebar(this.currentSidebar());
-      dispatchSidebarChange(this.currentSidebar());
-      this.resettingDefaults = false;
-      window.location.reload();
+
+      this.appName = nextState.branding.appName;
+      this.brandColor = nextState.branding.brandColor;
+      this.sidebarProductKeys = [...nextState.sidebar.iamProductKeys];
+    },
+
+    updateAppName(value) {
+      this.appName = value;
+      this.applySettingsUpdate();
+    },
+
+    updateBrandColor(hex) {
+      this.brandColor = normalizeHexColor(hex);
+      this.applySettingsUpdate();
+    },
+
+    resetAllCustomizations() {
+      this.appName = TGK_DEMO_DEFAULTS.branding.appName;
+      this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
+      this.sidebarProductKeys = [...TGK_DEMO_DEFAULTS.sidebar.iamProductKeys];
+      this.applySettingsUpdate();
     }
   };
 }

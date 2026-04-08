@@ -204,6 +204,19 @@ function initials(name) {
   return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
+function avatarColor(seed) {
+  const value = String(seed || 'tgk-avatar');
+  let hash = 0;
+
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(i);
+    hash |= 0;
+  }
+
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue} 42% 46%)`;
+}
+
 // SVG sparkline points for a positive/negative trend (for <polyline>)
 function sparklinePath(positive) {
   if (positive) {
@@ -452,14 +465,14 @@ function sharedSettingsTemplate() {
             <div class="tgk-settings-card__body">
               <div class="tgk-field-card">
                 <label class="tgk-field-label" for="tgk-appName">App Name</label>
-                <input id="tgk-appName" x-model="appName" @input="previewAppName($event.target.value)" class="tgk-form-input" placeholder="TGK Wealth">
+                <input id="tgk-appName" x-model="appName" @input="updateAppName($event.target.value)" class="tgk-form-input" placeholder="TGK Wealth">
               </div>
 
               <div class="tgk-field-card">
                 <label class="tgk-field-label">Theme Color</label>
                 <div class="tgk-color-row">
                   <label class="tgk-color-swatch" :style="'background:' + brandColor">
-                    <input type="color" :value="brandColor" @input="applyColor($event.target.value)">
+                    <input type="color" :value="brandColor" @input="updateBrandColor($event.target.value)">
                   </label>
                   <div>
                     <div class="tgk-color-value" x-text="brandColor"></div>
@@ -513,8 +526,7 @@ function sharedSettingsTemplate() {
               </div>
 
               <div class="tgk-inline-actions">
-                <button @click="save()" :disabled="!dirty || resettingDefaults" class="tgk-button tgk-button--primary">Save Changes</button>
-                <button @click="resetCustomizations()" :disabled="resettingDefaults" class="tgk-button tgk-button--secondary" x-text="resettingDefaults ? 'Resetting...' : 'Reset Defaults'"></button>
+                <button @click="resetAllCustomizations()" class="tgk-button tgk-button--secondary">Reset All</button>
               </div>
             </div>
         </section>

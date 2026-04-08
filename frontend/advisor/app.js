@@ -13,18 +13,50 @@ const AGREEMENT_TYPE_COLORS = {
   Maintenance: '#ea580c',
   Other: '#64748b'
 };
+const AGREEMENT_TURNAROUND_HOURS = 7.1;
 
 function normalizeStatusValue(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function agreementTypeForName(name) {
+  const normalized = String(name || '').trim().toLowerCase();
+  if (!normalized) {
+    return 'Other';
+  }
+  if (normalized.includes('opening')) {
+    return 'Account Opening';
+  }
+  if (normalized.includes('transfer') || normalized.includes('acat')) {
+    return 'Transfer';
+  }
+  if (normalized.includes('beneficiary') || normalized.includes('maintenance') || normalized.includes('wire') || normalized.includes('update')) {
+    return 'Maintenance';
+  }
+  return 'Other';
 }
 
 function advisorApp() {
   const preferredAdvisorId = String(window.TGK_CONFIG?.advisorId || '').trim();
 
   return {
-    ...createBrandingState(),
+    ...createPortalChromeState({
+      currentKey: 'view',
+      defaultView: 'dashboard',
+      coreViews: ['dashboard', 'documents', 'monitor', 'client']
+    }),
+    ...createWorkflowLoadingState({
+      loadingKey: 'maestroLoading',
+      loadingIndexKey: 'onboardingLoadingIndex',
+      loadingTimerKey: 'onboardingLoadingTimer',
+      stepsKey: 'onboardingLoadingSteps',
+      steps: [
+        'Connecting to Docusign IAM',
+        'Preparing account opening',
+        'Launching the embedded experience'
+      ]
+    }),
     ...createEnvelopeModalHelpers(),
-    iamProducts: getIamProducts(),
     view: 'dashboard',
     currentUser: null,
     customers: [],
@@ -36,20 +68,13 @@ function advisorApp() {
     showOnboarding: false,
     maestroInstanceUrl: '',
     maestroError: null,
-    maestroLoading: false,
     maestroCompleted: false,
     maestroNewContact: null,
-    onboardingLoadingIndex: 0,
-    onboardingLoadingTimer: null,
-    sidebarCollapsed: false,
-    _sidebarChangeHandler: null,
     loading: true,
     totalAgreementCount: AGREEMENT_SUMMARY_METRICS.totalCount,
     agreementCompletionRateValue: AGREEMENT_SUMMARY_METRICS.completionRate,
     agreementVolumeSeries: [5, 6, 4, 8, 9, 11, 8, 12, 14, 15, 16, 20],
     allAgreements: [],
-
-    monitorAlerts: [],
     agreementSearchQuery: '',
     agreementsLoading: false,
     agreementsLoaded: false,
@@ -59,12 +84,7 @@ function advisorApp() {
     _maestroKnownContactIds: new Set(),
 
     async init() {
-      this.initializeBrandingState();
-      this.refreshSidebarProducts();
-      if (!this._sidebarChangeHandler) {
-        this._sidebarChangeHandler = () => this.refreshSidebarProducts();
-        window.addEventListener('tgk:sidebar-change', this._sidebarChangeHandler);
-      }
+      this.initializePortalChrome();
       try {
         const [employees, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -79,59 +99,19 @@ function advisorApp() {
       this.loading = false;
     },
 
-    canSeeSettings() {
-      return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
-    },
-
-    canSeeIamProducts() {
-      return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
-    },
-
     isCoreView(viewName = this.view) {
-      return ['dashboard', 'documents', 'monitor', 'client'].includes(viewName);
-    },
-
-    refreshSidebarProducts() {
-      this.iamProducts = getIamProducts();
-
-      if (!this.isCoreView() && this.view !== 'settings' && !this.iamProducts.some((product) => product.key === this.view)) {
-        this.view = 'dashboard';
-      }
-    },
-
-    activateIamProduct(productKey) {
-      this.setView(productKey);
-    },
-
-    isActiveIamProduct(productKey) {
-      return this.view === productKey;
+      return this.isCorePortalView(viewName);
     },
 
     setView(nextView) {
-      const allowedViews = new Set(['dashboard', 'documents', 'monitor', 'client']);
-      if (this.canSeeSettings()) {
-        allowedViews.add('settings');
-      }
-      if (this.canSeeIamProducts()) {
-        this.iamProducts.forEach((product) => {
-          allowedViews.add(product.key);
-        });
-      }
-      this.view = allowedViews.has(nextView) ? nextView : 'dashboard';
-      if (this.view === 'documents') {
+      const resolvedView = this.setPortalView(nextView);
+
+      if (resolvedView === 'documents') {
         void this.ensureAgreementFeed();
       }
-      if (this.view === 'monitor') {
+      if (resolvedView === 'monitor') {
         this.ensureMonitorAlerts();
       }
-    },
-
-    get currentIamProduct() {
-      return getIamProduct(this.view);
-    },
-
-    get currentIamPlaceholder() {
-      return getIamProductPlaceholder(this.view);
     },
 
     getAccountOpeningWorkflowId() {
@@ -142,7 +122,7 @@ function advisorApp() {
       if (!this.searchQuery.trim()) return this.customers;
       const q = this.searchQuery.toLowerCase();
       return this.customers.filter(c =>
-        `${c.name} ${c.email} ${c.company || ''} ${c.metadata?.household || ''} ${c.metadata?.riskProfile || ''}`.toLowerCase().includes(q)
+        `${c.name} ${c.email} ${c.company || ''} ${c.metadata?.riskProfile || ''}`.toLowerCase().includes(q)
       );
     },
 
@@ -164,7 +144,7 @@ function advisorApp() {
 
     get agreementTypeBreakdown() {
       const counts = this.allAgreements.reduce((map, agreement) => {
-        const type = String(agreement?.data?.agreementType || '').trim() || 'Other';
+        const type = agreementTypeForName(agreement?.name);
         map.set(type, (map.get(type) || 0) + 1);
         return map;
       }, new Map());
@@ -181,15 +161,7 @@ function advisorApp() {
     },
 
     get agreementTurnaroundHours() {
-      const turnaroundValues = this.allAgreements
-        .map((agreement) => Number(agreement?.data?.turnaroundHours))
-        .filter((value) => Number.isFinite(value) && value > 0);
-
-      if (turnaroundValues.length === 0) {
-        return 0;
-      }
-
-      return turnaroundValues.reduce((sum, value) => sum + value, 0) / turnaroundValues.length;
+      return AGREEMENT_TURNAROUND_HOURS;
     },
 
     get agreementTypeGradient() {
@@ -216,15 +188,6 @@ function advisorApp() {
         : `linear-gradient(180deg, hsl(214 76% ${Math.min(lightness + 4, 88)}%) 0%, hsl(214 70% ${lightness}%) 100%)`;
 
       return `height:${Math.max((value / this.agreementVolumePeak) * 100, 16)}%;background:${fill};`;
-    },
-
-    ensureMonitorAlerts() {
-      if (this.monitorAlerts.length) return;
-      this.monitorAlerts = buildMonitorAlerts(this.customers);
-    },
-
-    monitorTimeAgo(isoString) {
-      return monitorTimeAgo(isoString);
     },
 
     async ensureAgreementFeed(force = false) {
@@ -270,8 +233,6 @@ function advisorApp() {
       const customerId = agreement?.customer_id || agreement?.customerId;
       const matchedCustomer = this.customers.find((customer) => customer.id === customerId);
       return matchedCustomer?.name
-        || agreement?.data?.customerName
-        || agreement?.data?.customer_name
         || 'Unassigned investor';
     },
 
@@ -361,7 +322,7 @@ function advisorApp() {
       this.maestroNewContact = null;
       this.stopMaestroCreationPolling();
       this.clearOnboardingRedirectTimer();
-      this.stopOnboardingLoading();
+      this.stopWorkflowLoading();
       this._maestroTrackingStarted = false;
       this._maestroKnownContactIds = new Set();
     },
@@ -478,32 +439,6 @@ function advisorApp() {
       }, MAESTRO_COMPLETION_SETTLE_DELAY_MS);
     },
 
-    startOnboardingLoading() {
-      this.stopOnboardingLoading();
-      this.onboardingLoadingIndex = 0;
-      this.onboardingLoadingTimer = window.setInterval(() => {
-        this.onboardingLoadingIndex = Math.min(
-          this.onboardingLoadingIndex + 1,
-          this.onboardingLoadingSteps.length - 1
-        );
-      }, 1400);
-    },
-
-    stopOnboardingLoading() {
-      if (this.onboardingLoadingTimer) {
-        window.clearInterval(this.onboardingLoadingTimer);
-        this.onboardingLoadingTimer = null;
-      }
-    },
-
-    get onboardingLoadingSteps() {
-      return [
-        'Connecting to Docusign IAM',
-        'Preparing account opening',
-        'Launching the embedded experience'
-      ];
-    },
-
     async loadMaestroWorkflow() {
       this.stopMaestroCreationPolling();
       this.clearOnboardingRedirectTimer();
@@ -512,7 +447,7 @@ function advisorApp() {
       this.maestroLoading = true;
       this.maestroError = null;
       this.maestroInstanceUrl = '';
-      this.startOnboardingLoading();
+      this.startWorkflowLoading();
 
       try {
         const workflowId = this.getAccountOpeningWorkflowId();
@@ -539,7 +474,7 @@ function advisorApp() {
         this.stopMaestroCreationPolling();
       } finally {
         this.maestroLoading = false;
-        this.stopOnboardingLoading();
+        this.stopWorkflowLoading();
       }
     }
   };

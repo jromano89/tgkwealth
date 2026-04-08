@@ -60,7 +60,7 @@
 
     <!-- User -->
     <div class="tgk-portal-user">
-      <div class="tgk-portal-user__avatar" style="background: var(--color-brand, #3b5bdb);" x-text="currentUser?.metadata?.avatar || 'GG'"></div>
+      <div class="tgk-portal-user__avatar" style="background: var(--color-brand, #3b5bdb);" x-text="initials(currentUser?.name || 'Gordon Gecko')"></div>
       <div x-show="!sidebarCollapsed" class="tgk-portal-user__copy">
         <div class="tgk-portal-user__title" x-text="currentUser?.name || 'Gordon Gecko'"></div>
         <div class="tgk-portal-user__meta" x-text="currentUser?.title || 'Senior Advisor'"></div>
@@ -134,10 +134,10 @@
                   <tr @click="viewClient(c)" class="tgk-data-table__row">
                     <td class="tgk-data-table__cell">
                       <div class="tgk-data-table__contact">
-                        <div class="tgk-data-table__avatar" :style="`background:${c.metadata?.avatar || '#3b5bdb'}`" x-text="initials(c.name)"></div>
+                        <div class="tgk-data-table__avatar" :style="`background:${avatarColor(c.id || c.name)}`" x-text="initials(c.name)"></div>
                         <div class="tgk-data-table__identity">
                           <div class="tgk-data-table__name" x-text="c.name"></div>
-                          <div class="tgk-data-table__meta" x-text="c.metadata?.household || c.company || 'Investor'"></div>
+                          <div class="tgk-data-table__meta" x-text="c.company || 'Investor'"></div>
                         </div>
                       </div>
                     </td>
@@ -189,9 +189,9 @@
         <div class="tgk-detail-layout">
           <div class="tgk-detail-sidebar">
             <div class="tgk-surface-panel tgk-surface-panel--md tgk-profile-card">
-              <div class="tgk-profile-card__avatar" :style="`background:${selectedContact.metadata?.avatar || '#3b5bdb'}`" x-text="initials(selectedContact.name)"></div>
+              <div class="tgk-profile-card__avatar" :style="`background:${avatarColor(selectedContact.id || selectedContact.name)}`" x-text="initials(selectedContact.name)"></div>
               <h2 class="tgk-profile-card__name" x-text="selectedContact.name"></h2>
-              <div class="tgk-profile-card__meta" x-text="selectedContact.metadata?.household || selectedContact.company || 'Investor'"></div>
+              <div class="tgk-profile-card__meta" x-text="selectedContact.company || 'Investor'"></div>
               <span class="tgk-status-badge" :class="statusClasses(selectedContact.metadata?.status)" x-text="selectedContact.metadata?.status || 'active'"></span>
               <div class="tgk-contact-list">
                 <div class="tgk-contact-row">

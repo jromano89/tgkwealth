@@ -60,7 +60,7 @@
 
     <!-- User -->
     <div class="tgk-portal-user">
-      <div class="tgk-portal-user__avatar" :style="`background:${selectedClient?.metadata?.avatar || '#3b5bdb'}`" x-text="initials(clientName)"></div>
+      <div class="tgk-portal-user__avatar" :style="`background:${avatarColor(selectedClient?.id || clientName)}`" x-text="initials(clientName)"></div>
       <div x-show="!sidebarCollapsed" class="tgk-portal-user__copy">
         <div class="tgk-portal-user__title" x-text="clientName"></div>
         <div class="tgk-portal-user__meta">Investor</div>
@@ -203,7 +203,7 @@
         <div class="tgk-surface-panel tgk-surface-panel--md tgk-advisor-card">
           <h3 class="tgk-advisor-card__eyebrow">Your Advisor</h3>
           <div class="tgk-advisor-card__body">
-            <div class="tgk-advisor-card__avatar" x-text="assignedAdvisor?.metadata?.avatar || 'A'"></div>
+            <div class="tgk-advisor-card__avatar" x-text="initials(assignedAdvisor?.name || 'Advisor')"></div>
             <div>
               <div class="tgk-advisor-card__name" x-text="assignedAdvisor?.name || 'Your Advisor'"></div>
               <div class="tgk-advisor-card__meta" x-text="assignedAdvisor?.title || 'Advisor'"></div>

@@ -184,13 +184,6 @@ router.get('/', route((req, res) => {
   });
 }));
 
-router.get('/health', route((req, res) => {
-  res.json({
-    status: 'ok',
-    mode: 'in-process'
-  });
-}));
-
 router.get('/manifest/clientCredentials.ReadWriteManifest.json', route((req, res) => {
   res.json(buildManifest(getPublicBaseUrl(req)));
 }));

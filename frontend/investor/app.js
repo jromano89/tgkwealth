@@ -2,9 +2,23 @@ function investorApp() {
   const preferredAdvisorId = String(window.TGK_CONFIG?.advisorId || '').trim();
 
   return {
-    ...createBrandingState(),
+    ...createPortalChromeState({
+      currentKey: 'tab',
+      defaultView: 'overview',
+      coreViews: ['overview', 'documents', 'tasks']
+    }),
+    ...createWorkflowLoadingState({
+      loadingKey: 'taskWorkflowLoading',
+      loadingIndexKey: 'taskWorkflowLoadingIndex',
+      loadingTimerKey: 'taskWorkflowLoadingTimer',
+      stepsKey: 'taskWorkflowLoadingSteps',
+      steps: [
+        'Connecting to Docusign IAM',
+        'Preparing asset transfer',
+        'Launching the embedded experience'
+      ]
+    }),
     ...createEnvelopeModalHelpers(),
-    iamProducts: getIamProducts(),
     tab: 'overview',
     advisors: [],
     assignedAdvisor: null,
@@ -13,26 +27,15 @@ function investorApp() {
     selectedClient: null,
     accounts: [],
     envelopes: [],
-    sidebarCollapsed: false,
-    _sidebarChangeHandler: null,
     loading: true,
     tasks: [],
-    monitorAlerts: [],
     showTaskWorkflow: false,
     taskWorkflowTask: null,
     taskWorkflowInstanceUrl: '',
     taskWorkflowError: null,
-    taskWorkflowLoading: false,
-    taskWorkflowLoadingIndex: 0,
-    taskWorkflowLoadingTimer: null,
 
     async init() {
-      this.initializeBrandingState();
-      this.refreshSidebarProducts();
-      if (!this._sidebarChangeHandler) {
-        this._sidebarChangeHandler = () => this.refreshSidebarProducts();
-        window.addEventListener('tgk:sidebar-change', this._sidebarChangeHandler);
-      }
+      this.initializePortalChrome();
       try {
         const [advisors, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -54,32 +57,8 @@ function investorApp() {
       this.loading = false;
     },
 
-    canSeeSettings() {
-      return window.TGK_ACCESS?.canSeeSettings?.() ?? true;
-    },
-
-    canSeeIamProducts() {
-      return (window.TGK_ACCESS?.canSeeIamProducts?.() ?? this.canSeeSettings()) && this.iamProducts.length > 0;
-    },
-
-    refreshSidebarProducts() {
-      this.iamProducts = getIamProducts();
-
-      if (!this.isCoreTab(this.tab) && this.tab !== 'settings' && !this.iamProducts.some((product) => product.key === this.tab)) {
-        this.tab = 'overview';
-      }
-    },
-
     isCoreTab(tabName = this.tab) {
-      return ['overview', 'documents', 'tasks'].includes(tabName);
-    },
-
-    activateIamProduct(productKey) {
-      this.setTab(productKey);
-    },
-
-    isActiveIamProduct(productKey) {
-      return this.tab === productKey;
+      return this.isCorePortalView(tabName);
     },
 
     sortCustomers(customers) {
@@ -91,36 +70,11 @@ function investorApp() {
     },
 
     setTab(nextTab) {
-      const allowedTabs = new Set(['overview', 'documents', 'tasks']);
-      if (this.canSeeSettings()) {
-        allowedTabs.add('settings');
-      }
-      if (this.canSeeIamProducts()) {
-        this.iamProducts.forEach((product) => {
-          allowedTabs.add(product.key);
-        });
-      }
-      this.tab = allowedTabs.has(nextTab) ? nextTab : 'overview';
-      if (this.tab === 'monitor') {
+      const resolvedTab = this.setPortalView(nextTab);
+
+      if (resolvedTab === 'monitor') {
         this.ensureMonitorAlerts();
       }
-    },
-
-    get currentIamProduct() {
-      return getIamProduct(this.tab);
-    },
-
-    get currentIamPlaceholder() {
-      return getIamProductPlaceholder(this.tab);
-    },
-
-    ensureMonitorAlerts() {
-      if (this.monitorAlerts.length) return;
-      this.monitorAlerts = buildMonitorAlerts(this.customers);
-    },
-
-    monitorTimeAgo(isoString) {
-      return monitorTimeAgo(isoString);
     },
 
     getAssetTransferWorkflowId() {
@@ -319,7 +273,7 @@ function investorApp() {
       this.taskWorkflowInstanceUrl = '';
       this.taskWorkflowError = null;
       this.taskWorkflowLoading = false;
-      this.stopTaskWorkflowLoading();
+      this.stopWorkflowLoading();
     },
 
     async openTaskWorkflow(task) {
@@ -334,37 +288,11 @@ function investorApp() {
       this.resetTaskWorkflowState();
     },
 
-    startTaskWorkflowLoading() {
-      this.stopTaskWorkflowLoading();
-      this.taskWorkflowLoadingIndex = 0;
-      this.taskWorkflowLoadingTimer = window.setInterval(() => {
-        this.taskWorkflowLoadingIndex = Math.min(
-          this.taskWorkflowLoadingIndex + 1,
-          this.taskWorkflowLoadingSteps.length - 1
-        );
-      }, 1400);
-    },
-
-    stopTaskWorkflowLoading() {
-      if (this.taskWorkflowLoadingTimer) {
-        window.clearInterval(this.taskWorkflowLoadingTimer);
-        this.taskWorkflowLoadingTimer = null;
-      }
-    },
-
-    get taskWorkflowLoadingSteps() {
-      return [
-        'Connecting to Docusign IAM',
-        'Preparing asset transfer',
-        'Launching the embedded experience'
-      ];
-    },
-
     async loadTaskWorkflow(task) {
       this.taskWorkflowLoading = true;
       this.taskWorkflowError = null;
       this.taskWorkflowInstanceUrl = '';
-      this.startTaskWorkflowLoading();
+      this.startWorkflowLoading();
 
       try {
         const existingInstanceUrl = this.getTaskWorkflowLaunchUrl(task);
@@ -394,7 +322,7 @@ function investorApp() {
         this.taskWorkflowError = e.message || 'Failed to launch asset transfer.';
       } finally {
         this.taskWorkflowLoading = false;
-        this.stopTaskWorkflowLoading();
+        this.stopWorkflowLoading();
       }
     },
 

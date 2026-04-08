@@ -106,6 +106,32 @@ function buildTextSearch(columns, search) {
   };
 }
 
+function buildEqualityFilters(filters = {}, fieldMap = {}) {
+  const conditions = [];
+  const params = [];
+
+  Object.entries(fieldMap).forEach(([filterKey, column]) => {
+    if (!filters[filterKey]) {
+      return;
+    }
+
+    conditions.push(`${column} = ?`);
+    params.push(filters[filterKey]);
+  });
+
+  return { conditions, params };
+}
+
+function combineListOptions(...optionsList) {
+  return optionsList.reduce((combined, options) => ({
+    conditions: [...combined.conditions, ...(options?.conditions || [])],
+    params: [...combined.params, ...(options?.params || [])]
+  }), {
+    conditions: [],
+    params: []
+  });
+}
+
 function withTimestamps(record) {
   const timestamp = new Date().toISOString();
   return {
@@ -218,23 +244,13 @@ const RESOURCE_DEFINITIONS = {
     columns: ['employee_id', 'display_name', 'email', 'phone', 'organization', 'status', 'data'],
     orderBy: 'COALESCE(display_name, email, organization, id) COLLATE NOCASE ASC',
     buildListOptions(filters = {}) {
-      const conditions = [];
-      const params = [];
-
-      if (filters.status) {
-        conditions.push('status = ?');
-        params.push(filters.status);
-      }
-      if (filters.employeeId) {
-        conditions.push('employee_id = ?');
-        params.push(filters.employeeId);
-      }
-
-      const search = buildTextSearch(['display_name', 'email', 'organization', 'id'], filters.search);
-      return {
-        conditions: [...conditions, ...search.conditions],
-        params: [...params, ...search.params]
-      };
+      return combineListOptions(
+        buildEqualityFilters(filters, {
+          status: 'status',
+          employeeId: 'employee_id'
+        }),
+        buildTextSearch(['display_name', 'email', 'organization', 'id'], filters.search)
+      );
     },
     normalizeWrite: normalizeCustomerWrite,
     allowDelete: true,
@@ -249,31 +265,15 @@ const RESOURCE_DEFINITIONS = {
     columns: ['employee_id', 'customer_id', 'status', 'name', 'data'],
     orderBy: 'created_at DESC',
     buildListOptions(filters = {}) {
-      const conditions = [];
-      const params = [];
-
-      if (filters.id) {
-        conditions.push('id = ?');
-        params.push(filters.id);
-      }
-      if (filters.status) {
-        conditions.push('status = ?');
-        params.push(filters.status);
-      }
-      if (filters.employeeId) {
-        conditions.push('employee_id = ?');
-        params.push(filters.employeeId);
-      }
-      if (filters.customerId) {
-        conditions.push('customer_id = ?');
-        params.push(filters.customerId);
-      }
-
-      const search = buildTextSearch(['name', 'id'], filters.search);
-      return {
-        conditions: [...conditions, ...search.conditions],
-        params: [...params, ...search.params]
-      };
+      return combineListOptions(
+        buildEqualityFilters(filters, {
+          id: 'id',
+          status: 'status',
+          employeeId: 'employee_id',
+          customerId: 'customer_id'
+        }),
+        buildTextSearch(['name', 'id'], filters.search)
+      );
     },
     normalizeWrite: normalizeEnvelopeWrite
   },
@@ -283,31 +283,15 @@ const RESOURCE_DEFINITIONS = {
     columns: ['employee_id', 'customer_id', 'title', 'description', 'status', 'due_at', 'data'],
     orderBy: 'COALESCE(due_at, created_at) DESC',
     buildListOptions(filters = {}) {
-      const conditions = [];
-      const params = [];
-
-      if (filters.id) {
-        conditions.push('id = ?');
-        params.push(filters.id);
-      }
-      if (filters.status) {
-        conditions.push('status = ?');
-        params.push(filters.status);
-      }
-      if (filters.employeeId) {
-        conditions.push('employee_id = ?');
-        params.push(filters.employeeId);
-      }
-      if (filters.customerId) {
-        conditions.push('customer_id = ?');
-        params.push(filters.customerId);
-      }
-
-      const search = buildTextSearch(['title', 'description', 'id'], filters.search);
-      return {
-        conditions: [...conditions, ...search.conditions],
-        params: [...params, ...search.params]
-      };
+      return combineListOptions(
+        buildEqualityFilters(filters, {
+          id: 'id',
+          status: 'status',
+          employeeId: 'employee_id',
+          customerId: 'customer_id'
+        }),
+        buildTextSearch(['title', 'description', 'id'], filters.search)
+      );
     },
     normalizeWrite: normalizeTaskWrite,
     allowDelete: true

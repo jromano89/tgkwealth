@@ -1,15 +1,17 @@
 # TGK Demo Platform
 
-Static frontend plus reusable Express/SQLite backend.
+TGK Wealth demo platform for DocuSign IAM and Maestro workflows.
 
-The frontend has no build step or package metadata. It is plain HTML/CSS/JS served by the tiny Node server in `frontend/server.js` for Railway compatibility. If you host it elsewhere, serve `frontend/` as static files.
+The intent is to keep the demo frontends simple and static while reusing one lightweight backend for auth, proxying, local persistence, and Maestro bridge behavior.
+
+The frontend has no build step. It is plain HTML, CSS, and JS, served by the small Node server in `frontend/server.js` so it can run cleanly on Railway or any other simple Node host.
 
 ## Structure
 
-- `frontend/`: static advisor/investor demo
-- `backend/`: reusable backend, Maestro bridge, architecture page
-- `frontend/config.js`: frontend config + mode gate
-- `scripts/seed-demo-api.js`: optional seed script
+- `frontend/`: launcher plus advisor and investor demo portals
+- `backend/`: Express/SQLite API, DocuSign auth/proxy, Maestro bridge, architecture page
+- `frontend/config.js`: frontend config, workflow IDs, mode gate, and DocuSign settings
+- `scripts/seed-demo-api.js`: optional demo data loader
 
 ## Local
 
@@ -31,35 +33,33 @@ npm run dev
 
 ```bash
 cd frontend
-node server.js
+npm start
 ```
 
-Optional: load the demo dataset.
+4. Optionally seed demo data from the repo root.
 
 ```bash
 node scripts/seed-demo-api.js
 ```
 
-Useful URLs:
+Useful local URLs:
 
 - `http://localhost:8080/`
 - `http://localhost:8080/advisor/`
 - `http://localhost:8080/investor/`
-- `http://localhost:3000/`
 - `http://localhost:3000/api/health`
 - `http://localhost:3000/architecture/`
-- `http://localhost:3000/maestro/health`
 
 ## Notes
 
-- `advanced` is the default mode.
-- `normal` mode uses default branding and hides Settings + IAM Products.
-- Workflow IDs, backend URLs, and DocuSign `userId` / `accountId` / `scopes` live in `frontend/config.js`.
-- The backend-hosted DocuSign consent callback is fixed at `/api/auth/callback`, so frontend hosting changes do not require new redirect URIs in DocuSign.
-- The frontend fetches DocuSign access tokens from `POST /api/auth/token` and caches them locally; DocuSign API calls still go through `POST /api/proxy`.
+- `advanced` is the default frontend mode.
+- `normal` mode keeps default branding and hides Settings and IAM Products.
+- Frontend runtime config lives in `frontend/config.js`.
+- The backend-hosted DocuSign consent callback is fixed at `/api/auth/callback`.
+- The frontend gets DocuSign access tokens from `POST /api/auth/token` and sends downstream API calls through `POST /api/proxy`.
 
 ## Deployment
 
-- Frontend service: run `node server.js` in `frontend/`
+- Frontend service: run `npm start` in `frontend/`
 - Backend service: run `npm start` in `backend/`
-- Keep a persistent volume for `backend/data/`, or override `TGK_DB_PATH`
+- Persist `backend/data/`, or override `TGK_DB_PATH`
