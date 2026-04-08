@@ -300,9 +300,7 @@ function investorApp() {
       }
 
       payload.appSlug = window.TGK_CONFIG?.appSlug;
-      if (payload.idv === undefined) {
-        payload.idv = 'false';
-      }
+      delete payload.idv;
 
       return payload;
     },

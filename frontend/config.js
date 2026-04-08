@@ -12,7 +12,7 @@
   const DEFAULT_MODE = 'advanced';
 
   const WORKFLOWS = Object.freeze({
-    accountOpeningId: 'e26e565e-fb6a-433b-b004-bd2083c8963b',
+    accountOpeningId: '12319d8c-4ee5-464b-88d0-f27a03638bcb',
     assetTransferId: 'b59acbee-8052-403a-a752-c04287ad6ee1',
     accountMaintenanceId: 'b59acbee-8052-403a-a752-c04287ad6ee1'
   });
