@@ -278,16 +278,16 @@ function applyBrandingPreview(nextBranding = {}) {
 }
 
 function createBrandingState() {
+  const initialAppName = resolveBrandingAppName();
+
   return {
-    brandingAppName: resolveBrandingAppName(),
+    brandingAppName: initialAppName,
+    brandingInitial: getBrandingInitial(initialAppName),
     _brandingChangeHandler: null,
 
     syncBranding(detail = {}) {
       this.brandingAppName = resolveBrandingAppName(detail.appName);
-    },
-
-    get brandingInitial() {
-      return getBrandingInitial(this.brandingAppName);
+      this.brandingInitial = getBrandingInitial(this.brandingAppName);
     },
 
     initializeBrandingState() {

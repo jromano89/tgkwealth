@@ -74,7 +74,20 @@
       },
 
       activateIamProduct(productKey) {
-        this.setPortalView(productKey);
+        if (typeof this.setView === 'function') {
+          this.setView(productKey);
+          return;
+        }
+
+        if (typeof this.setTab === 'function') {
+          this.setTab(productKey);
+          return;
+        }
+
+        const resolvedView = this.setPortalView(productKey);
+        if (resolvedView === 'monitor') {
+          this.ensureMonitorAlerts();
+        }
       },
 
       isActiveIamProduct(productKey) {
@@ -116,10 +129,7 @@
       [loadingKey]: false,
       [loadingIndexKey]: 0,
       [loadingTimerKey]: null,
-
-      get [stepsKey]() {
-        return resolvedSteps;
-      },
+      [stepsKey]: resolvedSteps,
 
       startWorkflowLoading() {
         const maxIndex = Math.max(this[stepsKey].length - 1, 0);
