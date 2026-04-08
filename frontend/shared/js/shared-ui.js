@@ -455,81 +455,156 @@ function createEnvelopeModalHelpers() {
 function sharedSettingsTemplate() {
   return `
     <section class="tgk-settings-shell">
-      <div class="tgk-settings-stack">
-        <section class="tgk-settings-card">
-              <div class="tgk-settings-card__header">
-              <div class="tgk-settings-card__eyebrow">Configure</div>
-              <p class="tgk-settings-card__text">Shared branding and sidebar controls.</p>
+      <div class="tgk-settings-grid">
+        <div class="tgk-settings-stack">
+          <section class="tgk-settings-card">
+            <div class="tgk-settings-card__header">
+              <div class="tgk-settings-card__eyebrow">Account</div>
             </div>
 
-            <div class="tgk-settings-card__body">
-              <div class="tgk-field-card">
-                <label class="tgk-field-label" for="tgk-appName">App Name</label>
-                <input id="tgk-appName" x-model="appName" @input="updateAppName($event.target.value)" class="tgk-form-input" placeholder="TGK Wealth">
-              </div>
-
-              <div class="tgk-field-card">
-                <label class="tgk-field-label">Theme Color</label>
-                <div class="tgk-color-row">
-                  <label class="tgk-color-swatch" :style="'background:' + brandColor">
-                    <input type="color" :value="brandColor" @input="updateBrandColor($event.target.value)">
-                  </label>
-                  <div>
-                    <div class="tgk-color-value" x-text="brandColor"></div>
-                    <div class="tgk-help-text">Used for primary actions and highlights.</div>
-                  </div>
+            <div class="tgk-settings-card__body tgk-settings-card__body--compact">
+              <div class="tgk-settings-info-list">
+                <div class="tgk-settings-info-row">
+                  <span class="tgk-settings-info-label">User ID</span>
+                  <span class="tgk-settings-info-value" x-text="docusignConfig.userId || 'Not configured'"></span>
+                </div>
+                <div class="tgk-settings-info-row">
+                  <span class="tgk-settings-info-label">Account ID</span>
+                  <span class="tgk-settings-info-value" x-text="docusignConfig.accountId || 'Not configured'"></span>
                 </div>
               </div>
 
-              <div class="tgk-field-card">
-                <label class="tgk-field-label">IAM Sidebar</label>
-                <div class="tgk-settings-toggle-list">
-                  <template x-for="product in sidebarOptions()" :key="product.key">
-                    <label class="tgk-settings-toggle-row">
-                      <div class="tgk-settings-toggle-copy">
-                        <div class="tgk-settings-toggle-title" x-text="product.label"></div>
-                      </div>
-                      <span class="tgk-switch">
-                        <input
-                          type="checkbox"
-                          class="tgk-switch__input"
-                          :checked="isSidebarProductEnabled(product.key)"
-                          @change="toggleSidebarProduct(product.key, $event.target.checked)">
-                        <span class="tgk-switch__track"></span>
-                        <span class="tgk-switch__thumb"></span>
-                      </span>
+              <div class="tgk-settings-consent-row tgk-settings-consent-row--separated">
+                <div class="tgk-settings-consent-copy">
+                  <p class="tgk-help-text">Consent is still required before calling DocuSign APIs.</p>
+                </div>
+                <button
+                  @click="grantDocusignConsent()"
+                  :disabled="docusignConsentBusy || !hasDocusignAuthConfig()"
+                  class="tgk-button tgk-button--secondary"
+                  x-text="docusignConsentBusy ? 'Waiting...' : 'Grant Consent'"></button>
+              </div>
+              <p
+                x-show="docusignConsentMessage || !hasDocusignAuthConfig()"
+                class="tgk-help-text tgk-help-text--compact"
+                :style="docusignConsentStatus === 'error' ? 'color:#b42318;' : docusignConsentStatus === 'success' ? 'color:#067647;' : ''"
+                x-text="docusignConsentMessage || 'Configure frontend/config.js first.'"></p>
+            </div>
+          </section>
+
+          <section class="tgk-settings-card">
+            <div class="tgk-settings-card__header tgk-settings-card__header--split">
+              <div class="tgk-settings-card__eyebrow">Sidebar Selector</div>
+              <div class="tgk-settings-chip">Toggle Features</div>
+            </div>
+
+            <div class="tgk-settings-card__body tgk-settings-card__body--compact">
+              <div class="tgk-settings-toggle-list tgk-settings-toggle-list--flush">
+                <template x-for="product in sidebarOptions()" :key="product.key">
+                  <label class="tgk-settings-toggle-row">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title" x-text="product.label"></div>
+                    </div>
+                    <span class="tgk-switch">
+                      <input
+                        type="checkbox"
+                        class="tgk-switch__input"
+                        :checked="isSidebarProductEnabled(product.key)"
+                        @change="toggleSidebarProduct(product.key, $event.target.checked)">
+                      <span class="tgk-switch__track"></span>
+                      <span class="tgk-switch__thumb"></span>
+                    </span>
+                  </label>
+                </template>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="tgk-settings-stack">
+          <section class="tgk-settings-card">
+            <div class="tgk-settings-card__header">
+              <div class="tgk-settings-card__eyebrow">Branding</div>
+            </div>
+
+            <div class="tgk-settings-card__body tgk-settings-card__body--compact">
+              <div class="tgk-settings-branding-grid">
+                <div class="tgk-field-card tgk-field-card--compact">
+                  <label class="tgk-field-label">Theme Color</label>
+                  <div class="tgk-color-row tgk-color-row--compact">
+                    <label class="tgk-color-swatch tgk-color-swatch--compact" :style="'background:' + brandColor">
+                      <input type="color" :value="brandColor" @input="updateBrandColor($event.target.value)">
                     </label>
+                    <div class="tgk-color-value" x-text="brandColor"></div>
+                  </div>
+                </div>
+
+                <div class="tgk-field-card tgk-field-card--compact">
+                  <label class="tgk-field-label" for="tgk-appName">App Name</label>
+                  <input
+                    id="tgk-appName"
+                    x-model="appNameDraft"
+                    @input="previewAppName()"
+                    @change="commitAppName()"
+                    @blur="commitAppName()"
+                    class="tgk-form-input"
+                    placeholder="Enter app name">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tgk-settings-card">
+            <div class="tgk-settings-card__header tgk-settings-card__header--split">
+              <div class="tgk-settings-card__eyebrow">Saved Profiles</div>
+              <div class="tgk-settings-profile-count" x-text="profiles.length + ' saved'"></div>
+            </div>
+
+            <div class="tgk-settings-card__body tgk-settings-card__body--compact">
+              <template x-if="profiles.length">
+                <div class="tgk-settings-profile-list tgk-settings-profile-list--compact">
+                  <template x-for="profile in profiles" :key="profile.id">
+                    <article
+                      class="tgk-settings-profile-card tgk-settings-profile-card--compact"
+                      :class="{ 'tgk-settings-profile-card--current': profileMatchesCurrent(profile) }"
+                      @click="loadProfile(profile.id)"
+                      @keydown.enter.prevent="loadProfile(profile.id)"
+                      @keydown.space.prevent="loadProfile(profile.id)"
+                      role="button"
+                      tabindex="0">
+                      <div class="tgk-settings-profile-main">
+                        <div
+                          class="tgk-settings-profile-mark"
+                          :style="profileBadgeStyle(profile)"
+                          x-text="profileBadgeText(profile)"></div>
+                        <div class="tgk-settings-profile-copy">
+                          <div class="tgk-settings-profile-name" x-text="profile.name"></div>
+                        </div>
+                      </div>
+
+                      <div class="tgk-settings-profile-actions">
+                        <button @click.stop="saveProfile(profile.id)" class="tgk-button tgk-button--secondary tgk-button--compact" type="button">Save</button>
+                        <button @click.stop="deleteProfile(profile.id)" class="tgk-settings-profile-delete" type="button" aria-label="Delete profile">&times;</button>
+                      </div>
+                    </article>
                   </template>
                 </div>
-              </div>
+              </template>
 
-              <div class="tgk-field-card">
-                <label class="tgk-field-label">Docusign Account</label>
-                <div class="tgk-settings-consent-row">
-                  <div class="tgk-settings-consent-copy">
-                    <div class="tgk-settings-consent-meta">
-                      <div x-text="'User ID: ' + (docusignConfig.userId || 'Not configured')"></div>
-                      <div x-text="'Account ID: ' + (docusignConfig.accountId || 'Not configured')"></div>
-                    </div>
-                  </div>
-                  <button
-                    @click="grantDocusignConsent()"
-                    :disabled="docusignConsentBusy || !hasDocusignAuthConfig()"
-                    class="tgk-button tgk-button--secondary"
-                    x-text="docusignConsentBusy ? 'Waiting...' : 'Grant Consent'"></button>
+              <template x-if="!profiles.length">
+                <div class="tgk-settings-profile-empty">
+                  <div class="tgk-settings-profile-empty__title">No saved profiles yet</div>
+                  <p class="tgk-settings-profile-empty__text">Save the current branding and sidebar setup to reuse it later.</p>
                 </div>
-                <p
-                  x-show="docusignConsentMessage || !hasDocusignAuthConfig()"
-                  class="tgk-help-text tgk-help-text--compact"
-                  :style="docusignConsentStatus === 'error' ? 'color:#b42318;' : docusignConsentStatus === 'success' ? 'color:#067647;' : ''"
-                  x-text="docusignConsentMessage || 'Configure frontend/config.js first.'"></p>
-              </div>
+              </template>
 
-              <div class="tgk-inline-actions">
-                <button @click="resetAllCustomizations()" class="tgk-button tgk-button--secondary">Reset All</button>
+              <div class="tgk-settings-profile-footer">
+                <button @click="saveCurrentAsProfile()" class="tgk-button tgk-button--secondary" type="button">+ Save Current as Profile</button>
+                <button @click="resetAllDefaults()" class="tgk-button tgk-button--secondary" type="button">Reset defaults</button>
               </div>
             </div>
-        </section>
+          </section>
+        </div>
       </div>
     </section>
   `;

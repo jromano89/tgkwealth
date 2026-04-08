@@ -425,41 +425,40 @@
       <a class="crumb" href="/">← Back to TGK Demo Backend</a>
       <div class="actions">
         <a class="link-pill" href="/api/health">Backend Health</a>
-        <a class="link-pill" href="/maestro/manifest/clientCredentials.ReadWriteManifest.json">Maestro Manifest</a>
+        <a class="link-pill" href="/maestro/manifest/clientCredentials.ReadWriteManifest.json">Extension App Manifest</a>
       </div>
     </div>
 
     <section class="hero">
       <div>
         <div class="eyebrow">TGK Wealth Demo</div>
-        <h1>One demo story, three moving parts.</h1>
+        <h1>Built for one demo, structured for many.</h1>
         <p class="lede">
-          The TGK platform brings together two polished demo portals, one reusable backend, and
-          DocuSign IAM and Maestro services. The result is a guided story that feels like a real
-          product experience without turning the demo itself into a large application.
+          TGK combines two demo portals, one reusable backend, and live DocuSign services. The
+          reusable backend is the accelerator for future bespoke demo assets without turning the
+          demo itself into a large application.
         </p>
       </div>
 
       <div class="hero-cards">
         <div class="hero-card">
-          <strong>For an audience, not an engineer</strong>
+          <strong>Audience-first</strong>
           <p>
-            The experience is designed to feel simple on the surface: launch the portal, start a
-            workflow, and show what changes across the advisor and investor views.
+            Open a portal, run a workflow, and show the result.
           </p>
         </div>
         <div class="hero-card">
-          <strong>Reusable behind the scenes</strong>
+          <strong>Reusable backend</strong>
           <p>
-            The same backend handles auth, proxying, persistence, and Maestro support so future
-            demos do not need to rebuild the plumbing each time.
+            Auth, proxying, persistence, and extension plumbing live in one place so future bespoke
+            demos start faster.
           </p>
         </div>
         <div class="hero-card">
-          <strong>Fast to host and easy to move</strong>
+          <strong>Lightweight to host</strong>
           <p>
-            The frontend stays static and build-free. The backend stays lightweight. That keeps the
-            demo portable across local environments and simple cloud hosting.
+            Static frontends and a small backend keep the stack portable across local and cloud
+            environments.
           </p>
         </div>
       </div>
@@ -472,8 +471,7 @@
           <h2>How the experience is organized</h2>
         </div>
         <p>
-          The project is intentionally split into clear layers so each part has one job: present
-          the story, support the story, or power the workflow.
+          Each layer has one job: tell the story, support the story, or power the live workflow.
         </p>
       </div>
 
@@ -482,20 +480,20 @@
           <div class="lane-kicker">Experience Layer</div>
           <div class="lane-title">Advisor and Investor Portals</div>
           <p class="lane-copy">
-            Two lightweight frontends present the same demo from different points of view.
+            Two lightweight portals show the same demo from advisor and investor perspectives.
           </p>
           <div class="lane-list">
             <div class="mini-card">
               <strong>Launcher</strong>
-              <span>Select the story and enter the correct portal.</span>
+              <span>Choose the story and enter the right portal.</span>
             </div>
             <div class="mini-card">
               <strong>Advisor View</strong>
-              <span>Shows client book, agreements, onboarding, and configuration controls.</span>
+              <span>Client book, agreements, onboarding, and configuration controls.</span>
             </div>
             <div class="mini-card">
               <strong>Investor View</strong>
-              <span>Shows accounts, documents, tasks, and embedded workflow follow-up.</span>
+              <span>Accounts, documents, tasks, and workflow follow-up.</span>
             </div>
           </div>
         </article>
@@ -504,42 +502,38 @@
           <div class="lane-kicker">Support Layer</div>
           <div class="lane-title">Reusable TGK Backend</div>
           <p class="lane-copy">
-            A single backend keeps the demo coherent by centralizing the services both portals need.
+            One backend handles shared plumbing and speeds up future bespoke demo builds.
           </p>
           <div class="lane-list">
             <div class="mini-card">
               <strong>Auth and Consent</strong>
-              <span>Handles the DocuSign consent callback and token retrieval.</span>
+              <span>Handles DocuSign consent and token retrieval.</span>
             </div>
             <div class="mini-card">
               <strong>API Proxy</strong>
-              <span>Keeps DocuSign API traffic moving through one controlled backend path.</span>
+              <span>Routes DocuSign API calls through one controlled path.</span>
             </div>
             <div class="mini-card">
               <strong>Demo Data Store</strong>
-              <span>Persists employees, customers, envelopes, and tasks in local SQLite.</span>
+              <span>Stores employees, customers, envelopes, and tasks in SQLite.</span>
             </div>
           </div>
         </article>
 
         <article class="lane">
           <div class="lane-kicker">Workflow Layer</div>
-          <div class="lane-title">DocuSign IAM and Maestro</div>
+          <div class="lane-title">DocuSign IAM</div>
           <p class="lane-copy">
-            Live DocuSign services deliver the embedded workflow moments that make the demo feel real.
+            Live DocuSign services provide the workflow moments that make the demo feel real.
           </p>
           <div class="lane-list">
             <div class="mini-card">
-              <strong>IAM</strong>
-              <span>Supports consent, tokens, account context, and downstream API access.</span>
+              <strong>Workflows</strong>
+              <span>Runs workflows such as account opening and asset transfer.</span>
             </div>
             <div class="mini-card">
-              <strong>Maestro</strong>
-              <span>Launches workflow instances such as account opening and asset transfer.</span>
-            </div>
-            <div class="mini-card">
-              <strong>Manifest Bridge</strong>
-              <span>Lets the TGK backend present the demo data in a Maestro-friendly shape.</span>
+              <strong>Extension App</strong>
+              <span>Lets workflows read and write to TGK database.</span>
             </div>
           </div>
         </article>
@@ -553,8 +547,7 @@
           <h2>What someone sees during the demo</h2>
         </div>
         <p>
-          The platform is built to support a clean narrative from setup to outcome, not just a list
-          of disconnected pages.
+          The platform is built around a clean setup-to-outcome demo flow.
         </p>
       </div>
 
@@ -563,8 +556,8 @@
           <div class="step-index">1</div>
           <h3>Open the story</h3>
           <p>
-            The presenter starts from the launcher or directly in a portal. Branding, mode, and
-            workflow configuration shape the experience without requiring a rebuild.
+            Start from the launcher or go straight into a portal. Branding, mode, and workflow
+            settings shape the story without a rebuild.
           </p>
         </article>
 
@@ -572,8 +565,7 @@
           <div class="step-index">2</div>
           <h3>Trigger a live workflow</h3>
           <p>
-            The advisor or investor experience launches a real Maestro flow through the backend,
-            using DocuSign services behind the scenes.
+            The advisor or investor experience launches a live Workflow Builder flow through the backend.
           </p>
         </article>
 
@@ -581,8 +573,7 @@
           <div class="step-index">3</div>
           <h3>Show the outcome</h3>
           <p>
-            The portals refresh around the workflow result so the audience can see how documents,
-            tasks, and customer state evolve across the full story.
+            The portals refresh so the audience can see documents, tasks, and customer state change.
           </p>
         </article>
       </div>
@@ -595,8 +586,7 @@
           <h2>The design principles behind the demo</h2>
         </div>
         <p>
-          This is not trying to be a production platform. It is trying to be a credible, flexible,
-          easy-to-run demo foundation.
+          The goal is a credible, reusable demo foundation, not a production platform.
         </p>
       </div>
 
@@ -605,7 +595,7 @@
           <div class="principle-mark"></div>
           <h3>Simple frontends</h3>
           <p>
-            Static portals keep hosting easy and make the demo fast to iterate on.
+            Static portals keep iteration and hosting easy.
           </p>
         </article>
 
@@ -613,7 +603,7 @@
           <div class="principle-mark"></div>
           <h3>Reusable backend</h3>
           <p>
-            Shared plumbing means new demo variations can reuse the same foundation.
+            Shared plumbing accelerates future bespoke demo assets.
           </p>
         </article>
 
@@ -621,7 +611,7 @@
           <div class="principle-mark"></div>
           <h3>Real workflow moments</h3>
           <p>
-            Live IAM and Maestro integration keeps the story grounded in actual DocuSign capabilities.
+            Live IAM and Workflow Builder integration keeps the story grounded in real DocuSign capability.
           </p>
         </article>
 
@@ -635,9 +625,9 @@
       </div>
 
       <div class="footer-note">
-        <strong>In plain terms:</strong> TGK is a demo shell around real workflow services. The
-        frontends tell the story, the backend keeps the story coordinated, and DocuSign IAM plus
-        Maestro provide the live moments that matter.
+        <strong>In plain terms:</strong> the portals tell the story, the reusable backend keeps
+        future demos fast to build, and DocuSign IAM plus Workflow Builder provide the live
+        workflow moments.
       </div>
     </section>
   </main>

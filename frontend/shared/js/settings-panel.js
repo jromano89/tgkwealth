@@ -61,13 +61,40 @@ function normalizeIamProductKeys(keys, fallback = []) {
   return normalizedKeys;
 }
 
+function normalizeBrandingSettings(savedBranding = {}, fallbackBranding = TGK_DEMO_DEFAULTS.branding) {
+  const source = savedBranding && typeof savedBranding === 'object' ? savedBranding : {};
+  const baseBranding = fallbackBranding && typeof fallbackBranding === 'object'
+    ? fallbackBranding
+    : TGK_DEMO_DEFAULTS.branding;
+  const appNameFallback = String(baseBranding.appName || TGK_DEMO_DEFAULTS.branding.appName);
+  const rawAppName = source.appName !== undefined && source.appName !== null
+    ? String(source.appName)
+    : appNameFallback;
+
+  return {
+    appName: rawAppName.trim() ? rawAppName : appNameFallback,
+    brandColor: normalizeHexColor(source.brandColor, normalizeHexColor(baseBranding.brandColor))
+  };
+}
+
 function resolveBrandingAppName(value) {
-  return String(value || window.TGK_DEMO?.branding?.appName || window.TGK_CONFIG?.appName || TGK_DEMO_DEFAULTS.branding.appName).trim()
-    || TGK_DEMO_DEFAULTS.branding.appName;
+  if (value !== undefined && value !== null) {
+    return normalizeBrandingSettings({ appName: value }).appName;
+  }
+
+  const fallbackBranding = window.TGK_DEMO?.branding
+    || window.TGK_CONFIG
+    || TGK_DEMO_DEFAULTS.branding;
+
+  return normalizeBrandingSettings(fallbackBranding).appName;
 }
 
 function getBrandingInitial(value) {
   return (resolveBrandingAppName(value).match(/[A-Za-z0-9]/) || ['T'])[0].toUpperCase();
+}
+
+function getBrandingBadgeText(value) {
+  return getBrandingInitial(value);
 }
 
 function hexToHsl(hex) {
@@ -144,22 +171,6 @@ function applyThemeVariables(target, variables) {
   });
 }
 
-function readStoredSettings() {
-  try {
-    const storedValue = window.localStorage.getItem(TGK_DEMO_SETTINGS_STORAGE_KEY);
-    const parsed = storedValue ? JSON.parse(storedValue) : {};
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (error) {
-    return {};
-  }
-}
-
-function writeStoredSettings(settings) {
-  try {
-    window.localStorage.setItem(TGK_DEMO_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  } catch (error) {}
-}
-
 function resolveSidebarSettings(savedSidebar = {}) {
   if (Array.isArray(savedSidebar.iamProductKeys)) {
     return {
@@ -172,9 +183,105 @@ function resolveSidebarSettings(savedSidebar = {}) {
   };
 }
 
+function resolveCurrentSettings(savedCurrent = {}, fallbackCurrent = TGK_DEMO_DEFAULTS) {
+  const source = savedCurrent && typeof savedCurrent === 'object' ? savedCurrent : {};
+  const fallback = fallbackCurrent && typeof fallbackCurrent === 'object'
+    ? fallbackCurrent
+    : TGK_DEMO_DEFAULTS;
+
+  return {
+    branding: normalizeBrandingSettings(source.branding || {}, fallback.branding || TGK_DEMO_DEFAULTS.branding),
+    sidebar: resolveSidebarSettings(source.sidebar || fallback.sidebar || TGK_DEMO_DEFAULTS.sidebar)
+  };
+}
+
+function createProfileId() {
+  return 'profile_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+
+function normalizeTimestamp(value, fallback) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
+}
+
+function normalizeProfile(profile = {}, seenIds = new Set()) {
+  const source = profile && typeof profile === 'object' ? profile : {};
+  const normalizedCurrent = resolveCurrentSettings({
+    branding: source.branding || {},
+    sidebar: source.sidebar || {}
+  });
+  const createdAt = normalizeTimestamp(source.createdAt, new Date().toISOString());
+  const updatedAt = normalizeTimestamp(source.updatedAt, createdAt);
+  let id = String(source.id || '').trim();
+
+  if (!id || seenIds.has(id)) {
+    id = createProfileId();
+  }
+  seenIds.add(id);
+
+  return {
+    id,
+    name: String(source.name || '').trim() || normalizedCurrent.branding.appName,
+    branding: normalizedCurrent.branding,
+    sidebar: normalizedCurrent.sidebar,
+    createdAt,
+    updatedAt
+  };
+}
+
+function normalizeStoredSettings(rawSettings = {}) {
+  const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+  const hasCurrentSettings = source.current && typeof source.current === 'object';
+  const legacyCurrent = hasCurrentSettings
+    ? source.current
+    : {
+        branding: source.branding || {},
+        sidebar: source.sidebar || {}
+      };
+  const seenIds = new Set();
+
+  return {
+    current: resolveCurrentSettings(legacyCurrent),
+    profiles: Array.isArray(source.profiles)
+      ? source.profiles.map((profile) => normalizeProfile(profile, seenIds))
+      : []
+  };
+}
+
+function readStoredSettings() {
+  try {
+    const storedValue = window.localStorage.getItem(TGK_DEMO_SETTINGS_STORAGE_KEY);
+    const parsed = storedValue ? JSON.parse(storedValue) : {};
+    return normalizeStoredSettings(parsed);
+  } catch (error) {
+    return normalizeStoredSettings();
+  }
+}
+
+function writeStoredSettings(settings) {
+  try {
+    window.localStorage.setItem(TGK_DEMO_SETTINGS_STORAGE_KEY, JSON.stringify(normalizeStoredSettings(settings)));
+  } catch (error) {}
+}
+
+function buildDemoSettingsSnapshot(currentSettings = {}) {
+  const resolvedCurrent = resolveCurrentSettings(currentSettings);
+  const isAdvanced = canUseAdvancedCustomizations();
+
+  return {
+    branding: isAdvanced
+      ? resolvedCurrent.branding
+      : { ...TGK_DEMO_DEFAULTS.branding },
+    sidebar: isAdvanced
+      ? resolvedCurrent.sidebar
+      : { iamProductKeys: [] },
+    DEFAULTS: TGK_DEMO_DEFAULTS
+  };
+}
+
 function syncRuntimeSidebar(nextSidebar) {
   if (!window.TGK_DEMO) {
-    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
+    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings().current);
   }
 
   const resolvedSidebar = resolveSidebarSettings({
@@ -190,54 +297,6 @@ function dispatchSidebarChange(nextSidebar) {
   window.dispatchEvent(new CustomEvent(TGK_SIDEBAR_EVENT, {
     detail: resolveSidebarSettings(nextSidebar)
   }));
-}
-
-function persistDemoSettings({ branding, sidebar } = {}) {
-  const existing = readStoredSettings();
-  const nextBrandingSource = {
-    ...(existing.branding || {}),
-    ...(branding || {})
-  };
-  const nextBranding = {
-    appName: resolveBrandingAppName(nextBrandingSource.appName),
-    brandColor: normalizeHexColor(nextBrandingSource.brandColor)
-  };
-  const nextSidebar = resolveSidebarSettings(sidebar !== undefined ? sidebar : (existing.sidebar || {}));
-
-  writeStoredSettings({
-    ...existing,
-    branding: nextBranding,
-    sidebar: nextSidebar
-  });
-
-  applyBrandingPreview(nextBranding);
-  syncRuntimeSidebar(nextSidebar);
-  dispatchSidebarChange(nextSidebar);
-
-  return {
-    branding: nextBranding,
-    sidebar: nextSidebar
-  };
-}
-
-function buildDemoSettingsSnapshot(savedSettings) {
-  const savedBranding = savedSettings.branding || {};
-  const isAdvanced = canUseAdvancedCustomizations();
-
-  return {
-    branding: {
-      appName: isAdvanced
-        ? (savedBranding.appName || TGK_DEMO_DEFAULTS.branding.appName)
-        : TGK_DEMO_DEFAULTS.branding.appName,
-      brandColor: isAdvanced
-        ? normalizeHexColor(savedBranding.brandColor)
-        : TGK_DEMO_DEFAULTS.branding.brandColor
-    },
-    sidebar: isAdvanced
-      ? resolveSidebarSettings(savedSettings.sidebar || {})
-      : { iamProductKeys: [] },
-    DEFAULTS: TGK_DEMO_DEFAULTS
-  };
 }
 
 function applyThemeColor(brandColor) {
@@ -258,13 +317,10 @@ function applyBrandingPreview(nextBranding = {}) {
   const sourceBranding = canUseAdvancedCustomizations()
     ? nextBranding
     : TGK_DEMO_DEFAULTS.branding;
-  const branding = {
-    appName: resolveBrandingAppName(sourceBranding.appName),
-    brandColor: normalizeHexColor(sourceBranding.brandColor)
-  };
+  const branding = normalizeBrandingSettings(sourceBranding);
 
   if (!window.TGK_DEMO) {
-    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
+    window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings().current);
   }
 
   window.TGK_DEMO.branding = {
@@ -275,6 +331,41 @@ function applyBrandingPreview(nextBranding = {}) {
   applyThemeColor(branding.brandColor);
   window.dispatchEvent(new CustomEvent(TGK_BRANDING_EVENT, { detail: branding }));
   return branding;
+}
+
+function applyCurrentSettings(currentSettings = {}) {
+  const resolvedCurrent = resolveCurrentSettings(currentSettings);
+  applyBrandingPreview(resolvedCurrent.branding);
+  syncRuntimeSidebar(resolvedCurrent.sidebar);
+  dispatchSidebarChange(resolvedCurrent.sidebar);
+  return resolvedCurrent;
+}
+
+function commitSettingsStore(nextStore, { applyCurrent = true } = {}) {
+  const normalizedStore = normalizeStoredSettings(nextStore);
+  writeStoredSettings(normalizedStore);
+
+  if (applyCurrent) {
+    applyCurrentSettings(normalizedStore.current);
+  }
+
+  return normalizedStore;
+}
+
+function persistCurrentSettings({ branding, sidebar } = {}) {
+  const existing = readStoredSettings();
+  const nextCurrent = resolveCurrentSettings({
+    branding: {
+      ...(existing.current.branding || {}),
+      ...(branding || {})
+    },
+    sidebar: sidebar !== undefined ? sidebar : (existing.current.sidebar || {})
+  });
+
+  return commitSettingsStore({
+    current: nextCurrent,
+    profiles: existing.profiles
+  });
 }
 
 function createBrandingState() {
@@ -303,18 +394,41 @@ function createBrandingState() {
 }
 
 (function initializeDemoTheme() {
-  window.TGK_DEMO = buildDemoSettingsSnapshot(readStoredSettings());
+  const store = readStoredSettings();
+  window.TGK_DEMO = buildDemoSettingsSnapshot(store.current);
   applyBrandingPreview(window.TGK_DEMO.branding);
 })();
 
 function settingsPanelState() {
+  const initialStore = readStoredSettings();
+
   return {
-    appName: window.TGK_DEMO.branding.appName,
-    brandColor: window.TGK_DEMO.branding.brandColor,
-    sidebarProductKeys: [...(window.TGK_DEMO.sidebar?.iamProductKeys || [])],
+    appNameDraft: initialStore.current.branding.appName,
+    brandColor: initialStore.current.branding.brandColor,
+    sidebarProductKeys: [...(initialStore.current.sidebar?.iamProductKeys || [])],
+    profiles: initialStore.profiles,
     docusignConsentBusy: false,
     docusignConsentStatus: 'idle',
     docusignConsentMessage: '',
+
+    syncStateFromCurrent(nextCurrent = {}) {
+      const resolvedCurrent = resolveCurrentSettings(nextCurrent);
+      this.appNameDraft = resolvedCurrent.branding.appName;
+      this.brandColor = resolvedCurrent.branding.brandColor;
+      this.sidebarProductKeys = [...resolvedCurrent.sidebar.iamProductKeys];
+    },
+
+    syncProfiles(nextProfiles = []) {
+      const seenIds = new Set();
+      this.profiles = nextProfiles.map((profile) => normalizeProfile(profile, seenIds));
+    },
+
+    currentBranding() {
+      return normalizeBrandingSettings({
+        appName: this.appNameDraft,
+        brandColor: this.brandColor
+      });
+    },
 
     currentSidebar() {
       return resolveSidebarSettings({
@@ -322,8 +436,51 @@ function settingsPanelState() {
       });
     },
 
+    currentSettings() {
+      return {
+        branding: this.currentBranding(),
+        sidebar: this.currentSidebar()
+      };
+    },
+
     sidebarOptions() {
       return TGK_IAM_PRODUCT_OPTIONS;
+    },
+
+    profileMatchesCurrent(profile = {}) {
+      const current = this.currentSettings();
+      const resolvedProfile = resolveCurrentSettings({
+        branding: profile.branding || {},
+        sidebar: profile.sidebar || {}
+      });
+
+      return current.branding.appName === resolvedProfile.branding.appName
+        && current.branding.brandColor === resolvedProfile.branding.brandColor
+        && JSON.stringify(current.sidebar.iamProductKeys) === JSON.stringify(resolvedProfile.sidebar.iamProductKeys);
+    },
+
+    promptProfileName(defaultName = this.currentBranding().appName) {
+      const response = window.prompt('Profile name', String(defaultName || this.currentBranding().appName || '').trim());
+      if (response === null) {
+        return null;
+      }
+
+      const trimmed = String(response).trim();
+      return trimmed || this.currentBranding().appName;
+    },
+
+    getProfile(profileId) {
+      const id = String(profileId || '').trim();
+      return this.profiles.find((profile) => profile.id === id) || null;
+    },
+
+    profileBadgeText(profile = {}) {
+      return getBrandingBadgeText(profile.branding?.appName || profile.name || TGK_DEMO_DEFAULTS.branding.appName);
+    },
+
+    profileBadgeStyle(profile = {}) {
+      const branding = normalizeBrandingSettings(profile.branding || {});
+      return '--tgk-profile-preview-color:' + branding.brandColor + ';--tgk-profile-preview-light:' + deriveBrandLight(branding.brandColor) + ';';
     },
 
     get docusignConfig() {
@@ -383,21 +540,24 @@ function settingsPanelState() {
     },
 
     applySettingsUpdate() {
-      const nextState = persistDemoSettings({
-        branding: {
-          appName: this.appName,
-          brandColor: this.brandColor
-        },
-        sidebar: this.currentSidebar()
-      });
-
-      this.appName = nextState.branding.appName;
-      this.brandColor = nextState.branding.brandColor;
-      this.sidebarProductKeys = [...nextState.sidebar.iamProductKeys];
+      const nextStore = persistCurrentSettings(this.currentSettings());
+      this.syncStateFromCurrent(nextStore.current);
+      this.syncProfiles(nextStore.profiles);
     },
 
-    updateAppName(value) {
-      this.appName = value;
+    previewAppName() {
+      const draftValue = String(this.appNameDraft || '');
+      if (!draftValue.trim()) {
+        return;
+      }
+
+      applyBrandingPreview({
+        appName: draftValue,
+        brandColor: this.brandColor
+      });
+    },
+
+    commitAppName() {
       this.applySettingsUpdate();
     },
 
@@ -406,11 +566,95 @@ function settingsPanelState() {
       this.applySettingsUpdate();
     },
 
-    resetAllCustomizations() {
-      this.appName = TGK_DEMO_DEFAULTS.branding.appName;
+    resetAllDefaults() {
+      this.appNameDraft = TGK_DEMO_DEFAULTS.branding.appName;
       this.brandColor = TGK_DEMO_DEFAULTS.branding.brandColor;
       this.sidebarProductKeys = [...TGK_DEMO_DEFAULTS.sidebar.iamProductKeys];
       this.applySettingsUpdate();
+    },
+
+    saveCurrentAsProfile() {
+      const profileName = this.promptProfileName();
+      if (!profileName) {
+        return;
+      }
+
+      const timestamp = new Date().toISOString();
+      const existing = readStoredSettings();
+      const nextProfile = normalizeProfile({
+        id: createProfileId(),
+        name: profileName,
+        ...this.currentSettings(),
+        createdAt: timestamp,
+        updatedAt: timestamp
+      });
+      const nextStore = commitSettingsStore({
+        current: this.currentSettings(),
+        profiles: [...existing.profiles, nextProfile]
+      });
+
+      this.syncStateFromCurrent(nextStore.current);
+      this.syncProfiles(nextStore.profiles);
+    },
+
+    loadProfile(profileId) {
+      const profile = this.getProfile(profileId);
+      if (!profile) {
+        return;
+      }
+
+      const nextStore = persistCurrentSettings({
+        branding: profile.branding,
+        sidebar: profile.sidebar
+      });
+
+      this.syncStateFromCurrent(nextStore.current);
+      this.syncProfiles(nextStore.profiles);
+    },
+
+    saveProfile(profileId) {
+      const existing = readStoredSettings();
+      const profile = existing.profiles.find((item) => item.id === profileId);
+      if (!profile) {
+        return;
+      }
+
+      if (!window.confirm('Replace "' + profile.name + '" with the current settings?')) {
+        return;
+      }
+
+      const nextProfile = normalizeProfile({
+        ...profile,
+        ...this.currentSettings(),
+        updatedAt: new Date().toISOString()
+      });
+      const nextStore = commitSettingsStore({
+        current: this.currentSettings(),
+        profiles: existing.profiles.map((item) => (item.id === profileId ? nextProfile : item))
+      });
+
+      this.syncStateFromCurrent(nextStore.current);
+      this.syncProfiles(nextStore.profiles);
+    },
+
+    deleteProfile(profileId) {
+      const profile = this.getProfile(profileId);
+      if (!profile) {
+        return;
+      }
+
+      if (!window.confirm('Delete "' + profile.name + '"?')) {
+        return;
+      }
+
+      const existing = readStoredSettings();
+      const nextStore = commitSettingsStore({
+        current: this.currentSettings(),
+        profiles: existing.profiles.filter((item) => item.id !== profileId)
+      });
+
+      this.syncStateFromCurrent(nextStore.current);
+      this.syncProfiles(nextStore.profiles);
     }
   };
 }
