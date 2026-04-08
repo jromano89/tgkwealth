@@ -6,7 +6,7 @@
   const DOCUSIGN_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
   
   const BACKEND_URL = 'https://backend-tgk.up.railway.app';
-  const DOCUSIGN_BASE_URL = 'https://api-d.docusign.com';
+  const DOCUSIGN_IAM_BASE_URL = 'https://api-d.docusign.com';
   const DOCUSIGN_ESIGN_BASE_URL = 'https://demo.docusign.net/restapi';
   const ADVISOR_ID = '4871abfa-8868-4501-b068-5936c6363e6b';
   const BRAND_COLOR = '#3b5bdb';
@@ -68,7 +68,7 @@
     appName: APP_NAME,
     brandColor: BRAND_COLOR,
     backendUrl: resolveBackendUrl(),
-    docusignBaseUrl: DOCUSIGN_BASE_URL,
+    docusignIamBaseUrl: DOCUSIGN_IAM_BASE_URL,
     docusignEsignBaseUrl: DOCUSIGN_ESIGN_BASE_URL,
     docusignAuth: {
       userId: DOCUSIGN_USER_ID,

@@ -267,7 +267,7 @@
 
   const TGK_API = {
     baseUrl: window.TGK_CONFIG?.backendUrl || 'http://localhost:3000',
-    docusignBaseUrl: window.TGK_CONFIG?.docusignBaseUrl || 'https://api-d.docusign.com',
+    docusignIamBaseUrl: window.TGK_CONFIG?.docusignIamBaseUrl || 'https://api-d.docusign.com',
     docusignUserId: window.TGK_CONFIG?.docusignAuth?.userId || '',
     docusignAccountId: window.TGK_CONFIG?.docusignAuth?.accountId || '',
     docusignScopes: window.TGK_CONFIG?.docusignAuth?.scopes || '',
@@ -343,7 +343,7 @@
     getDocusignAppOrigin() {
       const defaultOrigin = 'https://apps-d.docusign.com';
       try {
-        const configured = this.docusignBaseUrl || defaultOrigin;
+        const configured = this.docusignIamBaseUrl || defaultOrigin;
         const url = new URL(configured, window.location.href);
         url.host = url.host.replace(/^api(?=[.-])/, 'apps');
         return url.origin;
@@ -613,7 +613,7 @@
     buildDocusignProxyOptions(options = {}) {
       return {
         ...options,
-        baseUrl: options.baseUrl || this.docusignBaseUrl,
+        baseUrl: options.baseUrl || this.docusignIamBaseUrl,
         url: this.replaceDocusignAccountId(options.url),
         path: this.replaceDocusignAccountId(options.path)
       };
