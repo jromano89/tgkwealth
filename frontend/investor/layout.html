@@ -310,7 +310,7 @@
       <div x-show="tab === 'monitor'" data-partial="../shared/partials/monitor-view.html"></div>
 
       <!-- IAM PRODUCT PLACEHOLDER -->
-      <div x-show="currentIamPlaceholder" data-partial="../shared/partials/iam-placeholder-view.html"></div>
+      <div x-show="getCurrentIamPlaceholder()" data-partial="../shared/partials/iam-placeholder-view.html"></div>
 
       <!-- SETTINGS TAB -->
       <div x-show="canSeeSettings() && tab === 'settings'">

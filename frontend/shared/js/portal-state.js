@@ -81,11 +81,11 @@
         return this[resolvedCurrentKey] === productKey;
       },
 
-      get currentIamProduct() {
+      getCurrentIamProduct() {
         return getIamProduct(this[resolvedCurrentKey]);
       },
 
-      get currentIamPlaceholder() {
+      getCurrentIamPlaceholder() {
         return getIamProductPlaceholder(this[resolvedCurrentKey]);
       },
 

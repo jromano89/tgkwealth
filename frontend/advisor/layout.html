@@ -434,7 +434,7 @@
     <div x-show="view === 'monitor'" class="tgk-page-shell u-scroll-y" data-partial="../shared/partials/monitor-view.html"></div>
 
     <!-- IAM PRODUCT PLACEHOLDER -->
-    <div x-show="currentIamPlaceholder" class="tgk-page-shell" data-partial="../shared/partials/iam-placeholder-view.html"></div>
+    <div x-show="getCurrentIamPlaceholder()" class="tgk-page-shell" data-partial="../shared/partials/iam-placeholder-view.html"></div>
 
     <!-- SETTINGS VIEW -->
     <div x-show="canSeeSettings() && view === 'settings'" class="tgk-page-shell">
