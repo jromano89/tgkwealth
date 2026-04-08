@@ -348,14 +348,10 @@ function createEnvelopeModalHelpers() {
       };
 
       try {
-        const response = await TGK_API.requestResponse('/api/proxy', {
-          method: 'POST',
-          body: {
-            method: 'GET',
-            path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
-            query: { certificate: 'true' },
-            authMode: 'docusign'
-          }
+        const response = await TGK_API.proxyDocusignResponse({
+          method: 'GET',
+          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
+          query: { certificate: 'true' }
         });
         const blob = await response.blob();
         const previewUrl = window.URL.createObjectURL(blob);
@@ -401,10 +397,9 @@ function createEnvelopeModalHelpers() {
       };
 
       try {
-        const result = await TGK_API.proxy({
+        const result = await TGK_API.proxyDocusign({
           method: 'GET',
-          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`,
-          authMode: 'docusign'
+          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`
         });
         const events = (result.auditEvents || [])
           .map((event) => {
@@ -496,6 +491,43 @@ function sharedSettingsTemplate() {
                     </label>
                   </template>
                 </div>
+              </div>
+
+              <div class="tgk-field-card">
+                <label class="tgk-field-label">Docusign Consent</label>
+                <p class="tgk-help-text">User/account/scopes are configured in <code>frontend/config.js</code>. This only opens the admin consent popup for JWT grant access.</p>
+                <div class="tgk-settings-toggle-list">
+                  <div class="tgk-settings-toggle-row">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title">User ID</div>
+                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.userId || 'Not configured'"></div>
+                    </div>
+                  </div>
+                  <div class="tgk-settings-toggle-row">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title">Account ID</div>
+                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.accountId || 'Not configured'"></div>
+                    </div>
+                  </div>
+                  <div class="tgk-settings-toggle-row">
+                    <div class="tgk-settings-toggle-copy">
+                      <div class="tgk-settings-toggle-title">Scopes</div>
+                      <div class="tgk-settings-toggle-text" x-text="docusignConfig.scopes || 'Not configured'"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="tgk-inline-actions" style="margin-top:16px;">
+                  <button
+                    @click="grantDocusignConsent()"
+                    :disabled="docusignConsentBusy || !hasDocusignAuthConfig()"
+                    class="tgk-button tgk-button--secondary"
+                    x-text="docusignConsentBusy ? 'Waiting...' : 'Grant Consent'"></button>
+                </div>
+                <p
+                  class="tgk-help-text"
+                  style="margin-top:12px;"
+                  :style="docusignConsentStatus === 'error' ? 'color:#b42318;' : docusignConsentStatus === 'success' ? 'color:#067647;' : ''"
+                  x-text="docusignConsentMessage || (!hasDocusignAuthConfig() ? 'Add userId, accountId, and scopes in frontend/config.js first.' : 'No consent action in progress.')"></p>
               </div>
 
               <div class="tgk-inline-actions">

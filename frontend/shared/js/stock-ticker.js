@@ -170,8 +170,7 @@ function stockTicker() {
       try {
         const csv = await TGK_API.proxyText({
           method: 'GET',
-          url: `https://stooq.com/q/l/?s=${symbols.map(symbol => symbol.feed).join('+')}&i=d`,
-          authMode: 'none'
+          url: `https://stooq.com/q/l/?s=${symbols.map(symbol => symbol.feed).join('+')}&i=d`
         });
         return parseQuotes(csv);
       } catch (error) {

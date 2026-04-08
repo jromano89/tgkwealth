@@ -1,6 +1,5 @@
 const BASE_URL = String(process.env.TGK_SEED_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
 const APP_SLUG = process.env.TGK_SEED_APP_SLUG || 'tgk-wealth';
-const DEFAULT_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
 
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
@@ -205,11 +204,6 @@ async function request(path, options = {}) {
 }
 
 async function main() {
-  await request('/api/auth/scopes', {
-    method: 'POST',
-    body: JSON.stringify({ scopes: DEFAULT_SCOPES })
-  });
-
   for (const employee of employees) {
     await request('/api/data/employees', { method: 'POST', body: JSON.stringify(employee) });
   }

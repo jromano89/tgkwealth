@@ -1,13 +1,14 @@
 /**
  * TGK Demo API Client
- * Thin fetch wrapper that handles sessions, errors, and the backend base URL.
+ * Thin fetch wrapper that handles errors, the backend base URL, and DocuSign token fetches.
  * Include this in any frontend via <script src="../shared/js/api-client.js"></script>
  */
 (function () {
-  const SESSION_CACHE_TTL_MS = 30000;
-  const DOCUSIGN_PREWARM_SUCCESS_TTL_MS = 10 * 60 * 1000;
-  const DOCUSIGN_PREWARM_RETRY_TTL_MS = 30000;
+  const DOCUSIGN_CONSENT_WINDOW_NAME = 'tgk-docusign-consent';
+  const DOCUSIGN_CONSENT_POLL_MS = 400;
+  const DOCUSIGN_TOKEN_REFRESH_BUFFER_MS = 60000;
   const SELECTED_CUSTOMER_STORAGE_PREFIX = 'tgk_selected_customer:';
+  const DOCUSIGN_TOKEN_STORAGE_PREFIX = 'tgk_docusign_token:';
 
   function splitDisplayName(displayName) {
     const parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
@@ -221,32 +222,59 @@
       url,
       path,
       baseUrl,
-      authMode = 'none',
-      bearerToken,
+      accessToken,
       headers,
       query,
       body
     } = options || {};
 
-    return { method, url, path, baseUrl, authMode, bearerToken, headers, query, body };
+    return { method, url, path, baseUrl, accessToken, headers, query, body };
   }
 
   function getSelectedCustomerStorageKey(appSlug) {
     return `${SELECTED_CUSTOMER_STORAGE_PREFIX}${String(appSlug || 'default').trim().toLowerCase()}`;
   }
 
+  function getDocusignTokenStorageKey(config = {}) {
+    const parts = [
+      String(config.baseUrl || '').trim().toLowerCase(),
+      String(config.userId || '').trim().toLowerCase(),
+      String(config.accountId || '').trim().toLowerCase(),
+      String(config.scopes || '').trim().toLowerCase()
+    ];
+
+    return `${DOCUSIGN_TOKEN_STORAGE_PREFIX}${parts.join(':')}`;
+  }
+
+  function normalizeDocusignTokenRecord(value) {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const accessToken = String(value.accessToken || value.access_token || '').trim();
+    const expiresAtRaw = value.expiresAt || value.expires_at || '';
+    const expiresAt = new Date(expiresAtRaw).getTime();
+
+    if (!accessToken || Number.isNaN(expiresAt)) {
+      return null;
+    }
+
+    return {
+      accessToken,
+      expiresAt
+    };
+  }
+
   const TGK_API = {
     baseUrl: window.TGK_CONFIG?.backendUrl || 'http://localhost:3000',
     docusignBaseUrl: window.TGK_CONFIG?.docusignBaseUrl || 'https://api-d.docusign.com',
+    docusignUserId: window.TGK_CONFIG?.docusignAuth?.userId || '',
+    docusignAccountId: window.TGK_CONFIG?.docusignAuth?.accountId || '',
+    docusignScopes: window.TGK_CONFIG?.docusignAuth?.scopes || '',
     appSlug: window.TGK_CONFIG?.appSlug || '',
     appName: window.TGK_CONFIG?.appName || '',
-    _sessionCache: null,
-    _sessionCacheExpiresAt: 0,
-    _sessionPromise: null,
-    _docusignPrewarmResult: null,
-    _docusignPrewarmExpiresAt: 0,
-    _docusignPrewarmPromise: null,
-    _docusignWarmScheduled: false,
+    _docusignTokenCache: null,
+    _docusignTokenPromise: null,
 
     withAppQuery(path) {
       if (!this.appSlug) {
@@ -312,93 +340,6 @@
       return this.request(path, { method: 'DELETE' });
     },
 
-    cacheSession(session) {
-      this._sessionCache = session;
-      this._sessionCacheExpiresAt = Date.now() + SESSION_CACHE_TTL_MS;
-    },
-
-    clearDocusignPrewarmCache() {
-      this._docusignPrewarmResult = null;
-      this._docusignPrewarmExpiresAt = 0;
-      this._docusignPrewarmPromise = null;
-    },
-
-    clearSessionCache() {
-      this._sessionCache = null;
-      this._sessionCacheExpiresAt = 0;
-      this._sessionPromise = null;
-      this.clearDocusignPrewarmCache();
-    },
-
-    async getSession(options = {}) {
-      const force = !!options.force;
-      if (!force && this._sessionCache && this._sessionCacheExpiresAt > Date.now()) {
-        return this._sessionCache;
-      }
-
-      if (!force && this._sessionPromise) {
-        return this._sessionPromise;
-      }
-
-      this._sessionPromise = this.get('/api/auth/session')
-        .then((session) => {
-          this.cacheSession(session);
-          return session;
-        })
-        .finally(() => {
-          this._sessionPromise = null;
-        });
-
-      return this._sessionPromise;
-    },
-
-    async prewarmDocusignAuth(options = {}) {
-      const force = !!options.force;
-      if (!force && this._docusignPrewarmResult && this._docusignPrewarmExpiresAt > Date.now()) {
-        return this._docusignPrewarmResult;
-      }
-
-      if (!force && this._docusignPrewarmPromise) {
-        return this._docusignPrewarmPromise;
-      }
-
-      this._docusignPrewarmPromise = this.get('/api/auth/prewarm')
-        .then((result) => {
-          if (result?.session) {
-            this.cacheSession(result.session);
-          }
-          this._docusignPrewarmResult = result;
-          this._docusignPrewarmExpiresAt = Date.now() + (result?.warmed ? DOCUSIGN_PREWARM_SUCCESS_TTL_MS : DOCUSIGN_PREWARM_RETRY_TTL_MS);
-          return result;
-        })
-        .finally(() => {
-          this._docusignPrewarmPromise = null;
-        });
-
-      return this._docusignPrewarmPromise;
-    },
-
-    async logout() {
-      this.clearSessionCache();
-      return this.post('/api/auth/logout');
-    },
-
-    async selectAccount(accountId) {
-      const result = await this.post('/api/auth/account', { accountId });
-      this.clearSessionCache();
-      return result;
-    },
-
-    async saveDocusignScopes(scopes) {
-      const result = await this.post('/api/auth/scopes', { scopes });
-      this.clearSessionCache();
-      return result;
-    },
-
-    getBackendOrigin() {
-      return new URL(this.baseUrl, window.location.href).origin;
-    },
-
     getDocusignAppOrigin() {
       const defaultOrigin = 'https://apps-d.docusign.com';
       try {
@@ -460,44 +401,222 @@
       }
     },
 
-    async warmDocusignExperience() {
+    warmDocusignExperience() {
       this.warmOrigin(this.getDocusignAppOrigin());
-      return this.prewarmDocusignAuth().catch(function () {
-        return null;
-      });
     },
 
-    scheduleDocusignWarmup() {
-      if (this._docusignWarmScheduled) {
-        return;
-      }
-
-      this._docusignWarmScheduled = true;
-      const warm = () => {
-        this.warmDocusignExperience();
+    getDocusignAuthConfig() {
+      return {
+        userId: String(this.docusignUserId || '').trim(),
+        accountId: String(this.docusignAccountId || '').trim(),
+        scopes: String(this.docusignScopes || '').trim()
       };
-
-      if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(warm, { timeout: 2500 });
-        return;
-      }
-
-      window.setTimeout(warm, 1200);
     },
 
-    getLoginUrl(redirect, scopes, display) {
-      const params = new URLSearchParams({
-        redirect: redirect || window.location.href,
-        app: this.appSlug || '',
-        appName: this.appName || ''
-      });
-      if (scopes) {
-        params.set('scopes', scopes);
+    hasDocusignAuthConfig() {
+      const config = this.getDocusignAuthConfig();
+      return !!(config.userId && config.accountId && config.scopes);
+    },
+
+    getDocusignConsentUrl() {
+      const scopes = this.getDocusignAuthConfig().scopes;
+      if (!scopes) {
+        throw new Error('Missing Docusign scopes in frontend config.');
       }
-      if (display) {
-        params.set('display', display);
-      }
+
+      const params = new URLSearchParams({ scopes });
       return `${this.baseUrl}/api/auth/login?${params.toString()}`;
+    },
+
+    startDocusignConsent() {
+      const backendOrigin = new URL(this.baseUrl, window.location.href).origin;
+      const popup = window.open(
+        this.getDocusignConsentUrl(),
+        DOCUSIGN_CONSENT_WINDOW_NAME,
+        'popup=yes,width=540,height=720,resizable=yes,scrollbars=yes'
+      );
+
+      if (!popup) {
+        throw new Error('Popup blocked. Allow popups and retry.');
+      }
+
+      if (typeof popup.focus === 'function') {
+        popup.focus();
+      }
+
+      return new Promise((resolve, reject) => {
+        let settled = false;
+
+        const cleanup = () => {
+          window.removeEventListener('message', handleMessage);
+          window.clearInterval(pollTimer);
+        };
+
+        const finish = (callback) => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          cleanup();
+          callback();
+        };
+
+        const handleMessage = (event) => {
+          const payload = event.data;
+          if (event.origin !== backendOrigin || !payload || payload.source !== 'tgk-docusign-consent') {
+            return;
+          }
+
+          if (payload.status === 'success') {
+            finish(() => resolve(payload));
+            return;
+          }
+
+          finish(() => reject(new Error(payload.message || 'Docusign consent failed.')));
+        };
+
+        const pollTimer = window.setInterval(() => {
+          if (!popup.closed) {
+            return;
+          }
+
+          finish(() => reject(new Error('Docusign consent window was closed before completion.')));
+        }, DOCUSIGN_CONSENT_POLL_MS);
+
+        window.addEventListener('message', handleMessage);
+      });
+    },
+
+    getDocusignTokenStorageKey() {
+      return getDocusignTokenStorageKey({
+        baseUrl: this.baseUrl,
+        ...this.getDocusignAuthConfig()
+      });
+    },
+
+    isDocusignTokenUsable(tokenRecord, bufferMs = DOCUSIGN_TOKEN_REFRESH_BUFFER_MS) {
+      return !!(tokenRecord?.accessToken && tokenRecord.expiresAt > Date.now() + bufferMs);
+    },
+
+    readStoredDocusignToken() {
+      try {
+        const rawValue = window.localStorage.getItem(this.getDocusignTokenStorageKey());
+        if (!rawValue) {
+          return null;
+        }
+
+        return normalizeDocusignTokenRecord(JSON.parse(rawValue));
+      } catch (error) {
+        return null;
+      }
+    },
+
+    writeStoredDocusignToken(tokenRecord) {
+      try {
+        window.localStorage.setItem(this.getDocusignTokenStorageKey(), JSON.stringify({
+          accessToken: tokenRecord.accessToken,
+          expiresAt: new Date(tokenRecord.expiresAt).toISOString()
+        }));
+      } catch (error) {
+        // Ignore localStorage write failures.
+      }
+    },
+
+    clearDocusignTokenCache() {
+      this._docusignTokenCache = null;
+      this._docusignTokenPromise = null;
+
+      try {
+        window.localStorage.removeItem(this.getDocusignTokenStorageKey());
+      } catch (error) {
+        // Ignore localStorage write failures.
+      }
+    },
+
+    readCachedDocusignToken() {
+      if (this.isDocusignTokenUsable(this._docusignTokenCache)) {
+        return this._docusignTokenCache;
+      }
+
+      const storedToken = this.readStoredDocusignToken();
+      if (this.isDocusignTokenUsable(storedToken)) {
+        this._docusignTokenCache = storedToken;
+        return storedToken;
+      }
+
+      return null;
+    },
+
+    async getDocusignAccessToken(options = {}) {
+      const force = !!options.force;
+      const config = this.getDocusignAuthConfig();
+
+      if (!config.userId) {
+        throw new Error('Missing Docusign user ID in frontend config.');
+      }
+      if (!config.accountId) {
+        throw new Error('Missing Docusign account ID in frontend config.');
+      }
+      if (!config.scopes) {
+        throw new Error('Missing Docusign scopes in frontend config.');
+      }
+
+      if (!force) {
+        const cachedToken = this.readCachedDocusignToken();
+        if (cachedToken) {
+          return cachedToken.accessToken;
+        }
+      }
+
+      if (this._docusignTokenPromise) {
+        const tokenRecord = await this._docusignTokenPromise;
+        return tokenRecord.accessToken;
+      }
+
+      this._docusignTokenPromise = this.post('/api/auth/token', config)
+        .then((payload) => {
+          const tokenRecord = normalizeDocusignTokenRecord(payload);
+          if (!tokenRecord) {
+            throw new Error('Docusign token response was invalid.');
+          }
+
+          this._docusignTokenCache = tokenRecord;
+          this.writeStoredDocusignToken(tokenRecord);
+          return tokenRecord;
+        })
+        .catch((error) => {
+          this.clearDocusignTokenCache();
+          throw error;
+        })
+        .finally(() => {
+          this._docusignTokenPromise = null;
+        });
+
+      const tokenRecord = await this._docusignTokenPromise;
+      return tokenRecord.accessToken;
+    },
+
+    replaceDocusignAccountId(value) {
+      if (typeof value !== 'string' || !value.includes('{accountId}')) {
+        return value;
+      }
+
+      const accountId = this.getDocusignAuthConfig().accountId;
+      if (!accountId) {
+        throw new Error('Missing Docusign account ID in frontend config.');
+      }
+
+      return value.replace(/\{accountId\}/g, accountId);
+    },
+
+    buildDocusignProxyOptions(options = {}) {
+      return {
+        ...options,
+        baseUrl: options.baseUrl || this.docusignBaseUrl,
+        url: this.replaceDocusignAccountId(options.url),
+        path: this.replaceDocusignAccountId(options.path)
+      };
     },
 
     getEmployees(params) {
@@ -587,6 +706,13 @@
       });
     },
 
+    proxyResponse(options) {
+      return this.requestResponse('/api/proxy', {
+        method: 'POST',
+        body: buildProxyPayload(options)
+      });
+    },
+
     proxyText(options) {
       return this.requestText('/api/proxy', {
         method: 'POST',
@@ -594,12 +720,24 @@
       });
     },
 
-    triggerMaestroWorkflow(workflowId, body) {
+    async proxyDocusign(options) {
       return this.proxy({
+        ...this.buildDocusignProxyOptions(options),
+        accessToken: await this.getDocusignAccessToken()
+      });
+    },
+
+    async proxyDocusignResponse(options) {
+      return this.proxyResponse({
+        ...this.buildDocusignProxyOptions(options),
+        accessToken: await this.getDocusignAccessToken()
+      });
+    },
+
+    triggerMaestroWorkflow(workflowId, body) {
+      return this.proxyDocusign({
         method: 'POST',
         path: `/v1/accounts/{accountId}/workflows/${workflowId}/actions/trigger`,
-        baseUrl: this.docusignBaseUrl,
-        authMode: 'docusign',
         body
       });
     }

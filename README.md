@@ -54,7 +54,9 @@ Useful URLs:
 
 - `advanced` is the default mode.
 - `normal` mode uses default branding and hides Settings + IAM Products.
-- Workflow IDs and backend URLs live in `frontend/config.js`.
+- Workflow IDs, backend URLs, and DocuSign `userId` / `accountId` / `scopes` live in `frontend/config.js`.
+- The backend-hosted DocuSign consent callback is fixed at `/api/auth/callback`, so frontend hosting changes do not require new redirect URIs in DocuSign.
+- The frontend fetches DocuSign access tokens from `POST /api/auth/token` and caches them locally; DocuSign API calls still go through `POST /api/proxy`.
 
 ## Deployment
 

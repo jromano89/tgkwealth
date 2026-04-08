@@ -1,23 +1,13 @@
 const express = require('express');
-const { getDb } = require('../database');
-const { getAccessToken } = require('../docusign-auth');
-const {
-  createError,
-  getRequiredApp,
-  isPlainObject,
-  requireSelectedDocusignAccount,
-  route
-} = require('../utils');
+const { createError, isPlainObject, route } = require('../utils');
 
 const router = express.Router();
-const AUTH_MODES = new Set(['none', 'bearer', 'docusign']);
 const BLOCKED_HEADERS = new Set(['connection', 'content-length', 'cookie', 'host', 'origin', 'referer', 'transfer-encoding']);
 
 router.post('/', route(async (req, res) => {
   const proxyRequest = normalizeProxyRequest(req.body);
-  const docusign = proxyRequest.authMode === 'docusign' ? getDocusignSession(req) : null;
-  const headers = await buildHeaders(req.headers.accept, proxyRequest, docusign);
-  const response = await fetch(buildTargetUrl(proxyRequest, docusign), {
+  const headers = buildHeaders(req.headers.accept, proxyRequest);
+  const response = await fetch(buildTargetUrl(proxyRequest), {
     method: proxyRequest.method,
     headers,
     body: ['GET', 'HEAD'].includes(proxyRequest.method) ? undefined : serializeBody(proxyRequest.body, headers)
@@ -31,11 +21,6 @@ function normalizeProxyRequest(body) {
     throw createError(400, 'Proxy requests must send a JSON object.');
   }
 
-  const authMode = String(body.authMode || 'none').toLowerCase();
-  if (!AUTH_MODES.has(authMode)) {
-    throw createError(400, `Unsupported authMode: ${authMode}`);
-  }
-
   const method = String(body.method || 'GET').toUpperCase();
   if (!/^[A-Z]+$/.test(method)) {
     throw createError(400, `Unsupported method: ${method}`);
@@ -47,37 +32,14 @@ function normalizeProxyRequest(body) {
 
   return {
     method,
-    authMode,
     url: body.url,
     path: body.path,
     baseUrl: body.baseUrl || process.env.DOCUSIGN_API_BASE || 'https://demo.docusign.net/restapi',
-    bearerToken: body.bearerToken,
+    accessToken: String(body.accessToken || '').trim(),
     headers: isPlainObject(body.headers) ? body.headers : {},
     query: isPlainObject(body.query) ? body.query : null,
     body: body.body
   };
-}
-
-function getDocusignSession(req) {
-  const db = getDb();
-  const app = requireSelectedDocusignAccount(getRequiredApp(db, req));
-  const scopes = String(app.docusign_scopes || '').trim();
-
-  if (!scopes) {
-    throw createError(409, 'Docusign scopes are not configured for this app. Open Settings and save the requested scopes.');
-  }
-
-  return {
-    userId: app.docusign_user_id,
-    accountId: app.docusign_account_id,
-    scopes
-  };
-}
-
-function replaceDocusignPlaceholders(value, docusign) {
-  return docusign && typeof value === 'string'
-    ? value.replace(/\{accountId\}/g, docusign.accountId || '')
-    : value;
 }
 
 function appendQuery(url, query) {
@@ -113,12 +75,11 @@ function normalizeProxyPath(baseUrl, path) {
   return rawPath.replace(/^\/+/, '');
 }
 
-function buildTargetUrl(proxyRequest, docusign) {
-  const base = replaceDocusignPlaceholders(proxyRequest.baseUrl, docusign);
-  const baseUrl = new URL(base.endsWith('/') ? base : `${base}/`);
+function buildTargetUrl(proxyRequest) {
+  const baseUrl = new URL(proxyRequest.baseUrl.endsWith('/') ? proxyRequest.baseUrl : `${proxyRequest.baseUrl}/`);
   const target = proxyRequest.url
-    ? new URL(replaceDocusignPlaceholders(proxyRequest.url, docusign))
-    : new URL(normalizeProxyPath(baseUrl, replaceDocusignPlaceholders(proxyRequest.path, docusign)), baseUrl);
+    ? new URL(proxyRequest.url)
+    : new URL(normalizeProxyPath(baseUrl, proxyRequest.path), baseUrl);
 
   appendQuery(target, proxyRequest.query);
   return target.toString();
@@ -139,7 +100,7 @@ function hasHeader(headers, name) {
   return Object.keys(headers).some((key) => key.toLowerCase() === expected);
 }
 
-async function buildHeaders(acceptHeader, proxyRequest, docusign) {
+function buildHeaders(acceptHeader, proxyRequest) {
   const headers = {};
 
   if (acceptHeader) {
@@ -156,15 +117,8 @@ async function buildHeaders(acceptHeader, proxyRequest, docusign) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (proxyRequest.authMode === 'bearer') {
-    if (!proxyRequest.bearerToken) {
-      throw createError(400, 'Missing bearerToken for authMode=bearer');
-    }
-    headers.Authorization = `Bearer ${proxyRequest.bearerToken}`;
-  }
-
-  if (proxyRequest.authMode === 'docusign') {
-    headers.Authorization = `Bearer ${await getAccessToken(docusign.userId, docusign.accountId, docusign.scopes)}`;
+  if (proxyRequest.accessToken) {
+    headers.Authorization = `Bearer ${proxyRequest.accessToken}`;
   }
 
   return headers;

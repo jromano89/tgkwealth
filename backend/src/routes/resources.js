@@ -1,15 +1,15 @@
 const express = require('express');
 const { getDb } = require('../database');
 const service = require('../resources/service');
-const { getRequiredApp, route } = require('../utils');
+const { requireAppSlug, route } = require('../utils');
 
 const router = express.Router();
 
 function withApp(handler) {
   return route((req, res) => {
     const db = getDb();
-    const app = getRequiredApp(db, req);
-    return handler(req, res, db, app);
+    const appSlug = requireAppSlug(req);
+    return handler(req, res, db, appSlug);
   });
 }
 
@@ -21,25 +21,25 @@ Object.entries(service.RESOURCE_DEFINITIONS).forEach(([resourceKey, resource]) =
   const collectionPath = `/${resourceKey}`;
   const itemPath = `${collectionPath}/:id`;
 
-  router.get(collectionPath, withApp((req, res, db, app) => {
-    res.json(service.listRecordsForApp(db, app.slug, resourceKey, req.query));
+  router.get(collectionPath, withApp((req, res, db, appSlug) => {
+    res.json(service.listRecordsForApp(db, appSlug, resourceKey, req.query));
   }));
 
-  router.get(itemPath, withApp((req, res, db, app) => {
-    res.json(service.getRecordForApp(db, app.slug, resourceKey, req.params.id, req.query));
+  router.get(itemPath, withApp((req, res, db, appSlug) => {
+    res.json(service.getRecordForApp(db, appSlug, resourceKey, req.params.id, req.query));
   }));
 
-  router.post(collectionPath, withApp((req, res, db, app) => {
-    created(res, service.createRecordForApp(db, app.slug, resourceKey, req.body));
+  router.post(collectionPath, withApp((req, res, db, appSlug) => {
+    created(res, service.createRecordForApp(db, appSlug, resourceKey, req.body));
   }));
 
-  router.put(itemPath, withApp((req, res, db, app) => {
-    res.json(service.updateRecordForApp(db, app.slug, resourceKey, req.params.id, req.body));
+  router.put(itemPath, withApp((req, res, db, appSlug) => {
+    res.json(service.updateRecordForApp(db, appSlug, resourceKey, req.params.id, req.body));
   }));
 
   if (resource.allowDelete) {
-    router.delete(itemPath, withApp((req, res, db, app) => {
-      res.json(service.deleteRecordForApp(db, app.slug, resourceKey, req.params.id));
+    router.delete(itemPath, withApp((req, res, db, appSlug) => {
+      res.json(service.deleteRecordForApp(db, appSlug, resourceKey, req.params.id));
     }));
   }
 });

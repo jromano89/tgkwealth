@@ -1,75 +1,77 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+
 const DEFAULT_DB_PATH = path.resolve(__dirname, '..', 'data', 'demo.db');
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS apps (
-    slug TEXT PRIMARY KEY,
-    data TEXT,
-    docusign_scopes TEXT,
-    docusign_user_id TEXT,
-    docusign_account_id TEXT,
-    docusign_account_name TEXT,
-    docusign_user_name TEXT,
-    docusign_email TEXT,
-    docusign_available_accounts TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+const TABLE_DEFINITIONS = {
+  employees: {
+    createSql: `
+      CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        app_slug TEXT NOT NULL,
+        display_name TEXT,
+        email TEXT,
+        phone TEXT,
+        title TEXT,
+        data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+  },
+  customers: {
+    createSql: `
+      CREATE TABLE IF NOT EXISTS customers (
+        id TEXT PRIMARY KEY,
+        app_slug TEXT NOT NULL,
+        employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+        display_name TEXT,
+        email TEXT,
+        phone TEXT,
+        organization TEXT,
+        status TEXT DEFAULT 'active',
+        data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+  },
+  envelopes: {
+    createSql: `
+      CREATE TABLE IF NOT EXISTS envelopes (
+        id TEXT PRIMARY KEY,
+        app_slug TEXT NOT NULL,
+        employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+        customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+        status TEXT DEFAULT 'created',
+        name TEXT,
+        data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+  },
+  tasks: {
+    createSql: `
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        app_slug TEXT NOT NULL,
+        employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+        customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+        title TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'pending',
+        due_at DATETIME,
+        data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+  }
+};
 
-  CREATE TABLE IF NOT EXISTS employees (
-    id TEXT PRIMARY KEY,
-    app_slug TEXT NOT NULL REFERENCES apps(slug) ON DELETE CASCADE,
-    display_name TEXT,
-    email TEXT,
-    phone TEXT,
-    title TEXT,
-    data TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS customers (
-    id TEXT PRIMARY KEY,
-    app_slug TEXT NOT NULL REFERENCES apps(slug) ON DELETE CASCADE,
-    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    display_name TEXT,
-    email TEXT,
-    phone TEXT,
-    organization TEXT,
-    status TEXT DEFAULT 'active',
-    data TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS envelopes (
-    id TEXT PRIMARY KEY,
-    app_slug TEXT NOT NULL REFERENCES apps(slug) ON DELETE CASCADE,
-    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
-    status TEXT DEFAULT 'created',
-    name TEXT,
-    data TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    app_slug TEXT NOT NULL REFERENCES apps(slug) ON DELETE CASCADE,
-    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
-    title TEXT,
-    description TEXT,
-    status TEXT DEFAULT 'pending',
-    due_at DATETIME,
-    data TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
+const INDEX_SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_employees_app_slug ON employees(app_slug);
   CREATE INDEX IF NOT EXISTS idx_customers_app_slug ON customers(app_slug);
   CREATE INDEX IF NOT EXISTS idx_customers_app_slug_status ON customers(app_slug, status);
@@ -83,8 +85,11 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 `;
 
+const SCHEMA = `${Object.values(TABLE_DEFINITIONS).map((definition) => definition.createSql).join(';\n')};\n${INDEX_SCHEMA}`;
+
 let db;
 let activeDbPath = null;
+let activeConfiguredDbPath = null;
 
 function resolveConfiguredDbPath() {
   const configuredPath = String(process.env.TGK_DB_PATH || '').trim();
@@ -110,13 +115,12 @@ function initializeDb(dbPath) {
   nextDb.pragma('journal_mode = WAL');
   nextDb.pragma('foreign_keys = ON');
   nextDb.exec(SCHEMA);
-
   return nextDb;
 }
 
 function getDb() {
-  const dbPath = resolveConfiguredDbPath();
-  if (db && activeDbPath === dbPath) {
+  const configuredDbPath = resolveConfiguredDbPath();
+  if (db && activeConfiguredDbPath === configuredDbPath) {
     return db;
   }
 
@@ -125,16 +129,18 @@ function getDb() {
   }
 
   try {
-    db = initializeDb(dbPath);
-    activeDbPath = dbPath;
+    db = initializeDb(configuredDbPath);
+    activeDbPath = configuredDbPath;
+    activeConfiguredDbPath = configuredDbPath;
   } catch (error) {
-    if (dbPath === DEFAULT_DB_PATH) {
+    if (configuredDbPath === DEFAULT_DB_PATH) {
       throw error;
     }
 
-    console.warn(`Unable to use TGK_DB_PATH at ${dbPath}; falling back to ${DEFAULT_DB_PATH}.`);
+    console.warn(`Unable to use TGK_DB_PATH at ${configuredDbPath}; falling back to ${DEFAULT_DB_PATH}.`);
     db = initializeDb(DEFAULT_DB_PATH);
     activeDbPath = DEFAULT_DB_PATH;
+    activeConfiguredDbPath = configuredDbPath;
   }
 
   return db;
@@ -148,6 +154,7 @@ function closeDb() {
   db.close();
   db = null;
   activeDbPath = null;
+  activeConfiguredDbPath = null;
 }
 
 module.exports = {

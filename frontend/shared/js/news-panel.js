@@ -152,8 +152,7 @@ function newsPanel() {
       try {
         const xml = await TGK_API.proxyText({
           method: 'GET',
-          url: 'https://news.google.com/rss/search?q=markets&hl=en-US&gl=US&ceid=US:en',
-          authMode: 'none'
+          url: 'https://news.google.com/rss/search?q=markets&hl=en-US&gl=US&ceid=US:en'
         });
         const items = parseFeed(xml);
         if (items.length > 0) {

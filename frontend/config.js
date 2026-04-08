@@ -4,6 +4,10 @@
   const BRAND_COLOR = '#3b5bdb';
   const BACKEND_URL = 'https://backend-tgk.up.railway.app';
   const DOCUSIGN_BASE_URL = 'https://api-d.docusign.com';
+  // Fill these once per demo frontend. The backend consent callback stays fixed.
+  const DOCUSIGN_USER_ID = '';
+  const DOCUSIGN_ACCOUNT_ID = '';
+  const DOCUSIGN_SCOPES = 'signature impersonation aow_manage organization_read webforms_manage webforms_read webforms_instance_read webforms_instance_write adm_store_unified_repo_read';
   const ADVISOR_ID = '4871abfa-8868-4501-b068-5936c6363e6b';
   const DEFAULT_MODE = 'advanced';
   const DEFAULT_IAM_PRODUCTS = [
@@ -70,6 +74,11 @@
     brandColor: BRAND_COLOR,
     backendUrl: resolveBackendUrl(),
     docusignBaseUrl: DOCUSIGN_BASE_URL,
+    docusignAuth: {
+      userId: DOCUSIGN_USER_ID,
+      accountId: DOCUSIGN_ACCOUNT_ID,
+      scopes: DOCUSIGN_SCOPES
+    },
     advisorId: ADVISOR_ID,
     defaultMode: DEFAULT_MODE,
     workflows: { ...WORKFLOWS },

@@ -12,21 +12,6 @@ function parseRecord(row) {
   };
 }
 
-function parseApp(row) {
-  if (!row) {
-    return row;
-  }
-
-  const parsed = parseJsonFields(row);
-  return {
-    ...parsed,
-    data: asObject(parsed.data),
-    docusign_available_accounts: Array.isArray(parsed.docusign_available_accounts)
-      ? parsed.docusign_available_accounts
-      : []
-  };
-}
-
 function buildListQuery(table, appSlug, options = {}) {
   const conditions = options.conditions || [];
   const params = options.params || [];
@@ -65,15 +50,6 @@ function readColumnValue(columnName, record) {
   return value ?? null;
 }
 
-function ensureAppBelongsToDb(db, appSlug) {
-  const app = parseApp(db.prepare('SELECT * FROM apps WHERE slug = ?').get(appSlug));
-  if (!app) {
-    throw createError(404, 'App not found');
-  }
-
-  return app;
-}
-
 function getRecord(db, table, appSlug, recordId, parser = parseRecord) {
   return parser(
     db.prepare(`SELECT * FROM ${table} WHERE id = ? AND app_slug = ?`).get(recordId, appSlug)
@@ -109,7 +85,6 @@ function ensureRecordBelongsToApp(db, table, appSlug, recordId, label) {
 }
 
 function listRecords(db, resource, appSlug, options = {}) {
-  ensureAppBelongsToDb(db, appSlug);
   const { query, params } = buildListQuery(resource.table, appSlug, options);
   return db.prepare(query).all(...params).map(parseRecord);
 }
@@ -159,7 +134,6 @@ function deleteRecord(db, resource, appSlug, recordId) {
 module.exports = {
   createRecord,
   deleteRecord,
-  ensureAppBelongsToDb,
   ensureRecordBelongsToApp,
   getRecord,
   getRecordById,

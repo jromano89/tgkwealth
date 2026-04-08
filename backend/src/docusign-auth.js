@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
-const CONSENT_STATE_MAX_AGE_MS = 60 * 60 * 1000;
 const tokenCache = new Map();
+const TOKEN_REFRESH_BUFFER_MS = 60000;
 
 function getOauthBase() {
   return process.env.DOCUSIGN_OAUTH_BASE || 'account-d.docusign.com';
@@ -12,14 +12,7 @@ function getIntegrationKey() {
   if (!value) {
     throw new Error('Missing DOCUSIGN_INTEGRATION_KEY');
   }
-  return value;
-}
 
-function getSecretKey() {
-  const value = String(process.env.DOCUSIGN_SECRET_KEY || '').trim();
-  if (!value) {
-    throw new Error('Missing DOCUSIGN_SECRET_KEY');
-  }
   return value;
 }
 
@@ -28,6 +21,7 @@ function getPrivateKey() {
   if (!value) {
     throw new Error('Missing DOCUSIGN_RSA_PRIVATE_KEY');
   }
+
   return value
     .replace(/\\\r?\n/g, '\n')
     .replace(/\\n/g, '\n');
@@ -51,6 +45,7 @@ async function requestJson(url, options, errorLabel) {
     const details = await response.text().catch(() => response.statusText);
     throw new Error(`${errorLabel}: ${response.status} ${details}`);
   }
+
   return response.json();
 }
 
@@ -61,21 +56,33 @@ function signJwt(value, privateKey) {
 }
 
 async function getAccessToken(userId, accountId, scopes) {
+  const normalizedUserId = String(userId || '').trim();
+  const normalizedAccountId = String(accountId || '').trim();
   const scopeString = normalizeScopeString(scopes);
+
+  if (!normalizedUserId) {
+    throw new Error('Missing Docusign user ID.');
+  }
+  if (!normalizedAccountId) {
+    throw new Error('Missing Docusign account ID.');
+  }
   if (!scopeString) {
-    throw new Error('Missing Docusign scopes. Save the requested scopes in Settings before retrying.');
+    throw new Error('Missing Docusign scopes.');
   }
 
-  const cacheKey = `${userId}_${accountId}_${scopeString}`;
+  const cacheKey = `${normalizedUserId}_${normalizedAccountId}_${scopeString}`;
   const cached = tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now() + 60000) {
-    return cached.token;
+  if (cached && cached.expiresAt > Date.now() + TOKEN_REFRESH_BUFFER_MS) {
+    return {
+      accessToken: cached.accessToken,
+      expiresAt: new Date(cached.expiresAt).toISOString()
+    };
   }
 
   const now = Math.floor(Date.now() / 1000);
   const assertionPayload = {
     iss: getIntegrationKey(),
-    sub: userId,
+    sub: normalizedUserId,
     aud: getOauthBase(),
     iat: now,
     exp: now + 3600,
@@ -95,62 +102,19 @@ async function getAccessToken(userId, accountId, scopes) {
     }).toString()
   }, 'Docusign JWT grant failed');
 
+  const expiresAt = Date.now() + (Number(tokenData.expires_in || 0) * 1000);
   tokenCache.set(cacheKey, {
-    token: tokenData.access_token,
-    expiresAt: Date.now() + (Number(tokenData.expires_in || 0) * 1000)
+    accessToken: tokenData.access_token,
+    expiresAt
   });
 
-  return tokenData.access_token;
+  return {
+    accessToken: tokenData.access_token,
+    expiresAt: new Date(expiresAt).toISOString()
+  };
 }
 
-function signValue(value) {
-  return base64url(
-    crypto.createHmac('sha256', getSecretKey()).update(String(value || '')).digest()
-  );
-}
-
-function createConsentState(payload = {}) {
-  const encodedPayload = base64url(JSON.stringify({
-    ...payload,
-    iat: Date.now()
-  }));
-  return `${encodedPayload}.${signValue(encodedPayload)}`;
-}
-
-function readConsentState(value) {
-  const raw = String(value || '');
-  const dotIndex = raw.indexOf('.');
-  const encodedPayload = dotIndex >= 0 ? raw.slice(0, dotIndex) : raw;
-  const signature = dotIndex >= 0 ? raw.slice(dotIndex + 1) : '';
-
-  if (!encodedPayload || !signature) {
-    throw new Error('Docusign consent state verification failed');
-  }
-
-  const actualBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(signValue(encodedPayload));
-  if (
-    actualBuffer.length !== expectedBuffer.length
-    || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)
-  ) {
-    throw new Error('Docusign consent state verification failed');
-  }
-
-  let payload;
-  try {
-    payload = JSON.parse(fromBase64url(encodedPayload).toString('utf8'));
-  } catch (error) {
-    throw new Error('Docusign consent state verification failed');
-  }
-
-  if (!payload?.iat || Date.now() - Number(payload.iat) > CONSENT_STATE_MAX_AGE_MS) {
-    throw new Error('Docusign consent state expired');
-  }
-
-  return payload;
-}
-
-function getConsentUrl(redirectUri, state, scopes) {
+function getConsentUrl(redirectUri, scopes) {
   const scopeString = normalizeScopeString(scopes);
   if (!scopeString) {
     throw new Error('Missing Docusign scopes');
@@ -161,35 +125,10 @@ function getConsentUrl(redirectUri, state, scopes) {
     scope: scopeString,
     client_id: getIntegrationKey(),
     redirect_uri: redirectUri,
-    state,
     prompt: 'login'
   });
 
-  getSecretKey();
   return `https://${getOauthBase()}/oauth/auth?${params.toString()}`;
-}
-
-async function getUserInfoFromCode(code, redirectUri) {
-  const tokenData = await requestJson(`https://${getOauthBase()}/oauth/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${getIntegrationKey()}:${getSecretKey()}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri
-    }).toString()
-  }, 'Docusign consent code exchange failed');
-
-  const userInfo = await requestJson(`https://${getOauthBase()}/oauth/userinfo`, {
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`
-    }
-  }, 'Failed to get user info from Docusign');
-
-  return { userInfo };
 }
 
 function base64url(value) {
@@ -200,17 +139,8 @@ function base64url(value) {
     .replace(/=+$/, '');
 }
 
-function fromBase64url(value) {
-  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
-  return Buffer.from(`${normalized}${padding}`, 'base64');
-}
-
 module.exports = {
-  createConsentState,
   getAccessToken,
   getConsentUrl,
-  getUserInfoFromCode,
-  normalizeScopeString,
-  readConsentState
+  normalizeScopeString
 };

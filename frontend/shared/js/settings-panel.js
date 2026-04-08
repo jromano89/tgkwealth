@@ -276,6 +276,9 @@ function settingsPanelState() {
     sidebarProductKeys: [...(window.TGK_DEMO.sidebar?.iamProductKeys || [])],
     dirty: false,
     resettingDefaults: false,
+    docusignConsentBusy: false,
+    docusignConsentStatus: 'idle',
+    docusignConsentMessage: '',
 
     currentSidebar() {
       return resolveSidebarSettings({
@@ -292,6 +295,40 @@ function settingsPanelState() {
 
     sidebarOptions() {
       return TGK_IAM_PRODUCT_OPTIONS;
+    },
+
+    get docusignConfig() {
+      return window.TGK_API?.getDocusignAuthConfig?.() || {
+        userId: '',
+        accountId: '',
+        scopes: ''
+      };
+    },
+
+    hasDocusignAuthConfig() {
+      return !!window.TGK_API?.hasDocusignAuthConfig?.();
+    },
+
+    async grantDocusignConsent() {
+      if (this.docusignConsentBusy) {
+        return;
+      }
+
+      this.docusignConsentBusy = true;
+      this.docusignConsentStatus = 'working';
+      this.docusignConsentMessage = 'Waiting for consent window...';
+
+      try {
+        await window.TGK_API.startDocusignConsent();
+        window.TGK_API.clearDocusignTokenCache();
+        this.docusignConsentStatus = 'success';
+        this.docusignConsentMessage = 'Consent granted.';
+      } catch (error) {
+        this.docusignConsentStatus = 'error';
+        this.docusignConsentMessage = error.message || 'Consent failed.';
+      } finally {
+        this.docusignConsentBusy = false;
+      }
     },
 
     isSidebarProductEnabled(productKey) {

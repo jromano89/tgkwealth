@@ -65,7 +65,6 @@ function advisorApp() {
         console.error('Failed to load customers:', e);
       }
       this.loading = false;
-      TGK_API.scheduleDocusignWarmup();
     },
 
     canSeeSettings() {

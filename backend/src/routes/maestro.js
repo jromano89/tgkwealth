@@ -1,7 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const resourceService = require('../resources/service');
-const { upsertApp } = require('../utils');
+const { createError, requireSlugValue } = require('../utils');
 const { config } = require('../maestro/config');
 const { setResourceAccess } = require('../maestro/resource-client');
 const { buildManifest } = require('../maestro/manifest');
@@ -24,19 +24,13 @@ function trimTrailingSlash(value) {
 }
 
 function requireAppSlug(appSlug) {
-  const normalized = String(appSlug || '').trim();
-  if (!normalized) {
-    const error = new Error('Maestro requests must include appSlug.');
-    error.statusCode = 400;
-    error.code = 'BAD_REQUEST';
-    throw error;
+  try {
+    return requireSlugValue(appSlug, 'Maestro requests must include appSlug.');
+  } catch (error) {
+    const wrappedError = createError(error.statusCode || 400, error.message);
+    wrappedError.code = 'BAD_REQUEST';
+    throw wrappedError;
   }
-
-  return normalized;
-}
-
-function ensureMaestroApp(db, appSlug) {
-  return upsertApp(db, { slug: requireAppSlug(appSlug) });
 }
 
 function createResourceAccess(resourceKey) {
@@ -44,7 +38,6 @@ function createResourceAccess(resourceKey) {
     create(appSlug, payload) {
       const db = getDb();
       const resolvedAppSlug = requireAppSlug(appSlug);
-      ensureMaestroApp(db, resolvedAppSlug);
       return resourceService.createRecordForApp(db, resolvedAppSlug, resourceKey, payload);
     },
     get(appSlug, recordId) {
