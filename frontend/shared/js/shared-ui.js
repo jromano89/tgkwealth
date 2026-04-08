@@ -329,6 +329,108 @@ function revokeEnvelopePreview(modalState) {
   }
 }
 
+function resolveEnvelopeApiId(envelope) {
+  const data = envelope?.data && typeof envelope.data === 'object' ? envelope.data : {};
+  return String(
+    data.docusignEnvelopeId
+    || data.docusign_envelope_id
+    || data.envelopeId
+    || data.envelope_id
+    || envelope?.id
+    || ''
+  ).trim();
+}
+
+function isNotFoundError(error) {
+  return /\b404\b/.test(String(error?.message || ''));
+}
+
+function buildFallbackPreviewUrl(envelope, envelopeId) {
+  const title = String(envelope?.name || 'Envelope document').trim() || 'Envelope document';
+  const status = String(envelope?.status || 'unknown').trim() || 'unknown';
+  const timestamp = envelopeTimestampLabel(envelope);
+  const escapedTitle = title
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const escapedStatus = status
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const escapedEnvelopeId = String(envelopeId || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const escapedTimestamp = String(timestamp || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return window.URL.createObjectURL(new Blob([`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>${escapedTitle}</title>
+    <style>
+      body{margin:0;padding:32px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#0f172a}
+      .card{max-width:760px;margin:0 auto;background:#fff;border:1px solid #dbe4ef;border-radius:20px;padding:32px;box-shadow:0 18px 40px rgba(15,23,42,.08)}
+      .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b}
+      h1{margin:12px 0 8px;font-size:28px;line-height:1.2}
+      p{margin:0 0 18px;color:#475569;line-height:1.6}
+      dl{display:grid;grid-template-columns:max-content 1fr;gap:10px 16px;margin:24px 0 0}
+      dt{font-weight:700;color:#334155}
+      dd{margin:0;color:#0f172a}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="eyebrow">TGK Demo Preview</div>
+      <h1>${escapedTitle}</h1>
+      <p>Live DocuSign document content is not available for this envelope record, so the app is showing a lightweight demo preview instead of a 404.</p>
+      <dl>
+        <dt>Envelope ID</dt>
+        <dd>${escapedEnvelopeId || 'Unavailable'}</dd>
+        <dt>Status</dt>
+        <dd>${escapedStatus}</dd>
+        <dt>Recorded</dt>
+        <dd>${escapedTimestamp || 'Unavailable'}</dd>
+      </dl>
+    </div>
+  </body>
+</html>`], { type: 'text/html' }));
+}
+
+function buildFallbackHistory(envelope) {
+  const createdAt = envelope?.created_at || envelope?.createdAt || '';
+  const updatedAt = envelope?.updated_at || envelope?.updatedAt || createdAt;
+  const status = String(envelope?.status || '').trim().toLowerCase();
+  const events = [];
+
+  if (updatedAt && status && status !== 'created') {
+    events.push({
+      Action: ({
+        sent: 'Sent for signature',
+        delivered: 'Delivered to recipient',
+        completed: 'Completed',
+        declined: 'Declined',
+        voided: 'Voided'
+      })[status] || `Status updated to ${status}`,
+      UserName: 'DocuSign',
+      LogTime: updatedAt
+    });
+  }
+
+  if (createdAt) {
+    events.push({
+      Action: 'Envelope added to TGK',
+      UserName: 'TGK Demo',
+      LogTime: createdAt
+    });
+  }
+
+  return events;
+}
+
 function createEnvelopeModalHelpers() {
   return {
     envelopeDocModal: null,
@@ -344,8 +446,9 @@ function createEnvelopeModalHelpers() {
     },
 
     async viewEnvelopeDoc(envelope) {
-      const envelopeId = envelope?.id;
+      const envelopeId = resolveEnvelopeApiId(envelope);
       if (!envelopeId) return;
+      const docusignEsignBaseUrl = window.TGK_CONFIG?.docusignEsignBaseUrl || 'https://demo.docusign.net/restapi';
 
       const requestKey = `${envelopeId}:${Date.now()}`;
       const title = envelope?.name || 'Document';
@@ -363,6 +466,7 @@ function createEnvelopeModalHelpers() {
       try {
         const response = await TGK_API.proxyDocusignResponse({
           method: 'GET',
+          baseUrl: docusignEsignBaseUrl,
           path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
           query: { certificate: 'true' }
         });
@@ -385,6 +489,16 @@ function createEnvelopeModalHelpers() {
           return;
         }
 
+        if (isNotFoundError(error)) {
+          this.envelopeDocModal = {
+            ...this.envelopeDocModal,
+            previewUrl: buildFallbackPreviewUrl(envelope, envelopeId),
+            loading: false,
+            error: null
+          };
+          return;
+        }
+
         this.envelopeDocModal = {
           ...this.envelopeDocModal,
           loading: false,
@@ -394,8 +508,9 @@ function createEnvelopeModalHelpers() {
     },
 
     async viewEnvelopeHistory(envelope) {
-      const envelopeId = envelope?.id;
+      const envelopeId = resolveEnvelopeApiId(envelope);
       if (!envelopeId) return;
+      const docusignEsignBaseUrl = window.TGK_CONFIG?.docusignEsignBaseUrl || 'https://demo.docusign.net/restapi';
 
       const title = envelope?.name || 'Document';
       const requestKey = `${envelopeId}:${Date.now()}`;
@@ -412,6 +527,7 @@ function createEnvelopeModalHelpers() {
       try {
         const result = await TGK_API.proxyDocusign({
           method: 'GET',
+          baseUrl: docusignEsignBaseUrl,
           path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`
         });
         const events = (result.auditEvents || [])
@@ -439,6 +555,16 @@ function createEnvelopeModalHelpers() {
         };
       } catch (error) {
         if (!this.envelopeHistoryModal || this.envelopeHistoryModal.requestKey !== requestKey) {
+          return;
+        }
+
+        if (isNotFoundError(error)) {
+          this.envelopeHistoryModal = {
+            ...this.envelopeHistoryModal,
+            events: buildFallbackHistory(envelope),
+            loading: false,
+            error: null
+          };
           return;
         }
 

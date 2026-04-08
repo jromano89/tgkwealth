@@ -7,6 +7,7 @@
   
   const BACKEND_URL = 'https://backend-tgk.up.railway.app';
   const DOCUSIGN_BASE_URL = 'https://api-d.docusign.com';
+  const DOCUSIGN_ESIGN_BASE_URL = 'https://demo.docusign.net/restapi';
   const ADVISOR_ID = '4871abfa-8868-4501-b068-5936c6363e6b';
   const BRAND_COLOR = '#3b5bdb';
   const DEFAULT_MODE = 'advanced';
@@ -68,6 +69,7 @@
     brandColor: BRAND_COLOR,
     backendUrl: resolveBackendUrl(),
     docusignBaseUrl: DOCUSIGN_BASE_URL,
+    docusignEsignBaseUrl: DOCUSIGN_ESIGN_BASE_URL,
     docusignAuth: {
       userId: DOCUSIGN_USER_ID,
       accountId: DOCUSIGN_ACCOUNT_ID,
