@@ -206,21 +206,48 @@ async function request(path, options = {}) {
   return payload;
 }
 
+async function resourceExists(path) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: DEFAULT_HEADERS
+  });
+
+  if (response.status === 404) {
+    return false;
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`${response.status} ${path} ${text}`);
+  }
+
+  return true;
+}
+
+async function upsertRecord(collectionPath, record) {
+  const itemPath = `${collectionPath}/${encodeURIComponent(record.id)}`;
+
+  if (await resourceExists(itemPath)) {
+    return request(itemPath, { method: 'PUT', body: JSON.stringify(record) });
+  }
+
+  return request(collectionPath, { method: 'POST', body: JSON.stringify(record) });
+}
+
 async function main() {
   for (const employee of employees) {
-    await request('/api/data/employees', { method: 'POST', body: JSON.stringify(employee) });
+    await upsertRecord('/api/data/employees', employee);
   }
 
   for (const customer of customers) {
-    await request('/api/data/customers', { method: 'POST', body: JSON.stringify(customer) });
+    await upsertRecord('/api/data/customers', customer);
   }
 
   for (const envelopeRecord of envelopes) {
-    await request('/api/data/envelopes', { method: 'POST', body: JSON.stringify(envelopeRecord) });
+    await upsertRecord('/api/data/envelopes', envelopeRecord);
   }
 
   for (const taskRecord of tasks) {
-    await request('/api/data/tasks', { method: 'POST', body: JSON.stringify(taskRecord) });
+    await upsertRecord('/api/data/tasks', taskRecord);
   }
 
   const [seededEmployees, seededCustomers, seededTasks, seededEnvelopes] = await Promise.all([

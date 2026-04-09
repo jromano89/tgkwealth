@@ -2117,6 +2117,11 @@
   padding: 18px;
 }
 
+.tgk-workflow-shell--top {
+  align-items: flex-start;
+  padding-top: 72px;
+}
+
 .tgk-workflow-state--error {
   border-color: rgba(239, 68, 68, 0.24);
 }

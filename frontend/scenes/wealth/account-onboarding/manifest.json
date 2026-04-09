@@ -25,7 +25,23 @@
         "src": "../../../advisor/?mode=normal",
         "title": "Advisor portal dashboard",
         "interactive": true,
-        "height": 940
+        "height": 940,
+        "shell": "laptop",
+        "lock": {
+          "mode": "focusTarget",
+          "target": {
+            "selector": "button",
+            "text": "Open Account"
+          },
+          "dimSelectors": [
+            ".tgk-portal-sidebar",
+            ".tgk-page-title",
+            ".tgk-search-field",
+            ".tgk-page-header__actions > div[x-data]",
+            ".tgk-kpi-grid",
+            ".tgk-surface-panel"
+          ]
+        }
       },
       "vignette": {
         "icon": "advisor",
@@ -80,12 +96,21 @@
         "title": "Advisor agreements queue",
         "interactive": true,
         "height": 940,
+        "shell": "laptop",
+        "lock": {
+          "mode": "full"
+        },
         "actions": [
           {
             "type": "clickText",
             "selector": "button",
             "text": "Agreements",
-            "afterMs": 700
+            "afterMs": 150
+          },
+          {
+            "type": "waitForSelector",
+            "selector": ".tgk-agreements-dashboard",
+            "afterMs": 150
           }
         ]
       },

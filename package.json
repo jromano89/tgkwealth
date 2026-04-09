@@ -1,0 +1,14 @@
+{
+  "name": "tgk-demo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "frontend": "npm --prefix frontend start",
+    "backend": "npm --prefix backend run dev",
+    "dev": "node scripts/dev.js",
+    "seed": "node scripts/seed-demo-api.js"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}

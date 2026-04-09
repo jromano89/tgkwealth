@@ -21,25 +21,29 @@ The frontend has no build step. It is plain HTML, CSS, and JS, served by the sma
 cp backend/.env.example backend/.env
 ```
 
-2. Start the backend.
+2. Install backend dependencies if needed.
 
 ```bash
-cd backend
-npm install
+npm install --prefix backend
+```
+
+3. Start both services from the repo root.
+
+```bash
 npm run dev
 ```
 
-3. Start the frontend in another terminal.
+4. If you only need one service, run it on its own.
 
 ```bash
-cd frontend
-npm start
+npm run backend
+npm run frontend
 ```
 
-4. Optionally seed demo data from the repo root.
+5. Optionally seed demo data from the repo root.
 
 ```bash
-node scripts/seed-demo-api.js
+npm run seed
 ```
 
 Useful local URLs:

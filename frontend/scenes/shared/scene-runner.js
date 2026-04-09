@@ -4,6 +4,66 @@
     body { background: #f4f6f9 !important; }
   `.trim();
 
+  const FOCUS_TARGET_LOCK_CSS = `
+    body.tgk-scene-lock--focus-target {
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    body.tgk-scene-lock--focus-target::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      background: rgba(247, 249, 252, 0.22);
+      backdrop-filter: saturate(0.94) brightness(0.99);
+      pointer-events: none;
+    }
+
+    body.tgk-scene-lock--focus-target .tgk-scene-focus-target {
+      position: relative;
+      z-index: 3;
+      isolation: isolate;
+      box-shadow:
+        0 0 0 1px rgba(53, 103, 223, 0.09),
+        0 0 0 4px rgba(53, 103, 223, 0.035),
+        0 8px 18px rgba(32, 51, 84, 0.06);
+      animation: tgk-scene-focus-pulse 3.8s ease-in-out infinite;
+    }
+
+    body.tgk-scene-lock--focus-target .tgk-scene-focus-target::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: inherit;
+      border: 1px solid rgba(53, 103, 223, 0.1);
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    body.tgk-scene-lock--focus-target .tgk-modal-shell {
+      position: fixed;
+      z-index: 4;
+    }
+
+    @keyframes tgk-scene-focus-pulse {
+      0%,
+      100% {
+        box-shadow:
+          0 0 0 1px rgba(53, 103, 223, 0.09),
+          0 0 0 4px rgba(53, 103, 223, 0.028),
+          0 8px 18px rgba(32, 51, 84, 0.055);
+      }
+
+      50% {
+        box-shadow:
+          0 0 0 1px rgba(53, 103, 223, 0.11),
+          0 0 0 5px rgba(53, 103, 223, 0.05),
+          0 10px 20px rgba(32, 51, 84, 0.065);
+      }
+    }
+  `.trim();
+
   async function fetchJson(url) {
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
@@ -213,6 +273,10 @@
     return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
+  function getEmbedLockMode(lock = {}) {
+    return String(lock?.mode || '').trim().toLowerCase();
+  }
+
   function findElementByText(doc, selector, text) {
     const targetText = normalizeText(text);
     const candidates = [...doc.querySelectorAll(selector || 'button, a, [role="button"]')];
@@ -220,6 +284,134 @@
     return candidates.find((element) => normalizeText(element.textContent) === targetText)
       || candidates.find((element) => normalizeText(element.textContent).includes(targetText))
       || null;
+  }
+
+  function findElementByConfig(doc, target = {}) {
+    const selector = String(target?.selector || '').trim();
+    const text = String(target?.text || '').trim();
+
+    if (text) {
+      return findElementByText(doc, selector || 'button, a, [role="button"]', text);
+    }
+
+    if (!selector) {
+      return null;
+    }
+
+    return doc.querySelector(selector);
+  }
+
+  function buildEmbedCss(embed = {}) {
+    const cssBlocks = [BASE_EMBED_CSS];
+
+    if (getEmbedLockMode(embed.lock) === 'focustarget') {
+      cssBlocks.push(FOCUS_TARGET_LOCK_CSS);
+    }
+
+    return cssBlocks.join('\n\n');
+  }
+
+  function syncFocusTargetLock(doc, lock = {}) {
+    doc.body.classList.add('tgk-scene-lock--focus-target');
+    doc.querySelectorAll('.tgk-scene-focus-target').forEach((element) => {
+      element.classList.remove('tgk-scene-focus-target');
+    });
+
+    const target = findElementByConfig(doc, lock.target);
+    target?.classList.add('tgk-scene-focus-target');
+    return target;
+  }
+
+  function installFocusTargetGuard(doc, lock = {}) {
+    if (doc.documentElement.dataset.tgkFocusGuardInstalled === 'true') {
+      return;
+    }
+
+    const getAllowedTarget = () => findElementByConfig(doc, lock.target);
+    const isWithinAllowedTarget = (element) => {
+      const allowedTarget = getAllowedTarget();
+      return Boolean(allowedTarget && (element === allowedTarget || allowedTarget.contains(element)));
+    };
+
+    const isAllowedInteraction = (node) => {
+      const element = node?.nodeType === 1 ? node : node?.parentElement;
+      if (!element) {
+        return false;
+      }
+
+      if (element.closest('.tgk-modal-shell')) {
+        return true;
+      }
+
+      return isWithinAllowedTarget(element);
+    };
+
+    const blockEvent = (event) => {
+      if (isAllowedInteraction(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+
+    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart'].forEach((eventName) => {
+      doc.addEventListener(eventName, blockEvent, true);
+    });
+
+    doc.addEventListener('focusin', (event) => {
+      if (isAllowedInteraction(event.target)) {
+        return;
+      }
+
+      getAllowedTarget()?.focus?.();
+    }, true);
+
+    const observer = new doc.defaultView.MutationObserver(() => {
+      syncFocusTargetLock(doc, lock);
+    });
+
+    observer.observe(doc.body, {
+      childList: true,
+      subtree: true
+    });
+
+    doc.documentElement.dataset.tgkFocusGuardInstalled = 'true';
+  }
+
+  async function applyFocusTargetLock(frame, lock = {}) {
+    const doc = await waitForCondition(() => frame.contentDocument?.body ? frame.contentDocument : null);
+
+    try {
+      await waitForCondition(
+        () => findElementByConfig(doc, lock.target),
+        { timeoutMs: Number(lock.timeoutMs || 8000) }
+      );
+      syncFocusTargetLock(doc, lock);
+      installFocusTargetGuard(doc, lock);
+    } catch (error) {
+      console.warn('Unable to find focus target for scene lock:', error);
+    }
+  }
+
+  async function applyEmbedLock(frame, embed = {}) {
+    const lock = embed.lock && typeof embed.lock === 'object' ? embed.lock : null;
+    if (!lock) {
+      return;
+    }
+
+    if (getEmbedLockMode(lock) === 'focustarget') {
+      await applyFocusTargetLock(frame, lock);
+    }
+  }
+
+  function buildFrameLockMarkup(lock = {}) {
+    if (getEmbedLockMode(lock) !== 'full') {
+      return '';
+    }
+
+    return '<div class="scene-ref__frame-lock" aria-hidden="true"></div>';
   }
 
   async function runEmbedActions(frame, actions = []) {
@@ -230,7 +422,22 @@
     const doc = await waitForCondition(() => frame.contentDocument?.body ? frame.contentDocument : null);
 
     for (const action of actions) {
-      if (String(action?.type || '').trim().toLowerCase() !== 'clicktext') {
+      const actionType = String(action?.type || '').trim().toLowerCase();
+
+      if (actionType === 'waitforselector') {
+        const selector = String(action.selector || '').trim();
+        if (!selector) {
+          continue;
+        }
+
+        await waitForCondition(() => doc.querySelector(selector), {
+          timeoutMs: Number(action.timeoutMs || 8000)
+        });
+        await sleep(Number(action.afterMs || 0));
+        continue;
+      }
+
+      if (actionType !== 'clicktext') {
         continue;
       }
 
@@ -338,13 +545,12 @@
           </div>
           <div class="scene-device__mail-subject">Review and sign your onboarding package</div>
           <div class="scene-device__mail-preview">
-            Hi ${recipientName}, your account opening package is ready to review securely.
+            Hi ${recipientName}, your account opening package is ready.
           </div>
           <div class="scene-device__mail-cta">
             <span class="scene-device__mail-cta-label">Opening secure signing session</span>
             <span class="scene-device__mail-dots" aria-hidden="true"><span></span><span></span><span></span></span>
           </div>
-          <div class="scene-device__loading-progress" aria-hidden="true"><span></span></div>
           <div class="scene-device__loading-status" data-scene-embed-status>Generating signing session</div>
         </div>
       </div>
@@ -380,12 +586,14 @@
     const height = Math.max(Number(embed.height || 920), 320);
     const interactive = Boolean(embed.interactive);
     const isTablet = Boolean(device);
+    const usesLaptopShell = String(embed.shell || '').trim().toLowerCase() === 'laptop';
     const deviceScrollHeight = Math.max(Number(device?.scrollHeight || 0), height);
     const usesExternalDeviceScroll = isTablet && !interactive && deviceScrollHeight > height;
     const frameHeight = usesExternalDeviceScroll ? `${deviceScrollHeight}px` : '100%';
     const viewportClass = usesExternalDeviceScroll
       ? 'scene-device__viewport'
       : 'scene-device__viewport scene-device__viewport--interactive';
+    const frameLockMarkup = buildFrameLockMarkup(embed.lock);
 
     if (isTablet) {
       container.innerHTML = `
@@ -402,12 +610,38 @@
                     referrerpolicy="no-referrer"
                     allowfullscreen
                   style="height:${frameHeight};${interactive ? 'pointer-events:auto;' : ''}"></iframe>
+                  ${frameLockMarkup}
                 </div>
               </div>
               ${buildDeviceLoadingMarkup(recipientView)}
               ${buildDeviceInteractionMaskMarkup(embed.interactionMask)}
             </div>
           </div>
+        </div>
+      `;
+    } else if (usesLaptopShell) {
+      container.innerHTML = `
+        <div class="scene-ref__embed scene-ref__embed--laptop" style="--scene-frame-height:${height}px;">
+          <div class="scene-laptop">
+            <div class="scene-laptop__lid">
+              <div class="scene-laptop__screen">
+                <div class="scene-ref__frame-wrap scene-ref__frame-wrap--laptop">
+                  <iframe
+                    class="scene-ref__frame scene-ref__frame--laptop"
+                    title="${escapeHtml(title)}"
+                    loading="eager"
+                    referrerpolicy="no-referrer"
+                    allowfullscreen
+                    style="${interactive ? 'pointer-events:auto;' : ''}"></iframe>
+                  ${frameLockMarkup}
+                </div>
+              </div>
+            </div>
+            <div class="scene-laptop__base" aria-hidden="true">
+              <div class="scene-laptop__trackpad"></div>
+            </div>
+          </div>
+          <div class="scene-ref__embed-status" data-scene-embed-status>Loading live frontend</div>
         </div>
       `;
     } else {
@@ -421,6 +655,7 @@
               referrerpolicy="no-referrer"
               allowfullscreen
               style="${interactive ? 'pointer-events:auto;' : ''}"></iframe>
+            ${frameLockMarkup}
           </div>
           <div class="scene-ref__embed-status" data-scene-embed-status>Loading live frontend</div>
         </div>
@@ -449,11 +684,12 @@
       await loaded;
 
       if (!recipientView) {
-        injectEmbedCss(frame, BASE_EMBED_CSS);
+        injectEmbedCss(frame, buildEmbedCss(embed));
         if (status) {
           status.textContent = 'Configuring scene view';
         }
         await runEmbedActions(frame, Array.isArray(embed.actions) ? embed.actions : []);
+        await applyEmbedLock(frame, embed);
       }
 
       if (status) {
