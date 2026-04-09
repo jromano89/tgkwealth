@@ -3,3 +3,5 @@ node_modules/
 *.bak-*
 backend/.env
 extensions/maestro-tgk/.env
+context/
+docs/

@@ -295,6 +295,34 @@ body {
   outline-offset: 3px;
 }
 
+.launch-cta-secondary {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.1rem;
+  border: 1.5px solid rgba(76, 0, 255, 0.22);
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--tgk-cobalt);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background 170ms ease, border-color 170ms ease;
+}
+
+.launch-cta-secondary:hover {
+  background: rgba(76, 0, 255, 0.06);
+  border-color: rgba(76, 0, 255, 0.35);
+}
+
+.launch-cta-secondary:focus-visible {
+  outline: 3px solid rgba(76, 0, 255, 0.18);
+  outline-offset: 3px;
+}
+
 .footer-meta {
   display: grid;
   justify-items: center;
