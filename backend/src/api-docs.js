@@ -18,7 +18,6 @@ function buildApiSpec({ title, version, req }) {
       { name: 'system', description: 'System endpoints' },
       { name: 'auth', description: 'DocuSign auth endpoints' },
       { name: 'proxy', description: 'Public passthrough proxy' },
-      { name: 'webhooks', description: 'Inbound webhook sink' },
       { name: 'data', description: 'App-scoped demo data' },
       { name: 'maestro', description: 'Maestro bridge endpoints' }
     ],
@@ -89,23 +88,6 @@ function buildApiSpec({ title, version, req }) {
         post: proxyOperation('POST passthrough proxy', true),
         put: proxyOperation('PUT passthrough proxy', true),
         delete: proxyOperation('DELETE passthrough proxy', true)
-      },
-      '/api/webhooks/docusign': {
-        post: {
-          tags: ['webhooks'],
-          summary: 'DocuSign webhook sink',
-          requestBody: {
-            required: false,
-            content: {
-              'application/json': { schema: genericObjectSchema() },
-              'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
-              'text/plain': { schema: { type: 'string' } }
-            }
-          },
-          responses: {
-            202: jsonSchemaResponse('#/components/schemas/WebhookAck')
-          }
-        }
       },
       '/api/data/employees': {
         get: listOperation('employees', 'List employees', '#/components/schemas/Employee', [
@@ -268,13 +250,6 @@ function buildApiSpec({ title, version, req }) {
             code: { type: 'string' }
           },
           additionalProperties: true
-        },
-        WebhookAck: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            discarded: { type: 'boolean' }
-          }
         },
         DocusignTokenRequest: {
           type: 'object',
@@ -451,10 +426,9 @@ function buildDocsHtml({ title, version, req }) {
     },
     {
       title: 'System',
-      note: 'Public status and webhook endpoints.',
+      note: 'Public status endpoints.',
       items: [
-        ['GET', '/api/health', 'Health JSON'],
-        ['POST', '/api/webhooks/docusign', 'Raw DocuSign webhook sink']
+        ['GET', '/api/health', 'Health JSON']
       ]
     },
     {

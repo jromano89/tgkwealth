@@ -85,6 +85,7 @@ function advisorApp() {
 
     async init() {
       this.initializePortalChrome();
+      void TGK_API.prefetchDocusignAccessToken();
       try {
         const [employees, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -330,7 +331,6 @@ function advisorApp() {
     async openOnboarding() {
       this.resetOnboardingState();
       this.showOnboarding = true;
-      this.warmOnboarding();
       await this.loadMaestroWorkflow();
     },
 
@@ -343,10 +343,6 @@ function advisorApp() {
         window.clearTimeout(this._maestroRedirectTimer);
         this._maestroRedirectTimer = null;
       }
-    },
-
-    warmOnboarding() {
-      return TGK_API.warmDocusignExperience();
     },
 
     async fetchMaestroCustomers() {

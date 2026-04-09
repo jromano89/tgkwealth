@@ -334,45 +334,6 @@
       return this.request(path, { method: 'DELETE' });
     },
 
-    getDocusignAppOrigin() {
-      const defaultOrigin = 'https://apps-d.docusign.com';
-      try {
-        const configured = this.docusignIamBaseUrl || defaultOrigin;
-        const url = new URL(configured, window.location.href);
-        url.host = url.host.replace(/^api(?=[.-])/, 'apps');
-        return url.origin;
-      } catch (error) {
-        return defaultOrigin;
-      }
-    },
-
-    warmOrigin(origin) {
-      let normalizedOrigin;
-      try {
-        normalizedOrigin = new URL(origin, window.location.href).origin;
-      } catch (error) {
-        return;
-      }
-
-      const key = normalizedOrigin.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      if (document.head.querySelector(`link[data-warm-origin="${key}"]`)) {
-        return;
-      }
-
-      const dnsPrefetch = document.createElement('link');
-      dnsPrefetch.rel = 'dns-prefetch';
-      dnsPrefetch.href = normalizedOrigin;
-      dnsPrefetch.dataset.warmOrigin = key;
-      document.head.appendChild(dnsPrefetch);
-
-      const preconnect = document.createElement('link');
-      preconnect.rel = 'preconnect';
-      preconnect.href = normalizedOrigin;
-      preconnect.crossOrigin = '';
-      preconnect.dataset.warmOrigin = key;
-      document.head.appendChild(preconnect);
-    },
-
     getPreferredCustomerId() {
       try {
         return window.localStorage.getItem(getSelectedCustomerStorageKey(this.appSlug)) || '';
@@ -395,8 +356,21 @@
       }
     },
 
-    warmDocusignExperience() {
-      this.warmOrigin(this.getDocusignAppOrigin());
+    async prefetchDocusignAccessToken() {
+      if (!this.hasDocusignAuthConfig()) {
+        return false;
+      }
+
+      if (this.readCachedDocusignToken()) {
+        return true;
+      }
+
+      try {
+        await this.getDocusignAccessToken();
+        return true;
+      } catch (error) {
+        return false;
+      }
     },
 
     getDocusignAuthConfig() {

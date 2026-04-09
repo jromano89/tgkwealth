@@ -33,8 +33,7 @@ function createApp() {
   app.set('trust proxy', 1);
   app.use(setOpenCorsHeaders);
 
-  // Connect payloads can arrive outside the normal JSON parser, so mount the sink first.
-  app.use('/api/webhooks', require('./routes/webhooks'));
+  // Proxy requests can carry arbitrary payloads, so mount it before the JSON parser.
   app.use('/api/proxy', require('./routes/proxy'));
   app.use('/architecture', express.static(path.resolve(__dirname, '..', 'public', 'architecture')));
   app.get('/favicon.ico', (req, res) => {

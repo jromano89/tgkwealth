@@ -37,6 +37,7 @@ function investorApp() {
 
     async init() {
       this.initializePortalChrome();
+      void TGK_API.prefetchDocusignAccessToken();
       try {
         const [advisors, customers] = await Promise.all([
           TGK_API.getEmployees(),
@@ -163,14 +164,6 @@ function investorApp() {
       this.openTaskWorkflow(task);
     },
 
-    warmTaskWorkflow() {
-      return TGK_API.warmDocusignExperience();
-    },
-
-    warmAccountMaintenance() {
-      return this.warmTaskWorkflow();
-    },
-
     getTaskWorkflowKind(task = this.taskWorkflowTask) {
       const workflow = String(task?.data?.workflow || this.taskWorkflowKind || 'asset-transfer').trim().toLowerCase();
 
@@ -229,15 +222,6 @@ function investorApp() {
     syncTaskWorkflowLoadingSteps(task = this.taskWorkflowTask) {
       const presentation = this.getTaskWorkflowPresentation(task);
       this.taskWorkflowLoadingSteps = [...presentation.steps];
-    },
-
-    getTaskWorkflowId(task) {
-      return String(
-        task?.data?.workflowId
-        || task?.data?.workflow_id
-        || this.getAssetTransferWorkflowId()
-        || ''
-      ).trim();
     },
 
     getTaskWorkflowLaunchUrl(task) {
@@ -350,7 +334,6 @@ function investorApp() {
       this.taskWorkflowKind = this.getTaskWorkflowKind(task);
       this.taskWorkflowTask = task || null;
       this.syncTaskWorkflowLoadingSteps(task);
-      this.warmTaskWorkflow();
       await this.loadTaskWorkflow(task);
     },
 
@@ -363,7 +346,6 @@ function investorApp() {
       this.showTaskWorkflow = true;
       this.taskWorkflowKind = 'account-maintenance';
       this.syncTaskWorkflowLoadingSteps();
-      this.warmAccountMaintenance();
       await this.loadTaskWorkflow();
     },
 
