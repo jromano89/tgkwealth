@@ -56,7 +56,7 @@ Useful local URLs:
 - `normal` mode keeps default branding and hides Settings and IAM Products.
 - Frontend runtime config lives in `frontend/config.js`.
 - The backend-hosted DocuSign consent callback is fixed at `/api/auth/callback`.
-- The frontend gets DocuSign access tokens from `POST /api/auth/token` and sends downstream API calls through `POST /api/proxy`.
+- The frontend gets DocuSign access tokens from `POST /api/auth/token` and sends downstream API calls through `/api/proxy?url=<encoded-target-url>`.
 
 ## Deployment
 

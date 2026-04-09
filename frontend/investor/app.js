@@ -64,8 +64,8 @@ function investorApp() {
 
     sortCustomers(customers) {
       return [...(customers || [])].sort((a, b) => {
-        const left = `${a.first_name || ''} ${a.last_name || ''}`.trim();
-        const right = `${b.first_name || ''} ${b.last_name || ''}`.trim();
+        const left = String(a.name || '').trim();
+        const right = String(b.name || '').trim();
         return left.localeCompare(right, undefined, { sensitivity: 'base' });
       });
     },
@@ -113,7 +113,7 @@ function investorApp() {
     },
 
     get clientName() {
-      return this.selectedClient ? `${this.selectedClient.first_name} ${this.selectedClient.last_name}` : '';
+      return this.selectedClient?.name || '';
     },
 
     get portfolioDateLabel() {
@@ -266,7 +266,6 @@ function investorApp() {
         task?.data?.customerName
         || task?.data?.customer_name
         || this.selectedClient?.name
-        || [this.selectedClient?.first_name, this.selectedClient?.last_name].filter(Boolean).join(' ')
         || ''
       ).trim();
     },

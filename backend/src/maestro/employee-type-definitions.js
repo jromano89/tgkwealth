@@ -15,8 +15,6 @@ const FIELD_DEFINITIONS = [
   { name: 'Id', label: 'Employee ID', type: 'String', optional: false, readableOnly: true },
   { name: 'AppSlug', label: 'App Slug', type: 'String', optional: false },
   { name: 'DisplayName', label: 'Display Name', type: 'String', optional: true },
-  { name: 'FirstName', label: 'First Name', type: 'String', optional: true },
-  { name: 'LastName', label: 'Last Name', type: 'String', optional: true },
   { name: 'Email', label: 'Email', type: 'String', optional: true },
   { name: 'Phone', label: 'Phone', type: 'String', optional: true },
   { name: 'Title', label: 'Title', type: 'String', optional: true },

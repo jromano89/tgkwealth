@@ -138,7 +138,7 @@ function buildMonitorAlerts(customers = []) {
   const day = 864e5;
   const investorName = (index, fallback) => {
     const customer = customers[index];
-    return customer ? (customer.name || `${customer.first_name} ${customer.last_name}`) : fallback;
+    return customer ? customer.name : fallback;
   };
 
   return [
@@ -466,9 +466,13 @@ function createEnvelopeModalHelpers() {
       try {
         const response = await TGK_API.proxyDocusignResponse({
           method: 'GET',
-          baseUrl: docusignEsignBaseUrl,
-          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
-          query: { certificate: 'true' }
+          url: TGK_API.buildDocusignUrl(
+            `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/documents/combined`,
+            {
+              baseUrl: docusignEsignBaseUrl,
+              query: { certificate: 'true' }
+            }
+          )
         });
         const blob = await response.blob();
         const previewUrl = window.URL.createObjectURL(blob);
@@ -527,8 +531,10 @@ function createEnvelopeModalHelpers() {
       try {
         const result = await TGK_API.proxyDocusign({
           method: 'GET',
-          baseUrl: docusignEsignBaseUrl,
-          path: `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`
+          url: TGK_API.buildDocusignUrl(
+            `/v2.1/accounts/{accountId}/envelopes/${encodeURIComponent(envelopeId)}/audit_events`,
+            { baseUrl: docusignEsignBaseUrl }
+          )
         });
         const events = (result.auditEvents || [])
           .map((event) => {

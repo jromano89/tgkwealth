@@ -160,12 +160,7 @@ function buildPersonDisplayName(input, existingRecord, fallbackKeyAliases) {
     return explicitDisplayName;
   }
 
-  const firstName = normalizeOptionalText(pickFirstDefined(input, ['FirstName', 'firstName']));
-  const lastName = normalizeOptionalText(pickFirstDefined(input, ['LastName', 'lastName']));
-  const combined = [firstName, lastName].filter(Boolean).join(' ').trim();
-
-  return combined
-    || normalizeOptionalText(readRecordValue(existingRecord, 'displayName', 'display_name'))
+  return normalizeOptionalText(readRecordValue(existingRecord, 'displayName', 'display_name'))
     || normalizeOptionalText(pickFirstDefined(input, ['Email', 'email']))
     || normalizeOptionalText(pickFirstDefined(input, fallbackKeyAliases))
     || undefined;
@@ -173,24 +168,10 @@ function buildPersonDisplayName(input, existingRecord, fallbackKeyAliases) {
 
 function buildPersonData(input, existingData, structuredDataKeys, consumedInputKeys) {
   const structuredData = parseDataValue(pickFirstDefined(input, structuredDataKeys));
-  const mergedInput = {
-    ...structuredData,
-    ...input
-  };
   const nextData = {
     ...asObject(existingData),
     ...structuredData
   };
-
-  const firstName = normalizeOptionalText(pickFirstDefined(mergedInput, ['FirstName', 'firstName']));
-  const lastName = normalizeOptionalText(pickFirstDefined(mergedInput, ['LastName', 'lastName']));
-
-  if (firstName !== undefined) {
-    nextData.firstName = firstName;
-  }
-  if (lastName !== undefined) {
-    nextData.lastName = lastName;
-  }
 
   const extensionFields = collectExtensionFields(input, consumedInputKeys);
   if (Object.keys(extensionFields).length > 0) {

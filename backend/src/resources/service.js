@@ -65,18 +65,10 @@ function mergeData(existingData, nextData) {
   };
 }
 
-function deriveDisplayName({ displayName, data, email, organization, id }) {
+function deriveDisplayName({ displayName, email, organization, id }) {
   const explicit = normalizeOptionalString(displayName);
   if (explicit) {
     return explicit;
-  }
-
-  const mergedData = asObject(data);
-  const firstName = normalizeOptionalString(mergedData.firstName);
-  const lastName = normalizeOptionalString(mergedData.lastName);
-  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
-  if (combinedName) {
-    return combinedName;
   }
 
   return normalizeOptionalString(email)
@@ -148,7 +140,6 @@ function normalizeEmployeeWrite({ existingRecord, input = {} }) {
   const title = normalizeOptionalString(input.title !== undefined ? input.title : existingRecord?.title);
   const displayName = deriveDisplayName({
     displayName: input.displayName !== undefined ? input.displayName : existingRecord?.display_name,
-    data: data !== undefined ? data : existingRecord?.data,
     email,
     organization: title,
     id
@@ -172,7 +163,6 @@ function normalizeCustomerWrite({ db, appSlug, existingRecord, input = {} }) {
   const organization = normalizeOptionalString(input.organization !== undefined ? input.organization : existingRecord?.organization);
   const displayName = deriveDisplayName({
     displayName: input.displayName !== undefined ? input.displayName : existingRecord?.display_name,
-    data: data !== undefined ? data : existingRecord?.data,
     email,
     organization,
     id

@@ -10,20 +10,6 @@
   const SELECTED_CUSTOMER_STORAGE_PREFIX = 'tgk_selected_customer:';
   const DOCUSIGN_TOKEN_STORAGE_PREFIX = 'tgk_docusign_token:';
 
-  function splitDisplayName(displayName) {
-    const parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return { firstName: '', lastName: '' };
-    }
-    if (parts.length === 1) {
-      return { firstName: parts[0], lastName: '' };
-    }
-    return {
-      firstName: parts[0],
-      lastName: parts.slice(1).join(' ')
-    };
-  }
-
   function pickDisplayName(value, fallbacks) {
     const explicit = String(value || '').trim();
     if (explicit) {
@@ -73,11 +59,8 @@
       employee?.title,
       employee?.id
     ]);
-    const name = splitDisplayName(displayName);
     return {
       id: employee.id,
-      first_name: name.firstName,
-      last_name: name.lastName,
       name: displayName,
       email: employee.email,
       phone: employee.phone,
@@ -145,11 +128,8 @@
       customer?.organization,
       customer?.id
     ]);
-    const name = splitDisplayName(displayName);
     return {
       id: customer.id,
-      first_name: name.firstName,
-      last_name: name.lastName,
       name: displayName,
       email: customer.email,
       phone: customer.phone,
@@ -193,7 +173,7 @@
     return fallbackMessage;
   }
 
-  function serializeBodyWithAppContext(client, body, headers) {
+  function serializeRequestBody(body, headers) {
     if (!body || typeof body !== 'object' || body instanceof FormData) {
       return body;
     }
@@ -205,34 +185,61 @@
       return JSON.stringify(body);
     }
 
-    const payload = client.appSlug && !Object.prototype.hasOwnProperty.call(body, 'appSlug')
-      ? { ...body, appSlug: client.appSlug }
-      : body;
-
     if (!headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
-    return JSON.stringify(payload);
-  }
-
-  function buildProxyPayload(options) {
-    const {
-      method = 'GET',
-      url,
-      path,
-      baseUrl,
-      accessToken,
-      headers,
-      query,
-      body
-    } = options || {};
-
-    return { method, url, path, baseUrl, accessToken, headers, query, body };
+    return JSON.stringify(body);
   }
 
   function getSelectedCustomerStorageKey(appSlug) {
     return `${SELECTED_CUSTOMER_STORAGE_PREFIX}${String(appSlug || 'default').trim().toLowerCase()}`;
+  }
+
+  function appendAppQuery(path, appSlug) {
+    if (!appSlug) {
+      return path;
+    }
+
+    const url = new URL(path, 'http://tgk.local');
+    if (!url.searchParams.has('app')) {
+      url.searchParams.set('app', appSlug);
+    }
+
+    return `${url.pathname}${url.search}`;
+  }
+
+  function appendUrlQuery(targetUrl, query) {
+    if (!query) {
+      return;
+    }
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined) {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => targetUrl.searchParams.append(key, item));
+        return;
+      }
+
+      targetUrl.searchParams.append(key, value);
+    });
+  }
+
+  function normalizeProxyPath(baseUrl, path) {
+    const rawPath = String(path || '');
+    if (!rawPath.startsWith('/')) {
+      return rawPath;
+    }
+
+    const basePath = String(baseUrl.pathname || '/').replace(/\/+$/, '') || '/';
+    if (basePath === '/' || rawPath === basePath || rawPath.startsWith(`${basePath}/`)) {
+      return rawPath;
+    }
+
+    return rawPath.replace(/^\/+/, '');
   }
 
   function getDocusignTokenStorageKey(config = {}) {
@@ -276,36 +283,23 @@
     _docusignTokenCache: null,
     _docusignTokenPromise: null,
 
-    withAppQuery(path) {
-      if (!this.appSlug) {
-        return path;
-      }
-
-      const url = new URL(path, this.baseUrl);
-      if (!url.searchParams.has('app')) {
-        url.searchParams.set('app', this.appSlug);
-      }
-      return `${url.pathname}${url.search}`;
-    },
-
     async requestResponse(path, options = {}) {
       const method = String(options.method || 'GET').toUpperCase();
       const headers = { ...(options.headers || {}) };
-      const requestPath = this.withAppQuery(path);
       const requestOptions = {
         ...options,
         method
       };
 
       if (requestOptions.body !== undefined) {
-        requestOptions.body = serializeBodyWithAppContext(this, requestOptions.body, headers);
+        requestOptions.body = serializeRequestBody(requestOptions.body, headers);
       }
 
       if (Object.keys(headers).length > 0) {
         requestOptions.headers = headers;
       }
 
-      const response = await fetch(`${this.baseUrl}${requestPath}`, requestOptions);
+      const response = await fetch(`${this.baseUrl}${path}`, requestOptions);
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
         const payload = contentType.includes('application/json')
@@ -597,60 +591,83 @@
       return tokenRecord.accessToken;
     },
 
-    replaceDocusignAccountId(value) {
-      if (typeof value !== 'string' || !value.includes('{accountId}')) {
-        return value;
-      }
-
+    getDocusignAccountId() {
       const accountId = this.getDocusignAuthConfig().accountId;
       if (!accountId) {
         throw new Error('Missing Docusign account ID in frontend config.');
       }
 
-      return value.replace(/\{accountId\}/g, accountId);
+      return accountId;
     },
 
-    buildDocusignProxyOptions(options = {}) {
-      return {
-        ...options,
-        baseUrl: options.baseUrl || this.docusignIamBaseUrl,
-        url: this.replaceDocusignAccountId(options.url),
-        path: this.replaceDocusignAccountId(options.path)
-      };
+    buildDocusignUrl(path, options = {}) {
+      const baseUrl = String(options.baseUrl || this.docusignIamBaseUrl || '').trim();
+      if (!baseUrl) {
+        throw new Error('Missing Docusign base URL in frontend config.');
+      }
+
+      const resolvedBaseUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+      const resolvedPath = String(path || '').replace(/\{accountId\}/g, this.getDocusignAccountId());
+      const targetUrl = new URL(normalizeProxyPath(resolvedBaseUrl, resolvedPath), resolvedBaseUrl);
+      appendUrlQuery(targetUrl, options.query);
+      return targetUrl.toString();
+    },
+
+    buildProxyPath(url) {
+      const targetUrl = String(url || '').trim();
+      if (!targetUrl) {
+        throw new Error('Proxy requests must provide "url".');
+      }
+
+      return `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+    },
+
+    buildProxyHeaders(options = {}) {
+      const headers = { ...(options.headers || {}) };
+
+      if (options.accessToken) {
+        headers.Authorization = `Bearer ${options.accessToken}`;
+      }
+
+      return headers;
+    },
+
+    withDataApp(path) {
+      return appendAppQuery(path, this.appSlug);
     },
 
     getEmployees(params) {
-      return this.get(withSearchParams('/api/data/employees', params)).then((employees) => employees.map(mapEmployee));
+      return this.get(this.withDataApp(withSearchParams('/api/data/employees', params))).then((employees) => employees.map(mapEmployee));
     },
     getCustomersRaw(params) {
-      return this.get(withSearchParams('/api/data/customers', params));
+      return this.get(this.withDataApp(withSearchParams('/api/data/customers', params)));
     },
     getCustomerRaw(id, options = {}) {
-      return this.get(withSearchParams(getItemPath('/api/data/customers', id), buildCustomerDetailParams(options)));
+      return this.get(this.withDataApp(withSearchParams(getItemPath('/api/data/customers', id), buildCustomerDetailParams(options))));
     },
     updateCustomerRaw(id, body) {
-      return this.put(getItemPath('/api/data/customers', id), body);
+      return this.put(this.withDataApp(getItemPath('/api/data/customers', id)), body);
     },
     deleteCustomerRaw(id) {
-      return this.del(getItemPath('/api/data/customers', id));
+      return this.del(this.withDataApp(getItemPath('/api/data/customers', id)));
     },
     getTasksRaw(params) {
-      return this.get(withSearchParams('/api/data/tasks', params));
+      return this.get(this.withDataApp(withSearchParams('/api/data/tasks', params)));
     },
     getTaskRaw(id) {
-      return this.get(getItemPath('/api/data/tasks', id));
+      return this.get(this.withDataApp(getItemPath('/api/data/tasks', id)));
     },
     createTaskRaw(body) {
-      return this.post('/api/data/tasks', body);
+      return this.post(this.withDataApp('/api/data/tasks'), body);
     },
     updateTaskRaw(id, body) {
-      return this.put(getItemPath('/api/data/tasks', id), body);
+      return this.put(this.withDataApp(getItemPath('/api/data/tasks', id)), body);
     },
     deleteTaskRaw(id) {
-      return this.del(getItemPath('/api/data/tasks', id));
+      return this.del(this.withDataApp(getItemPath('/api/data/tasks', id)));
     },
     getEnvelopesRaw(params) {
-      return this.get(withSearchParams('/api/data/envelopes', params));
+      return this.get(this.withDataApp(withSearchParams('/api/data/envelopes', params)));
     },
 
     async getCustomers(params) {
@@ -700,36 +717,39 @@
     },
 
     proxy(options) {
-      return this.request('/api/proxy', {
-        method: 'POST',
-        body: buildProxyPayload(options)
+      return this.request(this.buildProxyPath(options?.url), {
+        method: String(options?.method || 'GET').toUpperCase(),
+        headers: this.buildProxyHeaders(options),
+        body: options?.body
       });
     },
 
     proxyResponse(options) {
-      return this.requestResponse('/api/proxy', {
-        method: 'POST',
-        body: buildProxyPayload(options)
+      return this.requestResponse(this.buildProxyPath(options?.url), {
+        method: String(options?.method || 'GET').toUpperCase(),
+        headers: this.buildProxyHeaders(options),
+        body: options?.body
       });
     },
 
     proxyText(options) {
-      return this.requestText('/api/proxy', {
-        method: 'POST',
-        body: buildProxyPayload(options)
+      return this.requestText(this.buildProxyPath(options?.url), {
+        method: String(options?.method || 'GET').toUpperCase(),
+        headers: this.buildProxyHeaders(options),
+        body: options?.body
       });
     },
 
     async proxyDocusign(options) {
       return this.proxy({
-        ...this.buildDocusignProxyOptions(options),
+        ...options,
         accessToken: await this.getDocusignAccessToken()
       });
     },
 
     async proxyDocusignResponse(options) {
       return this.proxyResponse({
-        ...this.buildDocusignProxyOptions(options),
+        ...options,
         accessToken: await this.getDocusignAccessToken()
       });
     },
@@ -737,7 +757,7 @@
     triggerMaestroWorkflow(workflowId, body) {
       return this.proxyDocusign({
         method: 'POST',
-        path: `/v1/accounts/{accountId}/workflows/${workflowId}/actions/trigger`,
+        url: this.buildDocusignUrl(`/v1/accounts/{accountId}/workflows/${workflowId}/actions/trigger`),
         body
       });
     }

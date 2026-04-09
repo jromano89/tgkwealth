@@ -1,8 +1,5 @@
 const crypto = require('crypto');
 
-const tokenCache = new Map();
-const TOKEN_REFRESH_BUFFER_MS = 60000;
-
 function getOauthBase() {
   return process.env.DOCUSIGN_OAUTH_BASE || 'account-d.docusign.com';
 }
@@ -70,15 +67,6 @@ async function getAccessToken(userId, accountId, scopes) {
     throw new Error('Missing Docusign scopes.');
   }
 
-  const cacheKey = `${normalizedUserId}_${normalizedAccountId}_${scopeString}`;
-  const cached = tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now() + TOKEN_REFRESH_BUFFER_MS) {
-    return {
-      accessToken: cached.accessToken,
-      expiresAt: new Date(cached.expiresAt).toISOString()
-    };
-  }
-
   const now = Math.floor(Date.now() / 1000);
   const assertionPayload = {
     iss: getIntegrationKey(),
@@ -103,10 +91,6 @@ async function getAccessToken(userId, accountId, scopes) {
   }, 'Docusign JWT grant failed');
 
   const expiresAt = Date.now() + (Number(tokenData.expires_in || 0) * 1000);
-  tokenCache.set(cacheKey, {
-    accessToken: tokenData.access_token,
-    expiresAt
-  });
 
   return {
     accessToken: tokenData.access_token,

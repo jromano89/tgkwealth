@@ -12,11 +12,30 @@
   };
 
   const workflows = {
+    onboarding: true,
+    maintenance: true
+  };
+
+  const portalTargets = {
     onboarding: {
-      routeHref: 'advisor/'
+      path: 'advisor/',
+      launchLabel: 'Launch Advisor Portal ->'
     },
     maintenance: {
-      routeHref: 'investor/'
+      path: 'investor/',
+      launchLabel: 'Launch Investor Portal ->'
+    }
+  };
+
+  const scenarioOverrides = {
+    wealth: {
+      onboarding: {
+        path: 'scenes/wealth/account-onboarding/',
+        label: 'Generate Story Demo ->',
+        params: {
+          scene: 'problem'
+        }
+      }
     }
   };
 
@@ -33,12 +52,13 @@
     });
   }
 
-  function buildHref(pathname, state, extraParams = {}) {
+  function buildHref(pathname, extraParams = {}) {
     const url = new URL(pathname, window.location.href);
-    url.searchParams.set('vertical', state.vertical);
-    url.searchParams.set('workflow', state.workflow);
 
     Object.entries(extraParams).forEach(([key, value]) => {
+      if (value == null || value === '') {
+        return;
+      }
       url.searchParams.set(key, value);
     });
 
@@ -52,12 +72,44 @@
     window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}`);
   }
 
+  function getPortalTarget(workflow) {
+    return portalTargets[workflow] || portalTargets[defaults.workflow];
+  }
+
+  function getPrimaryScenario(state) {
+    const override = scenarioOverrides[state.vertical]?.[state.workflow];
+    if (override) {
+      return override;
+    }
+
+    const portalTarget = getPortalTarget(state.workflow);
+    return {
+      path: portalTarget.path,
+      label: portalTarget.launchLabel,
+      params: {
+        mode: 'normal'
+      }
+    };
+  }
+
+  function getConfigurableScenario(state) {
+    const portalTarget = getPortalTarget(state.workflow);
+    return {
+      path: portalTarget.path,
+      params: {
+        mode: 'advanced'
+      }
+    };
+  }
+
   function bootLauncher() {
     const heroCopy = document.getElementById('hero-copy');
     const generateLink = document.getElementById('generate-demo-link');
+    const generateLabel = document.getElementById('generate-demo-label');
     const configurablePortalLink = document.getElementById('configurable-portal-link');
+    const backendServiceLink = document.getElementById('backend-service-link');
 
-    if (!heroCopy || !generateLink || !configurablePortalLink) {
+    if (!heroCopy || !generateLink || !generateLabel || !configurablePortalLink || !backendServiceLink) {
       return;
     }
 
@@ -67,14 +119,17 @@
     };
 
     function render() {
-      const selectedWorkflow = workflows[state.workflow];
+      const primaryScenario = getPrimaryScenario(state);
+      const configurableScenario = getConfigurableScenario(state);
 
       setSelectedOption('vertical', state.vertical);
       setSelectedOption('workflow', state.workflow);
 
       heroCopy.textContent = HERO_COPY;
-      generateLink.href = buildHref(selectedWorkflow.routeHref, state, { mode: 'normal' });
-      configurablePortalLink.href = 'advisor/?mode=advanced';
+      generateLabel.textContent = primaryScenario.label;
+      generateLink.href = buildHref(primaryScenario.path, primaryScenario.params);
+      configurablePortalLink.href = buildHref(configurableScenario.path, configurableScenario.params);
+      backendServiceLink.href = window.TGK_CONFIG?.backendUrl || '#';
       syncUrl(state);
     }
 

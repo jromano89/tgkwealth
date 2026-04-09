@@ -1,6 +1,7 @@
 const path = require('path');
 const dotenv = require('dotenv');
 const express = require('express');
+const { buildApiSpec, buildDocsHtml } = require('./api-docs');
 const { getDb } = require('./database');
 const API_TITLE = 'TGK Demo Backend';
 const API_VERSION = '3.0.0';
@@ -34,7 +35,11 @@ function createApp() {
 
   // Connect payloads can arrive outside the normal JSON parser, so mount the sink first.
   app.use('/api/webhooks', require('./routes/webhooks'));
+  app.use('/api/proxy', require('./routes/proxy'));
   app.use('/architecture', express.static(path.resolve(__dirname, '..', 'public', 'architecture')));
+  app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '..', '..', 'frontend', 'shared', 'favicon.ico'));
+  });
 
   app.use(express.json({ limit: '1mb' }));
   getDb();
@@ -59,9 +64,10 @@ a.alt:hover{background:rgba(255,255,255,.1)}
 <div class="eyebrow">Reusable Demo Backend</div>
 <h1>${API_TITLE}</h1>
 <p>CORS-enabled backend for DocuSign IAM demo portals. TGK Wealth is the current FINS implementation, but the service is structured to support future static demo frontends without rebuilding auth, proxying, storage, and Maestro plumbing each time.</p>
-<p>Use <code>X-Demo-App</code> to scope auth, data, and proxy requests to a logical demo app.</p>
+<p>Demo data routes can be scoped with <code>?app=...</code> or <code>X-Demo-App</code> when multiple demos share one backend.</p>
 <div class="links">
 <a href="/api/health">Health Check</a>
+<a class="alt" href="/api/docs">API Docs</a>
 <a class="alt" href="/architecture/">Architecture</a>
 <a class="alt" href="/maestro/manifest/clientCredentials.ReadWriteManifest.json">Maestro Manifest</a>
 </div>
@@ -69,9 +75,24 @@ a.alt:hover{background:rgba(255,255,255,.1)}
 </div></body></html>`);
   });
 
+  app.get('/api/docs', (req, res) => {
+    res.type('html').send(buildDocsHtml({
+      title: API_TITLE,
+      version: API_VERSION,
+      req
+    }));
+  });
+
+  app.get('/api/docs.json', (req, res) => {
+    res.type('application/openapi+json').send(JSON.stringify(buildApiSpec({
+      title: API_TITLE,
+      version: API_VERSION,
+      req
+    }), null, 2));
+  });
+
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/data', require('./routes/resources'));
-  app.use('/api/proxy', require('./routes/proxy'));
   app.use('/maestro', require('./routes/maestro'));
 
   app.get('/api/health', (req, res) => {
