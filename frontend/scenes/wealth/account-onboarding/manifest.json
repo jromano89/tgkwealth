@@ -92,7 +92,7 @@
       "label": "Operations Queue",
       "caption": "Back Office POV",
       "embed": {
-        "src": "../../../advisor/?mode=normal",
+        "src": "../../../advisor/?mode=normal&view=documents",
         "title": "Advisor agreements queue",
         "interactive": true,
         "height": 940,
@@ -101,12 +101,6 @@
           "mode": "full"
         },
         "actions": [
-          {
-            "type": "clickText",
-            "selector": "button",
-            "text": "Agreements",
-            "afterMs": 150
-          },
           {
             "type": "waitForSelector",
             "selector": ".tgk-agreements-dashboard",

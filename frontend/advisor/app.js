@@ -34,6 +34,11 @@ function agreementTypeForName(name) {
   return 'Other';
 }
 
+function getInitialAdvisorView() {
+  const view = new URL(window.location.href).searchParams.get('view');
+  return String(view || 'dashboard').trim() || 'dashboard';
+}
+
 function advisorApp() {
   const preferredAdvisorId = String(window.TGK_CONFIG?.advisorId || '').trim();
 
@@ -92,7 +97,7 @@ function advisorApp() {
         ]);
         this.currentUser = employees.find((employee) => employee.id === preferredAdvisorId) || employees[0] || null;
         this.customers = customers;
-        this.setView('dashboard');
+        this.setView(getInitialAdvisorView());
       } catch (e) {
         console.error('Failed to load customers:', e);
       }
