@@ -89,6 +89,31 @@ function buildApiSpec({ title, version, req }) {
         put: proxyOperation('PUT passthrough proxy', true),
         delete: proxyOperation('DELETE passthrough proxy', true)
       },
+      '/api/data/events': {
+        get: {
+          tags: ['data'],
+          summary: 'Subscribe to app-scoped data changes',
+          description: 'Server-Sent Events stream for app-scoped demo data changes. The stream sends a `connected` event on subscribe, heartbeat comments about every 25 seconds, and `data.changed` events when REST data routes create, update, or delete records, or when Maestro Data IO create/patch writes records. `data.changed` payloads include `type`, `appSlug`, `resource`, `action`, `id`, `record`, and `timestamp`.',
+          parameters: [appQueryParam(), appHeaderParam()],
+          responses: {
+            200: {
+              description: 'SSE stream of data change events.',
+              content: {
+                'text/event-stream': {
+                  schema: { type: 'string' },
+                  examples: {
+                    dataChanged: {
+                      summary: 'Record update event',
+                      value: 'event: data.changed\ndata: {"type":"data.changed","appSlug":"tgk","resource":"customers","action":"update","id":"customer-1","record":{"id":"customer-1"},"timestamp":"2026-04-10T12:00:00.000Z"}\n\n'
+                    }
+                  }
+                }
+              }
+            },
+            400: jsonErrorResponse()
+          }
+        }
+      },
       '/api/data/employees': {
         get: listOperation('employees', 'List employees', '#/components/schemas/Employee', [
           appQueryParam(),
@@ -452,8 +477,9 @@ function buildDocsHtml({ title, version, req }) {
     },
     {
       title: 'Data',
-      note: 'App-scoped demo data. Use `?app=...` or `X-Demo-App`.',
+      note: 'App-scoped demo data and SSE change notifications. Use `?app=...` or `X-Demo-App`.',
       items: [
+        ['GET', '/api/data/events?app=...', 'Subscribe to SSE data change events'],
         ['GET', '/api/data/employees', 'List employees'],
         ['POST', '/api/data/employees', 'Create employee'],
         ['GET', '/api/data/employees/{id}', 'Get employee'],

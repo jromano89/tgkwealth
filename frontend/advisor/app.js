@@ -1,7 +1,5 @@
-const MAESTRO_POLL_INTERVAL_MS = 1500;
 const MAESTRO_COMPLETION_SETTLE_DELAY_MS = 400;
 const MAESTRO_SUCCESS_REDIRECT_DELAY_MS = 2000;
-const CLIENT_DETAIL_REFRESH_MS = 5000;
 const CLIENT_DETAIL_REFRESH_MAX_MS = 20 * 60 * 1000;
 const AGREEMENT_SUMMARY_METRICS = Object.freeze({
   totalCount: 128,
@@ -63,7 +61,8 @@ function advisorApp() {
     selectedContact: null,
     selectedContactAccounts: [],
     selectedContactEnvelopes: [],
-    _clientDetailRefreshTimer: null,
+    _clientDetailEventsSubscription: null,
+    _clientDetailEventsTimeout: null,
     searchQuery: '',
     showOnboarding: false,
     maestroInstanceUrl: '',
@@ -78,7 +77,7 @@ function advisorApp() {
     agreementSearchQuery: '',
     agreementsLoading: false,
     agreementsLoaded: false,
-    _maestroCreationPollTimer: null,
+    _maestroCreationEventsSubscription: null,
     _maestroRedirectTimer: null,
     _maestroTrackingStarted: false,
     _maestroKnownContactIds: new Set(),
@@ -251,45 +250,70 @@ function advisorApp() {
         this.selectedContactEnvelopes = [];
       }
       this.setView('client');
-      this.startClientDetailRefresh(contact.id);
+      this.startClientDetailEvents(contact.id);
     },
 
-    startClientDetailRefresh(contactId) {
-      this.stopClientDetailRefresh();
+    startClientDetailEvents(contactId) {
+      this.stopClientDetailEvents();
       if (normalizeStatusValue(this.selectedContact?.metadata?.status) !== 'pending') return;
       const app = this;
-      const refreshDeadlineAt = Date.now() + CLIENT_DETAIL_REFRESH_MAX_MS;
-      this._clientDetailRefreshTimer = window.setInterval(async function () {
-        if (app.view !== 'client' || !app.selectedContact || app.selectedContact.id !== contactId) {
-          app.stopClientDetailRefresh();
-          return;
-        }
-        if (Date.now() >= refreshDeadlineAt) {
-          app.stopClientDetailRefresh();
-          return;
-        }
-        try {
-          const detail = await TGK_API.getCustomer(contactId, { includeTasks: false });
-          app.selectedContact = detail;
-          app.selectedContactAccounts = detail.accounts || [];
-          app.selectedContactEnvelopes = detail.envelopes || [];
-          const idx = app.customers.findIndex(c => c.id === contactId);
-          if (idx !== -1) {
-            app.customers[idx] = { ...app.customers[idx], ...detail, accounts: undefined, envelopes: undefined };
+      const subscription = TGK_API.subscribeDataEvents({
+        onConnected() {
+          void app.refreshSelectedContactDetail(contactId);
+        },
+        onChange(event) {
+          if (event?.resource !== 'customers' || event.id !== contactId) {
+            return;
           }
-          if (normalizeStatusValue(detail.metadata?.status) === 'active') {
-            app.stopClientDetailRefresh();
-          }
-        } catch (e) {
-          // Silently ignore refresh failures
+          void app.refreshSelectedContactDetail(contactId);
+        },
+        onError(error) {
+          console.warn('Customer detail event stream error:', error);
         }
-      }, CLIENT_DETAIL_REFRESH_MS);
+      });
+
+      if (!subscription.supported) {
+        console.warn('Server-Sent Events are not supported in this browser.');
+        return;
+      }
+
+      this._clientDetailEventsSubscription = subscription;
+      this._clientDetailEventsTimeout = window.setTimeout(function () {
+        app.stopClientDetailEvents();
+      }, CLIENT_DETAIL_REFRESH_MAX_MS);
     },
 
-    stopClientDetailRefresh() {
-      if (this._clientDetailRefreshTimer) {
-        window.clearInterval(this._clientDetailRefreshTimer);
-        this._clientDetailRefreshTimer = null;
+    async refreshSelectedContactDetail(contactId) {
+      try {
+        if (this.view !== 'client' || !this.selectedContact || this.selectedContact.id !== contactId) {
+          this.stopClientDetailEvents();
+          return null;
+        }
+        const detail = await TGK_API.getCustomer(contactId, { includeTasks: false });
+        this.selectedContact = detail;
+        this.selectedContactAccounts = detail.accounts || [];
+        this.selectedContactEnvelopes = detail.envelopes || [];
+        const idx = this.customers.findIndex(c => c.id === contactId);
+        if (idx !== -1) {
+          this.customers[idx] = { ...this.customers[idx], ...detail, accounts: undefined, envelopes: undefined };
+        }
+        if (normalizeStatusValue(detail.metadata?.status) === 'active') {
+          this.stopClientDetailEvents();
+        }
+        return detail;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    stopClientDetailEvents() {
+      if (this._clientDetailEventsSubscription) {
+        this._clientDetailEventsSubscription.close();
+        this._clientDetailEventsSubscription = null;
+      }
+      if (this._clientDetailEventsTimeout) {
+        window.clearTimeout(this._clientDetailEventsTimeout);
+        this._clientDetailEventsTimeout = null;
       }
     },
 
@@ -307,7 +331,7 @@ function advisorApp() {
     },
 
     goBack() {
-      this.stopClientDetailRefresh();
+      this.stopClientDetailEvents();
       this.setView('dashboard');
       this.selectedContact = null;
       this.selectedContactAccounts = [];
@@ -321,7 +345,7 @@ function advisorApp() {
       this.maestroLoading = false;
       this.maestroCompleted = false;
       this.maestroNewContact = null;
-      this.stopMaestroCreationPolling();
+      this.stopMaestroCreationEvents();
       this.clearOnboardingRedirectTimer();
       this.stopWorkflowLoading();
       this._maestroTrackingStarted = false;
@@ -377,7 +401,7 @@ function advisorApp() {
       if (!this.showOnboarding || this.maestroCompleted) {
         return;
       }
-      this.startMaestroCreationPolling();
+      this.startMaestroCreationEvents();
     },
 
     findNewMaestroCustomer(extensionCustomers) {
@@ -389,36 +413,58 @@ function advisorApp() {
       });
     },
 
-    startMaestroCreationPolling() {
-      this.stopMaestroCreationPolling();
-      const app = this;
-      const poll = async function () {
-        if (!app.showOnboarding || app.maestroCompleted) return;
-        try {
-          const extensionCustomers = await app.fetchMaestroCustomers();
-          const target = app.findNewMaestroCustomer(extensionCustomers);
-          if (target) {
-            await app.completeOnboardingWithContact(target);
-            return;
-          }
-        } catch (e) {
-          console.warn('Could not poll for Maestro-created customers:', e);
+    async checkForNewMaestroCustomer() {
+      if (!this.showOnboarding || this.maestroCompleted) return;
+      try {
+        const extensionCustomers = await this.fetchMaestroCustomers();
+        const target = this.findNewMaestroCustomer(extensionCustomers);
+        if (target) {
+          await this.completeOnboardingWithContact(target);
         }
-        app._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
-      };
-      this._maestroCreationPollTimer = window.setTimeout(poll, MAESTRO_POLL_INTERVAL_MS);
+      } catch (e) {
+        console.warn('Could not check for Maestro-created customers:', e);
+      }
     },
 
-    stopMaestroCreationPolling() {
-      if (this._maestroCreationPollTimer) {
-        window.clearTimeout(this._maestroCreationPollTimer);
-        this._maestroCreationPollTimer = null;
+    startMaestroCreationEvents() {
+      this.stopMaestroCreationEvents();
+      const app = this;
+      const subscription = TGK_API.subscribeDataEvents({
+        onConnected() {
+          void app.checkForNewMaestroCustomer();
+        },
+        onChange(event) {
+          if (event?.resource !== 'customers' || event.action !== 'create' || !event.id) {
+            return;
+          }
+          if (app._maestroKnownContactIds?.has(event.id)) {
+            return;
+          }
+          void app.completeOnboardingWithContact({ ...(event.record || {}), id: event.id });
+        },
+        onError(error) {
+          console.warn('Maestro customer event stream error:', error);
+        }
+      });
+
+      if (!subscription.supported) {
+        console.warn('Server-Sent Events are not supported in this browser.');
+        return;
+      }
+
+      this._maestroCreationEventsSubscription = subscription;
+    },
+
+    stopMaestroCreationEvents() {
+      if (this._maestroCreationEventsSubscription) {
+        this._maestroCreationEventsSubscription.close();
+        this._maestroCreationEventsSubscription = null;
       }
     },
 
     async completeOnboardingWithContact(target) {
-      if (!target || this.maestroCompleted) return;
-      this.stopMaestroCreationPolling();
+      if (!target || this.maestroCompleted || this._maestroRedirectTimer) return;
+      this.stopMaestroCreationEvents();
       this.clearOnboardingRedirectTimer();
       if (this._maestroKnownContactIds) {
         this._maestroKnownContactIds.add(target.id);
@@ -436,7 +482,7 @@ function advisorApp() {
     },
 
     async loadMaestroWorkflow() {
-      this.stopMaestroCreationPolling();
+      this.stopMaestroCreationEvents();
       this.clearOnboardingRedirectTimer();
       this._maestroTrackingStarted = false;
       this._maestroKnownContactIds = new Set();
@@ -466,7 +512,7 @@ function advisorApp() {
       } catch (e) {
         console.error('Failed to load Maestro workflow:', e);
         this.maestroError = e.message || 'Failed to launch account opening.';
-        this.stopMaestroCreationPolling();
+        this.stopMaestroCreationEvents();
       } finally {
         this.maestroLoading = false;
         this.stopWorkflowLoading();

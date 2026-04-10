@@ -9,7 +9,7 @@ The frontend has no build step. It is plain HTML, CSS, and JS, served by the sma
 ## Structure
 
 - `frontend/`: launcher plus advisor and investor demo portals
-- `backend/`: Express/SQLite API, DocuSign auth/proxy, Maestro bridge, architecture page
+- `backend/`: Express/SQLite API, DocuSign auth/proxy, Maestro bridge, SSE data-change notifications, architecture page
 - `frontend/config.js`: frontend config, workflow IDs, mode gate, and DocuSign settings
 - `scripts/seed-demo-api.js`: optional demo data loader
 
@@ -61,6 +61,7 @@ Useful local URLs:
 - Frontend runtime config lives in `frontend/config.js`.
 - The backend-hosted DocuSign consent callback is fixed at `/api/auth/callback`.
 - The frontend gets DocuSign access tokens from `POST /api/auth/token` and sends downstream API calls through `/api/proxy?url=<encoded-target-url>`.
+- `GET /api/data/events?app=...` opens an app-scoped Server-Sent Events stream for `connected` and `data.changed` events from REST data writes and Maestro Data IO writes.
 
 ## Deployment
 

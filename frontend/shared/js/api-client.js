@@ -610,6 +610,51 @@
       return appendAppQuery(path, this.appSlug);
     },
 
+    subscribeDataEvents(handlers = {}) {
+      const onChange = typeof handlers === 'function' ? handlers : handlers.onChange;
+      const onConnected = handlers.onConnected;
+      const onError = handlers.onError;
+
+      if (typeof window.EventSource !== 'function') {
+        return {
+          supported: false,
+          close() {}
+        };
+      }
+
+      const eventUrl = new URL(this.withDataApp('/api/data/events'), this.baseUrl);
+      const source = new window.EventSource(eventUrl.toString());
+
+      source.addEventListener('connected', (event) => {
+        if (typeof onConnected === 'function') {
+          onConnected(event);
+        }
+      });
+
+      source.addEventListener('data.changed', (event) => {
+        if (typeof onChange !== 'function') {
+          return;
+        }
+
+        try {
+          onChange(JSON.parse(event.data), event);
+        } catch (error) {
+          console.warn('Could not parse data change event:', error);
+        }
+      });
+
+      if (typeof onError === 'function') {
+        source.addEventListener('error', onError);
+      }
+
+      return {
+        supported: true,
+        close() {
+          source.close();
+        }
+      };
+    },
+
     getEmployees(params) {
       return this.get(this.withDataApp(withSearchParams('/api/data/employees', params))).then((employees) => employees.map(mapEmployee));
     },

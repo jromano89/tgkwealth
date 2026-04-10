@@ -1,4 +1,5 @@
 const { randomUUID } = require('crypto');
+const { publishDataChange } = require('../data-events');
 const store = require('./store');
 const { serializeRecord, serializeRecords } = require('./serializers');
 const { asObject, createError, normalizeOptionalString } = require('../utils');
@@ -346,7 +347,15 @@ function getRecordById(db, resourceKey, recordId) {
 function createRecordForApp(db, appSlug, resourceKey, input = {}) {
   const resource = getResourceDefinition(resourceKey);
   const record = resource.normalizeWrite({ db, appSlug, existingRecord: null, input });
-  return serializeRecord(store.createRecord(db, resource, appSlug, withTimestamps(record)));
+  const createdRecord = serializeRecord(store.createRecord(db, resource, appSlug, withTimestamps(record)));
+  publishDataChange({
+    appSlug,
+    resource: resourceKey,
+    action: 'create',
+    id: createdRecord.id,
+    record: createdRecord
+  });
+  return createdRecord;
 }
 
 function updateRecordForApp(db, appSlug, resourceKey, recordId, input = {}) {
@@ -357,7 +366,15 @@ function updateRecordForApp(db, appSlug, resourceKey, recordId, input = {}) {
   }
 
   const record = resource.normalizeWrite({ db, appSlug, existingRecord, input });
-  return serializeRecord(store.updateRecord(db, resource, appSlug, recordId, record));
+  const updatedRecord = serializeRecord(store.updateRecord(db, resource, appSlug, recordId, record));
+  publishDataChange({
+    appSlug,
+    resource: resourceKey,
+    action: 'update',
+    id: updatedRecord.id,
+    record: updatedRecord
+  });
+  return updatedRecord;
 }
 
 function deleteRecordForApp(db, appSlug, resourceKey, recordId) {
@@ -375,7 +392,15 @@ function deleteRecordForApp(db, appSlug, resourceKey, recordId) {
     resource.beforeDelete(db, appSlug, recordId);
   }
 
+  const deletedRecord = serializeRecord(existingRecord);
   store.deleteRecord(db, resource, appSlug, recordId);
+  publishDataChange({
+    appSlug,
+    resource: resourceKey,
+    action: 'delete',
+    id: recordId,
+    record: deletedRecord
+  });
   return { success: true };
 }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const { getDb } = require('../database');
+const { subscribeDataEvents } = require('../data-events');
 const service = require('../resources/service');
 const { requireAppSlug, route } = require('../utils');
 
@@ -16,6 +17,10 @@ function withApp(handler) {
 function created(res, payload) {
   res.status(201).json(payload);
 }
+
+router.get('/events', route((req, res) => {
+  subscribeDataEvents(requireAppSlug(req), res);
+}));
 
 Object.entries(service.RESOURCE_DEFINITIONS).forEach(([resourceKey, resource]) => {
   const collectionPath = `/${resourceKey}`;
